@@ -22,7 +22,7 @@ npm run build      # typecheck + production build
 | Tilt | right-drag vertically | two fingers slide up/down |
 | Zoom | wheel | pinch |
 | Time | Space = pause, 1 = pause, 2 = 1×, 3 = 4×, 4 = 16× | HUD buttons |
-| View | T = tilt-shift | HUD button |
+| Settings | ⚙ button: graphics quality, tilt-shift (T), reduced motion, volume, mute (M), save now / delete save | ⚙ button |
 | Miracles | click a miracle (or R, L, G, B, N), then click the land; Esc cancels | tap a miracle, then tap; Cancel button |
 | Shape Earth | drag to raise; hold Shift (or toggle Lower) to dig | drag; Raise/Lower toggle |
 | Rain cloud | drag the cloud while it lasts | drag the cloud |
@@ -32,6 +32,7 @@ npm run build      # typecheck + production build
 | Holy Book | H or the Holy Book button; "Show the Truth" sets what really happened beside each verse | Holy Book button |
 | God's Eye | F3 | triple-tap the top-left corner |
 | Tutorial | starts by itself the first time; the **?** button replays or stops it | same |
+| Save | autosaves every in-game year and when the tab is hidden; **Continue** on the title screen | same |
 
 In dev builds `window.omen` exposes `{ sim, loop, renderer, beliefs, book, … }` for poking at state from the console.
 
@@ -44,10 +45,12 @@ In dev builds `window.omen` exposes `{ sim, loop, renderer, beliefs, book, … }
   - `belief/` the interpretation engine (`interpret.ts`), belief store, priests, rumor and traditions (`BeliefSystem.ts`), behavior effects (`effects.ts`), dreams, and the data catalog of belief types.
   - `disaster/` the Warning (`Warning.ts`: countdown, faith collapse, verdict) and its disasters behind a `Disaster` interface (`Flood.ts` only; volcano or comet would add their own).
   - `myth/` memory and myth (`Myth.ts`): named places, legends and their compression at each succession, statues (`statues.ts`) and ruins, the god's name (`godName.ts`), and the Holy Book (`HolyBook.ts`) written through the `ScriptureWriter` interface (`scripture.ts`, template grammar; no LLM writer is implemented).
+  - `save.ts` save / load: the sim's object graph (shared references, Maps, run-length-encoded typed arrays), restored in place onto a fresh Sim of the same seed and mode. Production builds keep class names for this (`vite.config.ts`).
   - `events.ts` the event log the renderer, toasts and (later) omens read.
 - `src/render/` three.js; reads sim state, never mutates it.
   - `chunks/` column mesher (AO, color jitter; runs in a Web Worker for edits), terrain/water materials, decorative underside.
   - `camera/OrbitCamera.ts`, `Environment.ts` (sky, sun/moon, seasons, clouds, storm gloom), `post/PostFX.ts` (tilt-shift).
   - `villagers/VillagerRenderer.ts` instanced voxel villagers; `vfx/WeatherFx.ts` fire, embers, rain, lightning.
 - `src/ui/` plain DOM HUD, villager inspector, toasts, Village Beliefs, the Holy Book (`HolyBookPanel.ts`), title / vision / end screens (`Screens.ts`), the first-session tutorial (`Tutorial.ts`). `src/debug/` God's Eye: salience table for the latest omen, witness lines, belief history, myth stats, priest switch, force events and time jumps.
+- `src/audio/Soundscape.ts` WebAudio, all synthesized: wind, sea, birds, rain, murmuring at the fire, ritual drums, a voice per miracle, and the Warning's drone. Starts on the first click or key.
 - `src/loop.ts` fixed-timestep bridge between real time and sim ticks.

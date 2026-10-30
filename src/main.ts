@@ -6,20 +6,37 @@ import { BeliefsPanel } from './ui/BeliefsPanel';
 import { HolyBookPanel } from './ui/HolyBookPanel';
 import { EndScreen, randomSeed, startGame, TitleScreen, Vision } from './ui/Screens';
 import { Tutorial } from './ui/Tutorial';
+import { loadSettings, readSave, savedHeader, SettingsPanel, writeSave } from './ui/Settings';
+import { readHeader, restoreGame, saveGame } from './sim/save';
+import { formatCalendar } from './sim/time';
+import { Soundscape } from './audio/Soundscape';
 import { Inspector } from './ui/Inspector';
 import { MiracleController } from './ui/MiracleController';
 import { Toasts } from './ui/Toasts';
 import { DebugPanel } from './debug/DebugPanel';
 
 const params = new URLSearchParams(location.search);
-const seed = params.get('seed') ?? 'omen';
+// ?load=1 continues the saved game: its header says which island and mode to rebuild.
+const saved = params.has('load') ? readSave() : null;
+const header = saved ? readHeader(saved) : null;
+if (params.has('load') && !header) location.replace('?loadFailed=1');
+const seed = header?.seed ?? params.get('seed') ?? 'omen';
 // No mode yet: the title screen, over a sandbox island that just lives.
-const chosen = params.get('mode');
+const chosen = header?.mode ?? params.get('mode');
 const mode: GameMode = chosen === 'warning' ? 'warning' : 'sandbox';
 
 // ?years=N shortens the Warning (testing, or a quick game).
-const years = Number(params.get('years')) || undefined;
+const years = header ? header.floodInYears : Number(params.get('years')) || undefined;
 const sim = new Sim({ seed, mode, floodInYears: years });
+if (saved && header) {
+  try {
+    restoreGame(sim, saved);
+  } catch (err) {
+    console.error(err);
+    location.replace('?loadFailed=1');
+    throw err;
+  }
+}
 const loop = new FixedLoop(sim);
 const renderer = new GameRenderer(document.getElementById('app')!, sim);
 const hudRoot = document.getElementById('hud')!;
@@ -33,6 +50,33 @@ const book = new HolyBookPanel(hudRoot, sim);
 beliefs.onVerse = (id) => book.showVerse(id);
 hudRoot.querySelector('.hud-beliefs')!.addEventListener('click', () => beliefs.toggle());
 hudRoot.querySelector('.hud-book')!.addEventListener('click', () => book.toggle());
+
+/** Save the game in progress (not the title screen's idle island). */
+function saveNow(): string | null {
+  if (!chosen) return 'Nothing to save on the title screen.';
+  return writeSave(saveGame(sim, { seed, mode, floodInYears: years, label: formatCalendar(sim.calendar) }));
+}
+const sound = new Soundscape();
+const settings = new SettingsPanel(
+  hudRoot,
+  loadSettings(),
+  (s) => {
+    renderer.setQuality(s.quality);
+    renderer.post.enabled = s.tiltShift;
+    renderer.reducedMotion = s.reducedMotion;
+    document.body.classList.toggle('reduce-motion', s.reducedMotion);
+    sound.setVolume(s.muted ? 0 : s.volume);
+  },
+  chosen ? saveNow : null,
+);
+hudRoot.querySelector('.hud-settings')!.addEventListener('click', () => settings.toggle());
+// Autosave once a year, and when the page is hidden or closed.
+let savedYear = sim.calendar.year;
+function autosave(): void {
+  if (chosen && !end) saveNow();
+}
+window.addEventListener('pagehide', autosave);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && autosave());
 
 const tutorial = new Tutorial(hudRoot, {
   sim,
@@ -48,7 +92,11 @@ const firstTime = !Tutorial.seen();
 
 if (!chosen) {
   document.body.classList.add('at-title');
-  new TitleScreen(hudRoot, seed);
+  new TitleScreen(hudRoot, seed, savedHeader(), params.has('loadFailed'));
+} else if (header) {
+  // A loaded game picks up where it was, paused so the player can get their bearings.
+  loop.setSpeedIndex(0);
+  toasts.show(`Welcome back. ${formatCalendar(sim.calendar)}.`);
 } else if (sim.warning) {
   // The opening vision: the player alone sees the sea at the height it will reach.
   loop.setSpeedIndex(0);
@@ -92,7 +140,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 // Dev-only handle for poking at state from the console.
-if (import.meta.env.DEV) Object.assign(window, { omen: { sim, loop, renderer, debug, miracles, inspector, beliefs, book } });
+if (import.meta.env.DEV) Object.assign(window, { omen: { sim, loop, renderer, debug, miracles, inspector, beliefs, book, settings } });
 
 let last = performance.now();
 function frame(now: number): void {
@@ -110,6 +158,11 @@ function frame(now: number): void {
   book.update(dt);
   checkOutcome();
   tutorial.update();
+  sound.update(sim, loop.speedIndex > 0, dt);
+  if (sim.calendar.year !== savedYear) {
+    savedYear = sim.calendar.year;
+    autosave();
+  }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

@@ -1,3 +1,4 @@
+import type { SaveHeader } from '../sim/save';
 import type { GameMode, Sim } from '../sim/Sim';
 import { calendarAt, formatCalendar } from '../sim/time';
 import { TUNING } from '../sim/tuning';
@@ -8,6 +9,7 @@ const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').rep
 export function startGame(mode: GameMode | null, seed: string): void {
   const url = new URL(location.href);
   url.searchParams.set('seed', seed);
+  url.searchParams.delete('load');
   if (mode) url.searchParams.set('mode', mode);
   else url.searchParams.delete('mode');
   location.href = url.toString();
@@ -21,13 +23,18 @@ export function randomSeed(): string {
 export class TitleScreen {
   readonly el: HTMLElement;
 
-  constructor(root: HTMLElement, seed: string) {
+  constructor(root: HTMLElement, seed: string, saved: SaveHeader | null, loadFailed = false) {
     this.el = document.createElement('div');
     this.el.className = 'screen title-screen';
+    const cont = saved
+      ? `<button data-continue class="ts-continue">Continue <small>${saved.mode === 'warning' ? 'The Warning' : 'Sandbox'} · ${escape(saved.label)} · island ${escape(saved.seed)}</small></button>`
+      : '';
     this.el.innerHTML = `
       <div class="ts-inner">
         <h1>OMEN</h1>
         <p class="ts-tag">You are a god who cannot speak. They will make of you what they can.</p>
+        ${loadFailed ? '<p class="ts-error">That save could not be loaded (it may be from an older version).</p>' : ''}
+        ${cont}
         <div class="ts-modes">
           <button data-mode="warning" class="ts-mode ts-warning">
             <b>The Warning</b>
@@ -45,6 +52,12 @@ export class TitleScreen {
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.el.addEventListener('click', (e) => {
       const t = e.target as HTMLElement;
+      if (t.closest('[data-continue]')) {
+        const url = new URL(location.href);
+        url.search = '?load=1';
+        location.href = url.toString();
+        return;
+      }
       if (t.closest('[data-reroll]')) {
         e.preventDefault();
         startGame(null, randomSeed());

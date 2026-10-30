@@ -36,7 +36,8 @@ export class WeatherFx {
   flash = 0;
   /** Camera shake amount, decays. */
   shake = 0;
-  private lastSeq = 0;
+  /** -1 until the first update: start from now (a loaded game doesn't replay its past). */
+  private lastSeq = -1;
 
   constructor(private readonly offsetX: number, private readonly offsetZ: number) {
     const fg = new THREE.BufferGeometry();
@@ -89,6 +90,7 @@ export class WeatherFx {
     const oz = this.offsetZ;
 
     // ---- events
+    if (this.lastSeq < 0) this.lastSeq = sim.events.lastSeq;
     for (const e of sim.events.since(this.lastSeq)) this.onEvent(e);
     this.lastSeq = sim.events.lastSeq;
 

@@ -355,7 +355,8 @@ export class BeliefSystem {
       this.depict(w, omen.kind, omen.magnitude);
       this.remember(w, omen, att[0]?.feature?.key ?? '', val, false);
       // Faith: help breeds love, harm breeds fear (unwitnessed acts build nothing).
-      const df = Math.abs(val) * omen.magnitude * T.faithPerOmen;
+      // Everyday weather barely moves faith; wonders do.
+      const df = Math.abs(val) * omen.magnitude * T.faithPerOmen * (DEPICTION_WEIGHT[omen.kind] ?? 1);
       if (val >= 0) w.faith.love = Math.min(1 - w.faith.fear, w.faith.love + df);
       else w.faith.fear = Math.min(1 - w.faith.love, w.faith.fear + df);
     });
@@ -653,6 +654,11 @@ export class BeliefSystem {
     // The image of the god follows recent omens; old impressions fade.
     const dep = this.beliefs.get(this.key('DEPICTION', 'god'));
     if (dep?.traits) for (const k of Object.keys(dep.traits)) dep.traits[k]! *= T.depictionFadePerDay;
+    // Faith fades unless something renews it.
+    for (const v of this.sim.villagers.alive) {
+      v.faith.love *= 1 - T.faithFadePerDay;
+      v.faith.fear *= 1 - T.faithFadePerDay;
+    }
     const bias = this.bias;
     // Offerings relax back toward normal while nothing bad follows.
     for (const b of this.beliefs.values()) if (b.type === 'OFFERING') b.escalation = Math.max(1, b.escalation * 0.93);

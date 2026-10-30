@@ -12,7 +12,8 @@ const CAUSE: Record<string, string> = {
 /** Short-lived notices for notable moments. Rate-limited so 16× stays readable. */
 export class Toasts {
   private readonly el: HTMLElement;
-  private lastSeq = 0;
+  /** -1 until the first update: start from now (a loaded game doesn't replay its past). */
+  private lastSeq = -1;
   private recent: number[] = [];
 
   constructor(root: HTMLElement) {
@@ -35,6 +36,7 @@ export class Toasts {
   }
 
   update(sim: Sim): void {
+    if (this.lastSeq < 0) this.lastSeq = sim.events.lastSeq;
     for (const e of sim.events.since(this.lastSeq)) {
       const msg = this.describe(sim, e);
       if (msg) this.show(msg);

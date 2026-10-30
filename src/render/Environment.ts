@@ -164,6 +164,16 @@ export class Environment {
    * @param flash 0..1 lightning flash
    * @returns 0..1 how dark it is (for fire glow)
    */
+  /** Sun shadow map size; 0 turns sun shadows off. */
+  setShadows(size: number): void {
+    this.sun.castShadow = size > 0;
+    if (size > 0 && this.sun.shadow.mapSize.x !== size) {
+      this.sun.shadow.mapSize.set(size, size);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+    }
+  }
+
   update(dayFraction: number, yearFraction: number, realTime: number, dt: number, overcast = 0, flash = 0): number {
     // ---- palette
     let i = 0;

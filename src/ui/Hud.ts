@@ -9,7 +9,6 @@ export class Hud {
   private readonly countdownEl: HTMLElement;
   private readonly statsEl: HTMLElement;
   private readonly villageEl: HTMLElement;
-  private readonly tiltBtn: HTMLButtonElement;
   private readonly speedButtons: HTMLButtonElement[] = [];
   private frames = 0;
   private fpsTimer = 0;
@@ -34,7 +33,7 @@ export class Hud {
         <button class="hud-new" title="Generate a new island">New island</button>
         <button class="hud-beliefs" title="Village Beliefs (V)">Beliefs</button>
         <button class="hud-book" title="The Holy Book (H)">Holy Book</button>
-        <button class="hud-tilt" title="Tilt-shift (T)">Tilt-shift</button>
+        <button class="hud-settings" title="Settings, sound and saving" aria-label="Settings">⚙</button>
         <button class="hud-help" title="Tutorial">?</button>
       </div>
       <div class="hud-panel hud-village"></div>
@@ -43,7 +42,6 @@ export class Hud {
     this.countdownEl = root.querySelector('.hud-countdown')!;
     this.statsEl = root.querySelector('.hud-fps')!;
     this.villageEl = root.querySelector('.hud-village')!;
-    this.tiltBtn = root.querySelector('.hud-tilt')!;
     root.querySelector('.hud-seed')!.textContent = `seed: ${seedLabel}`;
 
     const speeds = root.querySelector('.hud-speeds')!;
@@ -55,15 +53,16 @@ export class Hud {
       this.speedButtons.push(b);
     });
 
-    this.tiltBtn.addEventListener('click', () => this.toggleTilt());
     root.querySelector('.hud-new')!.addEventListener('click', () => {
       const url = new URL(location.href);
       url.searchParams.set('seed', Math.random().toString(36).slice(2, 8));
+      url.searchParams.delete('load');
       location.href = url.toString();
     });
     root.querySelector('.hud-menu')!.addEventListener('click', () => {
       const url = new URL(location.href);
       url.searchParams.delete('mode');
+      url.searchParams.delete('load');
       location.href = url.toString();
     });
 
@@ -74,8 +73,6 @@ export class Hud {
       } else if (e.key >= '1' && e.key <= '4') {
         // 1 = pause … 4 = 16×, matching the button order
         loop.setSpeedIndex(Number(e.key) - 1);
-      } else if (e.code === 'KeyT') {
-        this.toggleTilt();
       }
     });
   }
@@ -94,15 +91,10 @@ export class Hud {
     this.countdownEl.classList.toggle('now', phase !== 'waiting');
   }
 
-  private toggleTilt(): void {
-    this.view.post.enabled = !this.view.post.enabled;
-  }
-
   update(sim: Sim, dtSeconds: number): void {
     const c = sim.calendar;
     this.calendarEl.textContent = `${formatCalendar(c)} · ${c.timeOfDay}`;
     this.speedButtons.forEach((b, i) => b.classList.toggle('active', i === this.loop.speedIndex));
-    this.tiltBtn.classList.toggle('active', this.view.post.enabled);
     const vs = sim.village.store;
     const w = sim.weather;
     const sky = w.precipitation === 'storm' ? 'Storm' : w.raining ? 'Rain' : w.drought ? 'Drought' : '';

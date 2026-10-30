@@ -913,13 +913,18 @@ export class Villagers {
     if (pop >= V.softCap) return;
     if (village.store.food / Math.max(1, pop) < V.birthFoodPerCapita) return;
     let freeBeds = village.bedCapacity() - pop;
+    // SPEC §10: a village that loves its god grows faster; one that fears it, slower.
+    let love = 0;
+    let fear = 0;
+    for (const v of this.alive) (love += v.faith.love), (fear += v.faith.fear);
+    const mood = Math.max(V.moodBirthMin, Math.min(V.moodBirthMax, 1 + V.moodBirthEffect * ((love - fear) / Math.max(1, pop))));
     for (const mother of this.alive.filter((v) => v.sex === 'f' && v.partnerId !== -1)) {
       if (freeBeds <= 0) break;
       if (mother.age < V.fertileMinAge || mother.age > V.fertileMaxAge) continue;
       const father = this.byId(mother.partnerId);
       if (!father?.alive) continue;
       const kids = mother.childIds.filter((c) => father.childIds.includes(c)).length;
-      if (kids >= V.maxChildrenPerCouple || !this.rng.chance(V.birthChancePerDay)) continue;
+      if (kids >= V.maxChildrenPerCouple || !this.rng.chance(V.birthChancePerDay * mood)) continue;
       const home = this.home(mother);
       const spot = home?.door ?? { x: Math.floor(mother.x), z: Math.floor(mother.z) };
       const cell = village.nearestWalkable(spot.x, spot.z) ?? spot;

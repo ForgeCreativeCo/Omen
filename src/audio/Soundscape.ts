@@ -1,0 +1,240 @@
+import type { SimEvent } from '../sim/events';
+import type { Sim } from '../sim/Sim';
+
+/**
+ * Sound (SPEC §17), all synthesized with WebAudio, no files: wind, sea and birds by
+ * time of day; rain; murmuring at the evening fire; drums for rituals; a voice for
+ * each miracle; and, in the Warning, a low drone that builds as the sea draws near.
+ * Reads the sim, never changes it. Starts on the first click or key (browsers
+ * don't allow sound before that).
+ */
+export class Soundscape {
+  private ctx: AudioContext | null = null;
+  private master: GainNode | null = null;
+  private noise: AudioBuffer | null = null;
+  private beds = new Map<string, GainNode>();
+  private lastSeq = -1;
+  private volume = 0.6;
+  private birdTimer = 0;
+  /** Real-time stamps of recent one-shots, so 16× doesn't turn into noise. */
+  private recent = new Map<string, number>();
+
+  constructor() {
+    const start = () => this.start();
+    window.addEventListener('pointerdown', start, { once: true });
+    window.addEventListener('keydown', start, { once: true });
+  }
+
+  setVolume(v: number): void {
+    this.volume = v;
+    if (this.ctx && this.master) this.master.gain.setTargetAtTime(v * 0.8, this.ctx.currentTime, 0.1);
+  }
+
+  private start(): void {
+    if (this.ctx) return;
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    this.ctx = ctx;
+    this.master = ctx.createGain();
+    this.master.gain.value = this.volume * 0.8;
+    this.master.connect(ctx.destination);
+    // Two seconds of white noise, looped by every noise-based sound.
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    this.noise = buf;
+    this.bed('wind', 'bandpass', 420, 0.6);
+    this.bed('sea', 'lowpass', 520, 0.7);
+    this.bed('rain', 'highpass', 2400, 0.5);
+    this.bed('murmur', 'bandpass', 520, 3);
+    this.droneBed();
+  }
+
+  /** A looping filtered-noise layer whose loudness follows the world. */
+  private bed(name: string, type: BiquadFilterType, freq: number, q: number): void {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    src.playbackRate.value = 0.8 + Math.random() * 0.4;
+    const f = ctx.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    f.Q.value = q;
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    src.connect(f).connect(g).connect(this.master!);
+    src.start();
+    this.beds.set(name, g);
+    // Murmuring voices: wobble the band so it sounds like talk, not hiss.
+    if (name === 'murmur') {
+      const lfo = ctx.createOscillator();
+      const depth = ctx.createGain();
+      lfo.frequency.value = 3.3;
+      depth.gain.value = 180;
+      lfo.connect(depth).connect(f.frequency);
+      lfo.start();
+    }
+  }
+
+  private droneBed(): void {
+    const ctx = this.ctx!;
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 170;
+    for (const hz of [55, 55.35, 82.6]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = hz;
+      o.connect(lp);
+      o.start();
+    }
+    lp.connect(g).connect(this.master!);
+    this.beds.set('drone', g);
+  }
+
+  private level(name: string, v: number): void {
+    const g = this.beds.get(name);
+    if (g && this.ctx) g.gain.setTargetAtTime(v, this.ctx.currentTime, 0.8);
+  }
+
+  /** Per frame. `running` = time is moving (paused worlds keep only their ambience). */
+  update(sim: Sim, running: boolean, dt: number): void {
+    if (!this.ctx) return;
+    const cal = sim.calendar;
+    const night = cal.timeOfDay === 'night' ? 1 : cal.timeOfDay === 'dusk' || cal.timeOfDay === 'dawn' ? 0.5 : 0;
+    const w = sim.weather;
+    const storm = w.precipitation === 'storm' ? 1 : 0;
+    const raining = w.raining || sim.miracles.clouds.length > 0;
+    const flood = sim.warning && sim.warning.disaster.phase === 'striking' ? 1 : 0;
+    this.level('wind', 0.05 + 0.05 * night + 0.22 * storm);
+    this.level('sea', 0.07 + 0.2 * flood);
+    this.level('rain', raining ? (storm ? 0.32 : 0.16) : 0);
+    const gathered = sim.villagers.alive.filter((v) => v.action?.kind === 'gathering' && v.action.phase === 'work').length;
+    this.level('murmur', running ? Math.min(0.14, gathered * 0.006) : 0);
+    // The Warning: a drone that starts ~40 years out and swells to the flood.
+    const wn = sim.warning;
+    const k = !wn ? 0 : wn.disaster.phase === 'waiting' ? Math.max(0, 1 - wn.yearsLeft / 40) ** 2 : wn.disaster.phase === 'striking' ? 1 : 0.3;
+    this.level('drone', 0.16 * k);
+
+    // Birds sing by day, not in the rain.
+    this.birdTimer -= dt;
+    if (this.birdTimer <= 0) {
+      this.birdTimer = 0.6 + Math.random() * 2.2;
+      if (!night && !raining && cal.season !== 'winter') this.chirp();
+    }
+
+    if (this.lastSeq < 0) this.lastSeq = sim.events.lastSeq;
+    if (running) for (const e of sim.events.since(this.lastSeq)) this.onEvent(e);
+    this.lastSeq = sim.events.lastSeq;
+  }
+
+  private onEvent(e: SimEvent): void {
+    switch (e.type) {
+      case 'lightning':
+        if (this.ok('thunder', 0.4)) this.thunder(e.divine ? 1 : 0.8);
+        break;
+      case 'bloom':
+        if (this.ok('bloom', 0.5)) this.chime();
+        break;
+      case 'earthShaped':
+        if (this.ok('rumble', 0.35)) this.rumble();
+        break;
+      case 'dream':
+        if (this.ok('dream', 1)) this.shimmer();
+        break;
+      case 'miracleRain':
+        if (this.ok('swell', 1)) this.swell();
+        break;
+      case 'ritual':
+        if (this.ok('drums', 3)) this.drums();
+        break;
+      case 'flood':
+        if (e.phase === 'strike') this.rumble(2.5);
+        break;
+    }
+  }
+
+  private ok(key: string, seconds: number): boolean {
+    const now = performance.now() / 1000;
+    if (now - (this.recent.get(key) ?? -Infinity) < seconds) return false;
+    this.recent.set(key, now);
+    return true;
+  }
+
+  // ---------------------------------------------------------------- one-shots
+
+  private env(peak: number, attack: number, decay: number, at = 0): GainNode {
+    const ctx = this.ctx!;
+    const g = ctx.createGain();
+    const t = ctx.currentTime + at;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+    g.connect(this.master!);
+    return g;
+  }
+
+  private noiseShot(type: BiquadFilterType, freq: number, out: GainNode, dur: number, at = 0): void {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    src.connect(f).connect(out);
+    src.start(ctx.currentTime + at);
+    src.stop(ctx.currentTime + at + dur);
+  }
+
+  private tone(type: OscillatorType, from: number, to: number, out: GainNode, dur: number, at = 0): void {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator();
+    o.type = type;
+    const t = ctx.currentTime + at;
+    o.frequency.setValueAtTime(from, t);
+    o.frequency.exponentialRampToValueAtTime(to, t + dur);
+    o.connect(out);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+
+  private chirp(): void {
+    const n = 1 + Math.floor(Math.random() * 3);
+    const base = 2600 + Math.random() * 1800;
+    for (let i = 0; i < n; i++) this.tone('sine', base, base * (1.3 + Math.random() * 0.4), this.env(0.03, 0.01, 0.09, i * 0.13), 0.1, i * 0.13);
+  }
+
+  private thunder(k: number): void {
+    this.noiseShot('highpass', 1800, this.env(0.35 * k, 0.005, 0.25), 0.3);
+    this.noiseShot('lowpass', 160, this.env(0.9 * k, 0.05, 2.6, 0.08), 3, 0.08);
+  }
+
+  private rumble(seconds = 1.2): void {
+    this.noiseShot('lowpass', 110, this.env(0.7, 0.15, seconds), seconds + 0.3);
+    this.tone('sine', 48, 36, this.env(0.25, 0.1, seconds), seconds);
+  }
+
+  private chime(): void {
+    // A rising pentatonic arpeggio.
+    [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach((hz, i) => this.tone('sine', hz, hz, this.env(0.07, 0.01, 1.4, i * 0.09), 1.5, i * 0.09));
+  }
+
+  private shimmer(): void {
+    for (const hz of [880, 1318.5, 1760.6]) this.tone('triangle', hz, hz * 1.01, this.env(0.035, 0.8, 2.2), 3);
+  }
+
+  private swell(): void {
+    this.noiseShot('highpass', 2200, this.env(0.18, 0.8, 1.6), 2.5);
+  }
+
+  private drums(): void {
+    for (let i = 0; i < 8; i++) {
+      const at = i * 0.32 + (i % 4 === 3 ? 0.08 : 0);
+      this.tone('sine', 120, 52, this.env(i % 4 === 0 ? 0.5 : 0.3, 0.005, 0.28, at), 0.3, at);
+    }
+  }
+}

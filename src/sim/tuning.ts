@@ -112,6 +112,10 @@ export const TUNING = {
     pairChancePerDay: 0.12,
     pairMaxAgeGap: 12,
     birthChancePerDay: 0.028,
+    /** Births × (1 + this × (mean love − mean fear)), clamped to [min, max]. */
+    moodBirthEffect: 0.6,
+    moodBirthMin: 0.75,
+    moodBirthMax: 1.35,
     fertileMinAge: 17,
     fertileMaxAge: 40,
     maxChildrenPerCouple: 4,
@@ -301,8 +305,10 @@ export const TUNING = {
     spreadRate: 0.12,
     /** Children inherit doctrine at this fraction of their parents' / priest's strength. */
     inheritance: 0.5,
-    /** Faith change per witnessed omen = valence × magnitude × this. */
+    /** Faith change per witnessed omen = valence × magnitude × this (× DEPICTION_WEIGHT for everyday weather). */
     faithPerOmen: 0.12,
+    /** Love and fear fade by this fraction a day: a god who does nothing is slowly forgotten. */
+    faithFadePerDay: 0.01,
     /** History points kept per belief (one per day). */
     historyLength: 120,
 

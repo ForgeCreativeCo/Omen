@@ -34,7 +34,8 @@ interface Glyph {
 export class MiracleFx {
   readonly group = new THREE.Group();
   private readonly rng = new Rng('miracle-fx');
-  private lastSeq = 0;
+  /** -1 until the first update: start from now (a loaded game doesn't replay its past). */
+  private lastSeq = -1;
 
   // Particles: dust (normal blend) and sparks (additive) share one pool each.
   private readonly sparkPos = new Float32Array(SPARKS * 3);
@@ -255,6 +256,7 @@ export class MiracleFx {
   shake = 0;
 
   update(sim: Sim, dt: number, time: number): void {
+    if (this.lastSeq < 0) this.lastSeq = sim.events.lastSeq;
     for (const e of sim.events.since(this.lastSeq)) this.onEvent(sim, e);
     this.lastSeq = sim.events.lastSeq;
     const ox = this.offsetX;

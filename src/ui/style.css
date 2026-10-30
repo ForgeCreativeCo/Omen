@@ -1680,3 +1680,176 @@ body.at-title #hud > :not(.screen) {
     animation: none;
   }
 }
+
+/* ---- Settings */
+.settings-panel {
+  top: 64px;
+  right: 12px;
+  width: 300px;
+  max-width: calc(100vw - 48px);
+  font-size: 13px;
+  z-index: 14;
+}
+
+.settings-panel h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: normal;
+  color: var(--hud-accent);
+}
+
+.settings-panel h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  font-weight: normal;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+.st-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.st-row input[type='range'] {
+  flex: 1;
+  max-width: 170px;
+  accent-color: var(--hud-accent);
+}
+
+.st-seg {
+  display: inline-flex;
+  border: 1px solid rgba(243, 233, 216, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.st-seg button,
+.st-actions button {
+  font: inherit;
+  color: var(--hud-fg);
+  background: none;
+  border: none;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.st-seg button + button {
+  border-left: 1px solid rgba(243, 233, 216, 0.2);
+}
+
+.st-seg button.active {
+  background: rgba(226, 178, 106, 0.25);
+  color: var(--hud-accent);
+}
+
+.st-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0;
+  cursor: pointer;
+}
+
+.st-check input {
+  accent-color: var(--hud-accent);
+  margin-top: 2px;
+}
+
+.st-check small,
+.st-save small {
+  display: block;
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+.st-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.st-actions button {
+  border: 1px solid rgba(243, 233, 216, 0.3);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.st-status {
+  margin-top: 8px;
+  font-style: italic;
+  color: var(--hud-accent);
+}
+
+.hud-settings {
+  font-size: 16px !important;
+}
+
+.ts-continue {
+  display: block;
+  width: 100%;
+  margin-bottom: 14px;
+  font: 18px Georgia, serif;
+  color: var(--hud-accent);
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-accent);
+  border-radius: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.ts-continue small {
+  display: block;
+  font-size: 12px;
+  color: var(--hud-fg);
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.ts-error {
+  color: #f0a28f;
+  font-style: italic;
+}
+
+/* Reduced motion (settings): calm every animation and transition. */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* ---- Narrow screens: stack the top HUD instead of overlapping it */
+@media (max-width: 1100px) {
+  .hud-fps {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .hud-new,
+  .hud-seed {
+    display: none;
+  }
+  .hud-view {
+    top: 52px;
+    gap: 6px;
+  }
+  .hud-view button {
+    padding: 4px 8px;
+  }
+  .hud-time {
+    top: 106px;
+  }
+  .beliefs-panel,
+  .settings-panel {
+    top: 158px;
+  }
+}

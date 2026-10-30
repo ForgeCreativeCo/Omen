@@ -12,7 +12,14 @@ import { WeatherFx } from './vfx/WeatherFx';
 import { MiracleFx } from './vfx/MiracleFx';
 import { WitnessLines } from './vfx/WitnessLines';
 
-const MAX_PIXEL_RATIO = 1.5;
+/** Pixel-ratio ceiling and shadow detail per graphics quality (settings). */
+export type Quality = 'low' | 'medium' | 'high';
+const QUALITY: Record<Quality, { maxRatio: number; shadows: number }> = {
+  low: { maxRatio: 0.75, shadows: 0 },
+  medium: { maxRatio: 1, shadows: 1024 },
+  high: { maxRatio: 1.5, shadows: 2048 },
+};
+const MAX_PIXEL_RATIO = QUALITY.high.maxRatio;
 const MIN_PIXEL_RATIO = 0.75;
 
 export interface RenderStats {
@@ -44,12 +51,22 @@ export class GameRenderer {
   pointerHook: PointerHook | null = null;
   private readonly world: Sim['world'];
   private floodPlane: THREE.Mesh | null = null;
+  /** No camera shake, softer lightning flashes (settings). */
+  reducedMotion = false;
   private guide: THREE.Group | null = null;
   private elapsed = 0;
   private pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
   private frameSamples = 0;
   private frameTimeSum = 0;
   readonly stats: RenderStats = { drawCalls: 0, triangles: 0, remeshed: 0, pixelRatio: this.pixelRatio };
+
+  /** Apply a graphics quality: resolution ceiling and sun shadows. */
+  setQuality(q: Quality): void {
+    const Q = QUALITY[q];
+    this.pixelRatio = Math.min(window.devicePixelRatio, Q.maxRatio);
+    this.env.setShadows(Q.shadows);
+    this.resize();
+  }
 
   /**
    * The Warning's opening vision: a ghost of the sea at the height it will reach,
@@ -231,7 +248,7 @@ export class GameRenderer {
     const yearFrac = ((cal.day % DAYS_PER_YEAR) + dayFrac) / DAYS_PER_YEAR;
 
     this.terrain.update();
-    const night = this.env.update(dayFrac, yearFrac, this.elapsed, dt, this.fx.overcast, this.fx.flash);
+    const night = this.env.update(dayFrac, yearFrac, this.elapsed, dt, this.fx.overcast, this.fx.flash * (this.reducedMotion ? 0.25 : 1));
     this.fx.update(sim, dt, this.elapsed, night);
     this.miracleFx.update(sim, dt, this.elapsed);
     this.witnessLines.update(sim, this.elapsed);
@@ -242,7 +259,7 @@ export class GameRenderer {
       const k = 1 + 0.25 * Math.sin(this.elapsed * 3);
       ring?.scale.set(k, 1, k);
     }
-    const shake = Math.max(this.fx.shake, this.miracleFx.shake);
+    const shake = this.reducedMotion ? 0 : Math.max(this.fx.shake, this.miracleFx.shake);
     if (shake > 0) {
       const s = shake * 0.35;
       this.camera.position.x += Math.sin(this.elapsed * 61) * s;
