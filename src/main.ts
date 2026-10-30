@@ -160,7 +160,7 @@ function frame(now: number): void {
   beliefs.update(dt);
   book.update(dt);
   if (goals) {
-    goals.covered = inspector.villagerId >= 0 || tutorial.running;
+    goals.covered = inspector.villagerId >= 0 || tutorial.running || miracles.armed !== null;
     goals.update(dt);
   }
   checkOutcome();

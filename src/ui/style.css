@@ -17,6 +17,11 @@ body {
   -webkit-user-select: none;
 }
 
+/* Panels set their own display; `hidden` must still win. */
+[hidden] {
+  display: none !important;
+}
+
 #app canvas {
   display: block;
 }
