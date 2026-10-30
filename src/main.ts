@@ -1,0 +1,23 @@
+import { Sim } from './sim/Sim';
+import { FixedLoop } from './loop';
+import { GameRenderer } from './render/GameRenderer';
+import { Hud } from './ui/Hud';
+
+const params = new URLSearchParams(location.search);
+const seed = params.get('seed') ?? 'omen';
+
+const sim = new Sim({ seed });
+const loop = new FixedLoop(sim);
+const renderer = new GameRenderer(document.getElementById('app')!);
+const hud = new Hud(document.getElementById('hud')!, loop);
+
+let last = performance.now();
+function frame(now: number): void {
+  const dt = (now - last) / 1000;
+  last = now;
+  const alpha = loop.advance(dt);
+  renderer.render(sim, alpha);
+  hud.update(sim, dt);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
