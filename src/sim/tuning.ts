@@ -25,8 +25,50 @@ export const TUNING = {
     sizeZ: 128,
     sizeY: 48,
     chunkSize: 16,
-    /** Max chunk re-meshes per rendered frame (SPEC §4). */
-    remeshBudgetPerFrame: 4,
+    /** Max chunk-column re-meshes per rendered frame (~3 ms each; SPEC §4). */
+    remeshBudgetPerFrame: 2,
+  },
+
+  /** Island generation (SPEC §4). Heights are in voxels; distances from island center. */
+  terrain: {
+    /** Topmost y filled with sea water. */
+    seaLevel: 14,
+    seaDepth: 4,
+    /** Valley floor height. Kept a few voxels above sea so a flood can cover it. */
+    valleyHeight: 17,
+    valleyNoise: 1.6,
+    /** Radius of the land (before coastline noise) and of the floating platform. */
+    landRadius: 43,
+    landRadiusNoise: 6,
+    coastWidth: 9,
+    platformRadius: 55,
+    platformRadiusNoise: 3,
+    /** Ridge: rises from ridgeStart to ridgeCrest (distance toward the ridge side). */
+    ridgeStart: 0,
+    ridgeCrest: 31,
+    ridgeHeight: 17,
+    ridgeNoise: 0.3,
+    /** Above valleyHeight + this, ridge tops turn to bare stone. */
+    rockLine: 13,
+    hillDistance: 23,
+    hillRadius: 12,
+    hillHeight: 8,
+    /** Max height for terrain so trees still fit under the world ceiling. */
+    maxGroundY: 38,
+    riverSourceDistance: 19,
+    riverWidthStart: 0.9,
+    riverWidthEnd: 1.9,
+    riverMeander: 3,
+    villageFlattenRadius: 7,
+    villageMinRiverDist: 5,
+    villageMaxRiverDist: 14,
+    /** Bottom y of the floating island's underside at its center. */
+    undersideBottom: 1,
+    forestThreshold: 0.15,
+    forestTreeChance: 0.14,
+    meadowTreeChance: 0.012,
+    treeSpacing: 3,
+    treeClearOfVillage: 11,
   },
 
   villagers: {

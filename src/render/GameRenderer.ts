@@ -1,91 +1,136 @@
 import * as THREE from 'three';
 import type { Sim } from '../sim/Sim';
-import { TICKS_PER_DAY } from '../sim/time';
+import { DAYS_PER_YEAR, TICKS_PER_DAY } from '../sim/time';
 import { TUNING } from '../sim/tuning';
+import { OrbitCamera } from './camera/OrbitCamera';
+import { TerrainRenderer } from './chunks/TerrainRenderer';
+import { Environment } from './Environment';
+import { PostFX } from './post/PostFX';
 
-const SKY_DAY = new THREE.Color(0xa9cfe6);
-const SKY_DUSK = new THREE.Color(0xe8a27c);
-const SKY_NIGHT = new THREE.Color(0x1b2440);
+const MAX_PIXEL_RATIO = 1.5;
+const MIN_PIXEL_RATIO = 0.75;
+
+export interface RenderStats {
+  drawCalls: number;
+  triangles: number;
+  remeshed: number;
+  pixelRatio: number;
+}
 
 /**
  * Reads sim state each frame and draws it. Never mutates the sim.
- * M0: a placeholder plinth plus a day/night sky so the loop is visibly alive.
  */
 export class GameRenderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
-  private readonly sun = new THREE.DirectionalLight(0xfff1dc, 2.2);
-  private readonly hemi = new THREE.HemisphereLight(0xcfe6ff, 0x6b5a45, 1.0);
-  private readonly sky = new THREE.Color();
+  readonly orbit: OrbitCamera;
+  readonly post: PostFX;
+  private readonly terrain: TerrainRenderer;
+  private readonly env = new Environment();
+  private elapsed = 0;
+  private pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+  private frameSamples = 0;
+  private frameTimeSum = 0;
+  readonly stats: RenderStats = { drawCalls: 0, triangles: 0, remeshed: 0, pixelRatio: this.pixelRatio };
 
-  constructor(container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  constructor(container: HTMLElement, sim: Sim) {
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);
 
-    const { sizeX, sizeZ } = TUNING.world;
-    this.camera = new THREE.PerspectiveCamera(30, 1, 1, 2000);
-    this.camera.position.set(sizeX * 1.4, sizeX * 1.1, sizeZ * 1.4);
-    this.camera.lookAt(0, 0, 0);
+    this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 2500);
+    this.scene.add(this.env.group);
 
-    this.scene.background = this.sky;
-    this.scene.add(this.hemi);
-    this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
-    const s = this.sun.shadow.camera;
-    s.left = s.bottom = -sizeX * 0.8;
-    s.right = s.top = sizeX * 0.8;
-    s.far = 600;
-    this.scene.add(this.sun);
+    this.terrain = new TerrainRenderer(sim.world, sim.seed);
+    this.terrain.buildAll();
+    this.scene.add(this.terrain.group);
 
-    this.addPlaceholderIsland();
+    const half = TUNING.world.sizeX / 2;
+    const ground = sim.island.ground;
+    const sizeX = TUNING.world.sizeX;
+    this.orbit = new OrbitCamera(this.camera, this.renderer.domElement, {
+      boundsRadius: half * 0.85,
+      minDistance: 14,
+      maxDistance: 340,
+      minPitch: 25,
+      maxPitch: 75,
+      groundHeightAt: (x, z) => {
+        // Scene → voxel coords; average a small area so the target glides over bumps.
+        let sum = 0;
+        let n = 0;
+        for (let dz = -4; dz <= 4; dz += 4)
+          for (let dx = -4; dx <= 4; dx += 4) {
+            const vx = Math.floor(x + half + dx);
+            const vz = Math.floor(z + half + dz);
+            if (vx < 0 || vz < 0 || vx >= sizeX || vz >= sizeX) continue;
+            const g = ground[vx + vz * sizeX] as number;
+            if (g < 0) continue;
+            sum += Math.max(g, TUNING.terrain.seaLevel) + 1;
+            n++;
+          }
+        return n ? sum / n : TUNING.terrain.seaLevel;
+      },
+    });
+    const v = sim.island.landmarks.villageSite;
+    this.orbit.focus((v.x - half) * 0.4, (v.z - half) * 0.4);
 
+    this.post = new PostFX(this.renderer, this.scene, this.camera);
     window.addEventListener('resize', () => this.resize());
     this.resize();
-  }
-
-  private addPlaceholderIsland(): void {
-    const { sizeX, sizeZ } = TUNING.world;
-    const top = new THREE.Mesh(
-      new THREE.BoxGeometry(sizeX * 0.7, 6, sizeZ * 0.7),
-      new THREE.MeshStandardMaterial({ color: 0x7fa65a, roughness: 0.9 }),
-    );
-    top.receiveShadow = top.castShadow = true;
-    const under = new THREE.Mesh(
-      new THREE.ConeGeometry(sizeX * 0.45, 40, 6),
-      new THREE.MeshStandardMaterial({ color: 0x8a6d50, roughness: 1, flatShading: true }),
-    );
-    under.rotation.x = Math.PI;
-    under.position.y = -23;
-    this.scene.add(top, under);
   }
 
   private resize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.setSize(w, h);
+    this.post.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
 
-  /** @param alpha interpolation between the last two sim ticks, 0..1 */
-  render(sim: Sim, alpha: number): void {
-    const dayFrac = (sim.calendar.dayFraction + alpha / TICKS_PER_DAY) % 1;
+  /**
+   * @param alpha interpolation between the last two sim ticks, 0..1
+   * @param dt real seconds since last frame
+   */
+  render(sim: Sim, alpha: number, dt: number): void {
+    this.elapsed += dt;
+    const cal = sim.calendar;
+    const dayFrac = (cal.dayFraction + alpha / TICKS_PER_DAY) % 1;
+    const yearFrac = ((cal.day % DAYS_PER_YEAR) + dayFrac) / DAYS_PER_YEAR;
 
-    // Sun travels east→west; height peaks at midday (dayFraction 0.5).
-    const angle = (dayFrac - 0.25) * Math.PI * 2;
-    const height = Math.sin(angle);
-    this.sun.position.set(Math.cos(angle) * 200, height * 200, 80);
-    const daylight = THREE.MathUtils.smoothstep(height, -0.15, 0.25);
-    this.sun.intensity = 2.2 * daylight;
-    this.hemi.intensity = 0.25 + 0.85 * daylight;
+    this.terrain.update();
+    this.env.update(dayFrac, yearFrac, this.elapsed, dt);
+    this.orbit.update(Math.min(dt, 0.1));
 
-    const duskness = 1 - Math.min(1, Math.abs(height) / 0.3);
-    this.sky.copy(SKY_NIGHT).lerp(SKY_DAY, daylight).lerp(SKY_DUSK, duskness * 0.6);
+    this.renderer.info.autoReset = false;
+    this.renderer.info.reset();
+    this.post.render(dt);
+    this.stats.drawCalls = this.renderer.info.render.calls;
+    this.stats.triangles = this.renderer.info.render.triangles;
+    this.stats.remeshed = this.terrain.lastRemeshed;
+    this.stats.pixelRatio = this.pixelRatio;
+    this.adaptResolution(dt);
+  }
 
-    this.renderer.render(this.scene, this.camera);
+  /**
+   * Fill rate is the bottleneck on integrated GPUs and tablets, so if frames run
+   * slow we step the pixel ratio down. It never steps back up within a session.
+   */
+  private adaptResolution(dt: number): void {
+    // Ignore hitches and throttled background tabs.
+    if (dt > 0.1) return;
+    this.frameSamples++;
+    this.frameTimeSum += dt;
+    if (this.frameSamples < 90) return;
+    const avg = this.frameTimeSum / this.frameSamples;
+    this.frameSamples = 0;
+    this.frameTimeSum = 0;
+    if (avg > 1 / 52 && this.pixelRatio > MIN_PIXEL_RATIO) {
+      this.pixelRatio = Math.max(MIN_PIXEL_RATIO, this.pixelRatio - 0.25);
+      this.resize();
+    }
   }
 }

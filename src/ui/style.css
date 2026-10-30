@@ -70,3 +70,34 @@ body {
   font-size: 12px;
   opacity: 0.8;
 }
+
+.hud-view {
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.hud-seed {
+  opacity: 0.75;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.hud-view button {
+  font: inherit;
+  color: var(--hud-fg);
+  background: transparent;
+  border: 1px solid rgba(243, 233, 216, 0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.hud-view button.active {
+  border-color: var(--hud-accent);
+  color: var(--hud-accent);
+}
