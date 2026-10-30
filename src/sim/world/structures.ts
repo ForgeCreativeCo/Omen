@@ -3,7 +3,7 @@ import { M } from './materials';
 import { LEGEND, prefabSize, type PrefabDef } from './prefabs';
 import type { VoxelWorld } from './VoxelWorld';
 
-export type StructureKind = 'hut' | 'field' | 'well' | 'firePit' | 'grave';
+export type StructureKind = 'hut' | 'field' | 'well' | 'firePit' | 'grave' | 'cairn';
 
 export interface BuildStep {
   x: number;

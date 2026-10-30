@@ -6,11 +6,11 @@ import { M, type MaterialId } from './materials';
  * layer index of the first map relative to the structure's base (first layer
  * above ground), so a well can sink into the ground with -1.
  *
- * Legend: P plank, T thatch, W wood, S stone, E ember, D dirt, A water,
+ * Legend: P plank, T thatch, W wood, S stone, E ember, D dirt, A water, H shrine-stone, K marker-stone,
  * '.' clear to air, ' ' leave untouched.
  */
 
-export type PrefabKind = 'hut' | 'well' | 'firePit' | 'grave';
+export type PrefabKind = 'hut' | 'well' | 'firePit' | 'grave' | 'cairn';
 
 export interface PrefabDef {
   kind: PrefabKind;
@@ -29,6 +29,8 @@ export const LEGEND: Record<string, MaterialId> = {
   E: M.EMBER,
   D: M.DIRT,
   A: M.WATER,
+  H: M.SHRINE_STONE,
+  K: M.MARKER_STONE,
   '.': M.AIR,
 };
 
@@ -86,6 +88,12 @@ export const PREFABS: readonly PrefabDef[] = [
       ['W.W', '...', 'W.W'],
       ['TTT', 'TTT', 'TTT'],
     ],
+  },
+  {
+    kind: 'cairn',
+    variant: 'stack',
+    yOffset: 0,
+    layers: [['.H.', 'HHH', '.H.'], ['...', '.H.', '...'], ['...', '.K.', '...']],
   },
   {
     kind: 'grave',

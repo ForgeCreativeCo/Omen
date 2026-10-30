@@ -117,7 +117,8 @@ export class Village {
   }
 
   usableHut(s: Structure): boolean {
-    return s.kind === 'hut' && s.complete && !s.destroyed;
+    // Huts on cursed ground are abandoned (SPEC §9).
+    return s.kind === 'hut' && s.complete && !s.destroyed && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2);
   }
 
   /** Beds in usable huts, or in every hut including ones being built or repaired. */
@@ -138,7 +139,7 @@ export class Village {
       for (let x = 0; x < W; x++) {
         const h = this.nav.at(x, z);
         let m = 0;
-        if (h >= 0 && this.regionAt(x, z) === region) {
+        if (h >= 0 && this.regionAt(x, z) === region && !this.forbidden(x, z)) {
           m = MASK_OK;
           if (this.clearAbove(x, z, h, 2)) {
             m |= MASK_CLEAR2;
@@ -311,10 +312,16 @@ export class Village {
     return Math.min(B.maxRadius, B.baseRadius + pop * B.radiusPerPerson);
   }
 
+  /** Ground the people won't build on (cursed); set by the sim. */
+  forbidden: (x: number, z: number) => boolean = () => false;
+  /** Where they'd rather live (a sacred place, weighted by belief); set by the sim. */
+  attraction: () => { x: number; z: number; strength: number } | null = () => null;
+
   /** Set by the sim each day; used for the planner's radius. */
   population = 0;
 
-  placePrefab(host: VillageHost, kind: PrefabKind, nearX: number, nearZ: number, instant: boolean): Structure | null {
+  /** Plan a prefab near a point. `nearOnly` limits the search to that radius (e.g. a cairn at a sacred spot). */
+  placePrefab(host: VillageHost, kind: PrefabKind, nearX: number, nearZ: number, instant: boolean, nearOnly?: number): Structure | null {
     const variants = prefabsOf(kind);
     const p = this.rng.pick(variants);
     // Rotation depends on where the site lands; try the rotation toward center for a provisional size.
@@ -323,17 +330,17 @@ export class Village {
       const clearance = kind === 'grave' ? 1 : 6;
       const accept = (x0: number, z0: number) => {
         const r = rotationToward(x0 + w / 2, z0 + d / 2, this.center.x + 0.5, this.center.z + 0.5);
-        return (r & 1) === rot || kind === 'firePit' || kind === 'well';
+        return (r & 1) === rot || kind === 'firePit' || kind === 'well' || kind === 'cairn';
       };
       // Prefer the compact village radius; spread out to the full radius when it's full.
       const site =
-        kind === 'firePit'
-          ? this.findSite(nearX, nearZ, w, d, 4, clearance, accept)
+        kind === 'firePit' || nearOnly !== undefined
+          ? this.findSite(nearX, nearZ, w, d, nearOnly ?? 4, clearance, accept)
           : (this.findSite(nearX, nearZ, w, d, this.maxRadius, clearance, accept) ??
             this.findSite(nearX, nearZ, w, d, B.maxRadius, clearance, accept));
       if (!site) continue;
       const finalRot =
-        kind === 'firePit' || kind === 'well' || kind === 'grave'
+        kind === 'firePit' || kind === 'well' || kind === 'grave' || kind === 'cairn'
           ? rot
           : rotationToward(site.x0 + w / 2, site.z0 + d / 2, this.center.x + 0.5, this.center.z + 0.5);
       const s = this.newStructure(kind, p.variant, host.tick);
@@ -422,7 +429,7 @@ export class Village {
   /** Cost of a build step in stores; null if free. */
   stepCost(mat: number): 'wood' | 'stone' | null {
     if (mat === M.PLANK || mat === M.THATCH || mat === M.WOOD) return 'wood';
-    if (mat === M.STONE) return 'stone';
+    if (mat === M.STONE || mat === M.SHRINE_STONE || mat === M.MARKER_STONE) return 'stone';
     return null;
   }
 
@@ -455,7 +462,9 @@ export class Village {
 
   /** Structures with blocks left to place, oldest first. */
   constructionSites(): Structure[] {
-    return this.structures.filter((s) => s.kind !== 'field' && s.kind !== 'grave' && !s.complete);
+    return this.structures.filter(
+      (s) => s.kind !== 'field' && s.kind !== 'grave' && !s.complete && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2),
+    );
   }
 
   // ---------------------------------------------------------------- farming
@@ -628,6 +637,16 @@ export class Village {
   // ---------------------------------------------------------------- graves
 
   private reserveGraveyard(): void {
+    // The dead are buried at a sacred place if there is one (SPEC §9).
+    const pull = this.attraction();
+    if (pull) {
+      const site = this.findSite(Math.round(pull.x), Math.round(pull.z), 5, 5, 10, 2);
+      if (site) {
+        this.graveyard = { x0: site.x0, z0: site.z0, w: 5, d: 5, used: 0 };
+        this.markOccupied(this.graveyard, GRAVEYARD);
+        return;
+      }
+    }
     const site = this.findSite(this.center.x, this.center.z, 5, 5, this.maxRadius + 6, 2, (x0, z0) => {
       const d = Math.hypot(x0 + 2.5 - this.center.x, z0 + 2.5 - this.center.z);
       return d >= 12;
@@ -683,7 +702,12 @@ export class Village {
     const hutsBuilding = sites.filter((s) => s.kind === 'hut').length;
     // Failed searches are expensive (the whole radius), so back off for a few days after one.
     if (this.bedCapacity(true) < pop + B.spareBeds && hutsBuilding < (pop > 40 ? 2 : 1) && host.tick >= this.retryHutAt) {
-      if (!this.placePrefab(host, 'hut', this.center.x, this.center.z, false)) this.retryHutAt = host.tick + SITE_RETRY_DAYS * TICKS_PER_DAY;
+      // New homes lean toward a sacred place, as far as belief pulls (SPEC §9).
+      const pull = this.attraction();
+      const k = pull ? Math.min(0.7, pull.strength) : 0;
+      const hx = Math.round(this.center.x + ((pull?.x ?? 0) - this.center.x) * k);
+      const hz = Math.round(this.center.z + ((pull?.z ?? 0) - this.center.z) * k);
+      if (!this.placePrefab(host, 'hut', hx, hz, false)) this.retryHutAt = host.tick + SITE_RETRY_DAYS * TICKS_PER_DAY;
     }
     const fields = this.fields;
     const fieldTarget = Math.ceil(pop * FARM.fieldsPerPerson) + 1;

@@ -1,4 +1,5 @@
 import type { DeathCause } from '../events';
+import type { OmenMemoryRecord } from '../omens/types';
 
 export type VillagerId = number;
 export type Sex = 'f' | 'm';
@@ -21,7 +22,13 @@ export type ActionKind =
   | 'forage'
   | 'build'
   | 'gathering'
-  | 'flee';
+  | 'flee'
+  /** Performing a believed ritual (dance, prayer) somewhere specific. */
+  | 'ritual'
+  | 'pilgrimage'
+  | 'offering'
+  /** Leaving the island for good (OUTCAST at full strength). */
+  | 'exile';
 
 export interface Action {
   kind: ActionKind;
@@ -36,17 +43,14 @@ export interface Action {
   structureId: number;
   tileIndex: number;
   treeIndex: number;
+  /** For rituals: the activity performed ('dance', 'pray'...). */
+  ritual?: string;
 }
 
 /** A dream the god sent (SPEC §6); interpreted in M4. */
 export interface DreamRecord {
   tick: number;
   symbols: string[];
-}
-
-/** Placeholder for M4: a villager's personal copy of an omen. */
-export interface OmenMemory {
-  omenId: string;
 }
 
 export interface Villager {
@@ -66,7 +70,9 @@ export interface Villager {
   partnerId: VillagerId;
   parentIds: VillagerId[];
   childIds: VillagerId[];
-  memories: OmenMemory[];
+  memories: OmenMemoryRecord[];
+  /** Social standing 0..1: taboo-breaking and being outcast lower it. */
+  standing: number;
   beliefStrengths: Map<string, number>;
   dreams: DreamRecord[];
 

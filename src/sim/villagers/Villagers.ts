@@ -33,6 +33,8 @@ export class Villagers {
   readonly all: Villager[] = [];
   alive: Villager[] = [];
   private readonly byIdMap = new Map<VillagerId, Villager>();
+  /** No new ritual for this villager before this tick. */
+  private readonly ritualRest = new Map<VillagerId, number>();
   readonly pathfinder: Pathfinder;
   private nextId = 1;
   private pathBudget = 0;
@@ -79,6 +81,7 @@ export class Villagers {
       parentIds: opts.parents ?? [],
       childIds: [],
       memories: [],
+      standing: 1,
       beliefStrengths: new Map(),
       dreams: [],
       alive: true,
@@ -209,9 +212,18 @@ export class Villagers {
     const shortOfFood = store.food / Math.max(1, this.alive.length) < WK.forageBelowFoodPerCapita * 0.5;
     if (workTime && (v.lifeStage !== 'child' || (shortOfFood && v.age >= WK.childForageAge))) consider('farm', 0.8);
 
-    // Keep doing the same kind of thing rather than re-planning; finish deliveries and escapes.
+    // Keep doing the same kind of thing rather than re-planning; finish deliveries, escapes and rites.
     const cur = v.action?.kind;
-    if (cur === 'flee' || v.action?.phase === 'deliver') return;
+    if (cur === 'flee' || cur === 'exile' || cur === 'ritual' || cur === 'pilgrimage' || v.action?.phase === 'deliver') return;
+
+    // Beliefs (SPEC §9): perform a ritual when the village wants what it brings, or at a festival.
+    if ((workTime || gatherTime) && v.lifeStage !== 'child' && (this.ritualRest.get(v.id) ?? 0) <= sim.tick && best !== 'eat') {
+      const plan = sim.effects.ritualFor(v, gatherTime);
+      if (plan) {
+        this.startRitual(v, plan.activity === 'gather' ? 'pray' : plan.activity, plan.x, plan.z, plan.belief.id);
+        return;
+      }
+    }
     if (cur && (cur === best || (best === 'farm' && WORK_KINDS.has(cur)))) {
       this.scheduleWindowEnd(v, f, night);
       return;
@@ -290,7 +302,9 @@ export class Villagers {
   private gatheringAction(v: Villager): Action {
     const c = this.sim.village.center;
     if (v.role === 'priest') return this.make('gathering', c.x, c.z, true, Infinity);
-    const a = this.ringCell(v, 2, 4);
+    // Outcasts keep to the edge of the firelight.
+    const outcast = this.sim.effects.outcastIds().has(v.id);
+    const a = outcast ? this.ringCell(v, 6, 8) : this.ringCell(v, 2, 4);
     return this.make('gathering', a?.x ?? c.x, a?.z ?? c.z, a === null, Infinity);
   }
 
@@ -308,6 +322,13 @@ export class Villagers {
   }
 
   private wanderAction(v: Villager): Action {
+    // Idle time is when people visit holy ground.
+    const holy = v.lifeStage !== 'child' ? this.sim.effects.pilgrimageFor(v) : null;
+    if (holy) {
+      const a = this.make('pilgrimage', holy.x, holy.z, false, 30);
+      a.ritual = 'pray';
+      return a;
+    }
     const h = this.home(v);
     const ax = h ? h.door.x : this.sim.village.center.x;
     const az = h ? h.door.z : this.sim.village.center.z;
@@ -346,8 +367,10 @@ export class Villagers {
             : ['farmer', 'gatherer'];
     const store = this.sim.village.store;
     const foodPerHead = store.food / Math.max(1, this.alive.length);
-    // When food is short, everyone forages first, except farmers with a harvest waiting.
-    if (foodPerHead < WK.forageBelowFoodPerCapita * 0.5) {
+    // When food is short (or a portent says hard times are coming), everyone forages first,
+    // except farmers with a harvest waiting.
+    const hoarding = this.sim.tick < this.sim.effects.prepareUntil && v.role === 'gatherer';
+    if (foodPerHead < WK.forageBelowFoodPerCapita * 0.5 || hoarding) {
       const harvestWaiting = v.role === 'farmer' && this.sim.village.fields.some((f) => f.tiles.some((t) => t.reservedBy === -1 && t.state === 2 && t.progress >= 1));
       if (!harvestWaiting || v.lifeStage === 'child') {
         const a = this.forageJob(v);
@@ -355,6 +378,10 @@ export class Villagers {
       }
     }
     for (const r of order) {
+      // A taboo on the work itself makes people shy away from it (never entirely: they must eat).
+      const activity = r === 'farmer' ? 'activity:farming' : r === 'builder' ? 'activity:building' : 'activity:woodcutting';
+      const taboo = this.sim.effects.taboo(activity);
+      if (taboo > 0 && this.rng.chance(Math.min(0.8, taboo))) continue;
       const a =
         r === 'farmer' ? this.farmJob(v) : r === 'builder' ? this.buildJob(v) : this.gatherJob(v, foodPerHead);
       if (a) return a;
@@ -371,7 +398,7 @@ export class Villagers {
       const d0 = Math.abs(f.x0 - v.x) + Math.abs(f.z0 - v.z);
       if (d0 > bestD + 8) continue;
       f.tiles.forEach((t, i) => {
-        if (t.reservedBy !== -1) return;
+        if (t.reservedBy !== -1 || this.sim.effects.isCursed(t.x, t.z)) return;
         const work = village.tileWork(t, season);
         if (!work) return;
         // Harvest first, then till, then plant.
@@ -398,7 +425,7 @@ export class Villagers {
       const next = s.steps[s.next];
       const cost = next ? village.stepCost(next.mat) : null;
       if (cost && village.store[cost] < 1) continue;
-      const cells = village.accessCells(s);
+      const cells = village.accessCells(s).filter((c) => !this.sim.effects.isCursed(c.x, c.z));
       if (!cells.length) continue;
       let cell = cells[0]!;
       let bd = Infinity;
@@ -439,7 +466,7 @@ export class Villagers {
     const c = this.sim.village.center;
     for (let i = 0; i < trees.length; i++) {
       const t = trees[i]!;
-      if (!t.alive || (reserve && t.reservedBy !== -1)) continue;
+      if (!t.alive || (reserve && t.reservedBy !== -1) || this.sim.effects.isCursed(t.x, t.z)) continue;
       if (!this.sim.village.reachable(Math.floor(v.x), Math.floor(v.z), t.x, t.z, true)) continue;
       // Favor trees near both the worker and the village store.
       const d = Math.hypot(t.x - v.x, t.z - v.z) + 0.5 * Math.hypot(t.x - c.x, t.z - c.z);
@@ -565,6 +592,23 @@ export class Villagers {
       case 'idle':
         if (--a.workLeft <= 0 && a.kind === 'idle') this.setAction(v, null);
         return;
+      case 'ritual':
+      case 'pilgrimage': {
+        if (a.workLeft === TUNING.belief.ritualTicks || a.workLeft === 30) {
+          sim.events.push(sim.tick, { type: 'ritual', beliefId: '', activity: a.ritual ?? 'pray', x: a.tx, z: a.tz });
+        }
+        if (--a.workLeft > 0) return;
+        // The rite is done: now the god is expected to answer (SPEC §8 step 5).
+        const act = a.kind === 'pilgrimage' ? 'activity:pilgrimage' : a.ritual === 'pray' ? 'activity:praying' : `activity:${a.ritual ?? 'dance'}`;
+        sim.belief.notePerformance(act);
+        this.ritualRest.set(v.id, sim.tick + TICKS_PER_DAY / 2);
+        this.setAction(v, null);
+        v.nextThink = sim.tick;
+        return;
+      }
+      case 'exile':
+        this.remove(v);
+        return;
       case 'wander':
         if (--a.workLeft <= 0) this.setAction(v, null);
         return;
@@ -605,7 +649,7 @@ export class Villagers {
           let next = -1;
           let nd = Infinity;
           f.tiles.forEach((o, i) => {
-            if (o.reservedBy !== -1 || !village.tileWork(o, sim.seasonIndex)) return;
+            if (o.reservedBy !== -1 || !village.tileWork(o, sim.seasonIndex) || sim.effects.isCursed(o.x, o.z)) return;
             const d = Math.abs(o.x - t.x) + Math.abs(o.z - t.z);
             if (d < nd) {
               nd = d;
@@ -662,6 +706,35 @@ export class Villagers {
       default:
         return;
     }
+  }
+
+  /** Go and perform a rite (dance, prayer) at a spot. */
+  startRitual(v: Villager, activity: string, x: number, z: number, _beliefId: string | null): void {
+    const a = this.make('ritual', x, z, false, TUNING.belief.ritualTicks);
+    a.ritual = activity;
+    this.setAction(v, a);
+    v.nextThink = this.sim.tick + TUNING.belief.ritualTicks * 3;
+  }
+
+  /** Send someone away for good: they walk to the shore and are gone (SPEC §9 OUTCAST). */
+  exile(v: Villager): void {
+    const L = this.sim.island.landmarks;
+    const shore = this.sim.village.nearestWalkable(Math.round(L.riverMouth.x), Math.round(L.riverMouth.z)) ?? { x: Math.floor(v.x), z: Math.floor(v.z) };
+    this.setAction(v, this.make('exile', shore.x, shore.z, true, 1));
+  }
+
+  /** Leave the village without dying (exile). */
+  private remove(v: Villager): void {
+    this.release(v);
+    v.alive = false;
+    v.deathTick = this.sim.tick;
+    v.deathCause = 'exiled';
+    v.action = null;
+    const partner = this.byId(v.partnerId);
+    if (partner) partner.partnerId = -1;
+    const home = v.homeId >= 0 ? this.sim.village.byId(v.homeId) : undefined;
+    if (home) home.residents = home.residents.filter((id) => id !== v.id);
+    this.sim.events.push(this.sim.tick, { type: 'exiled', id: v.id });
   }
 
   private startDelivery(v: Villager, a: Action, kind: 'wood' | 'stone' | 'food', amount: number): void {
@@ -725,12 +798,22 @@ export class Villagers {
     const village = this.sim.village;
     let priest = this.alive.find((v) => v.role === 'priest');
     if (!priest) {
+      // Succession: someone the god is believed to favor, else the most devout, else the eldest.
+      const chosen = this.sim.belief.chosenIds();
+      const outcast = this.sim.effects.outcastIds();
       const candidates = this.alive
-        .filter((v) => v.lifeStage !== 'child')
-        .sort((a, b) => Number(b.traits.includes('devout')) - Number(a.traits.includes('devout')) || b.age - a.age || a.id - b.id);
+        .filter((v) => v.lifeStage !== 'child' && !outcast.has(v.id))
+        .sort(
+          (a, b) =>
+            Number(chosen.has(b.id)) - Number(chosen.has(a.id)) ||
+            Number(b.traits.includes('devout')) - Number(a.traits.includes('devout')) ||
+            b.age - a.age ||
+            a.id - b.id,
+        );
       priest = candidates[0];
       if (priest) priest.role = 'priest';
     }
+    if (priest?.id !== this.sim.belief.priestId) this.sim.belief.setPriest(priest);
     const adults = this.alive.filter((v) => v.lifeStage === 'adult' && v.role !== 'priest').sort((a, b) => a.id - b.id);
     const sites = village.constructionSites().length;
     const tiles = village.fields.reduce((n, f) => n + f.tiles.length, 0);
@@ -785,6 +868,7 @@ export class Villagers {
       const child = this.spawn({ age: 0, x: cell.x, z: cell.z, parents: [mother.id, father.id] });
       if (home) this.moveHome(child, home);
       freeBeds--;
+      this.sim.belief.inherit(child);
       this.sim.events.push(this.sim.tick, { type: 'birth', id: child.id, parents: [mother.id, father.id] });
     }
   }

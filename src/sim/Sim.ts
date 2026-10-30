@@ -1,4 +1,7 @@
+import { BeliefSystem } from './belief/BeliefSystem';
+import { BeliefEffects } from './belief/effects';
 import { EventLog, type DeathCause } from './events';
+import { OmenRecorder } from './omens/OmenRecorder';
 import { Miracles, type CastFailure, type Command } from './miracles/Miracles';
 import { Rng } from './rng';
 import { calendarAt, SEASONS, TICKS_PER_DAY, type Calendar } from './time';
@@ -55,6 +58,9 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly village: Village;
   readonly villagers: Villagers;
   readonly miracles: Miracles;
+  readonly belief: BeliefSystem;
+  readonly effects: BeliefEffects;
+  private readonly recorder: OmenRecorder;
   readonly mode: GameMode;
   /** Every command applied, in order (SPEC §0 determinism). */
   readonly inputLog: LoggedCommand[] = [];
@@ -80,6 +86,11 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     );
     this.villagers = new Villagers(this, this.rng.fork('villagers'));
     this.miracles = new Miracles(this, this.rng.fork('miracles'));
+    this.belief = new BeliefSystem(this, this.rng.fork('belief'));
+    this.effects = new BeliefEffects(this, this.rng.fork('effects'));
+    this.recorder = new OmenRecorder(this, this.rng.fork('omens'));
+    this.village.forbidden = (x, z) => this.effects.isCursed(x, z);
+    this.village.attraction = () => this.effects.sacredArea();
     this.mode = opts.mode ?? 'sandbox';
     if (!opts.noVillage) this.found();
   }
@@ -146,6 +157,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
 
   /** Advance exactly one fixed tick. */
   step(): void {
+    const prevFrac = this.cal.dayFraction;
     this.tick++;
     this.cal = calendarAt(this.tick);
     const newDay = this.tick % TICKS_PER_DAY === 0;
@@ -166,9 +178,17 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.fire.step(this);
     this.village.growCrops(this);
     this.villagers.step();
+    this.recorder.step();
+    this.effects.step();
+
+    // Late in the evening gathering, people talk: beliefs spread around the fire.
+    const duskMark = TUNING.villagers.gatheringEndsAt - 0.04;
+    if (prevFrac < duskMark && this.cal.dayFraction >= duskMark) this.effects.dusk();
 
     if (newDay) {
       this.villagers.newDay();
+      this.belief.newDay();
+      this.effects.dawn();
       this.village.population = this.villagers.alive.length;
       this.village.inspect(this);
       this.village.plan(this);

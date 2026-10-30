@@ -264,6 +264,57 @@ export const TUNING = {
     secondAttributionMargin: 0.15,
     /** Window (in in-game days) for a believed response to count as confirmation. */
     confirmationWindowDays: 1,
+
+    // ---- Interpretation (SPEC §8)
+    /** Personal belief gain per witnessed attribution, before modifiers. */
+    formationRate: 0.5,
+    /** Weight of a secondary attribution relative to the main one. */
+    secondaryWeight: 0.6,
+    /** Below this top salience nothing stood out: harm reads as hunger (OFFERING), help as temperament. */
+    minSalience: 0.12,
+    salienceNoise: 0.03,
+    /** proximityFalloff = 1 / (1 + (d / proximityScale)²). */
+    proximityScale: 7,
+    /** recencyFalloff = exp(-recency / (recencyDays × ticksPerDay)) for deeds and events. */
+    recencyDays: 0.8,
+    /** novelty = 1 / (1 + timesSeen × noveltyDecay), never below noveltyFloor. */
+    noveltyDecay: 0.18,
+    noveltyFloor: 0.12,
+    /** Context is gathered within this many voxels of the omen. */
+    contextRadius: 11,
+    traitDevout: 1.4,
+    traitSkeptic: 0.6,
+    traitFearfulHarm: 1.3,
+    /** Personal strengths fade by this fraction per day (×trait modifiers). */
+    decayPerDay: 0.012,
+    skepticDecay: 2,
+    devoutDecay: 0.5,
+    /** Evening telling at the fire: listeners gain this × teller strength. */
+    spreadRate: 0.12,
+    /** Children inherit doctrine at this fraction of their parents' / priest's strength. */
+    inheritance: 0.5,
+    /** Faith change per witnessed omen = valence × magnitude × this. */
+    faithPerOmen: 0.12,
+    /** History points kept per belief (one per day). */
+    historyLength: 120,
+
+    // ---- Behavior (SPEC §9)
+    cursedPathCost: 12,
+    cursedMarkerCount: 6,
+    sacredCairnAt: 0.45,
+    pilgrimageChance: 0.15,
+    outcastExileAt: 0.6,
+    /** Food offered per person per day at full OFFERING strength. */
+    offeringPerCapita: 0.25,
+    offeringEscalation: 1.5,
+    ritualTicks: 40,
+    /** Doctrine rituals are held as festivals every this many days. */
+    festivalEveryDays: 3,
+    /** Base daily chance of a theft per adult (more when hungry, less under taboo). */
+    theftChancePerDay: 0.006,
+    fightChancePerDay: 0.004,
+    /** Chance per gathering that someone dances when the village is content. */
+    spontaneousDance: 0.25,
   },
 
   rumor: {

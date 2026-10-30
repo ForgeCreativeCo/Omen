@@ -3,7 +3,7 @@
  * and toasts; M4's omen recorder will turn many of them into omens.
  */
 
-export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood';
+export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled';
 
 export type SimEventBody =
   | { type: 'rainStart'; storm: boolean; divine: boolean }
@@ -26,6 +26,12 @@ export type SimEventBody =
   | { type: 'earthShaped'; x: number; z: number; radius: number; raise: boolean; columns: number; shaken: number }
   | { type: 'bloom'; x: number; z: number; radius: number; crops: number; flowers: number }
   | { type: 'dream'; villagerId: number; symbols: string[] }
+  | { type: 'omen'; omenId: string }
+  | { type: 'beliefLevel'; beliefId: string; level: 'behavior' | 'doctrine' | 'died' }
+  | { type: 'priest'; id: number; personality: string }
+  | { type: 'exiled'; id: number }
+  | { type: 'prophecy'; beliefId: string; good: boolean }
+  | { type: 'ritual'; beliefId: string; activity: string; x: number; z: number }
   | { type: 'fireStarted'; x: number; y: number; z: number }
   | { type: 'birth'; id: number; parents: number[] }
   | { type: 'death'; id: number; cause: DeathCause; x: number; z: number }
