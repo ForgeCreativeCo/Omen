@@ -88,14 +88,21 @@ export interface Omen {
   symbols?: string[];
 }
 
-/** A villager's own copy of an omen, as they understood it (can drift in M5). */
+/** A villager's own copy of an omen, as they understood it. Retelling mutates it (SPEC §12). */
 export interface OmenMemoryRecord {
   omenId: string;
   tick: number;
   kind: OmenKind;
   /** The feature they blamed / credited, or '' if nothing stood out. */
   cause: string;
+  /** Where they think it happened ('' once the detail is lost). */
+  place: string;
   valence: number;
+  /** Grows with each retelling, so it can exceed 1. */
   magnitude: number;
   hearsay: boolean;
+  /** How many tellings away from a witness (0 = saw it). */
+  retold: number;
+  /** Already passed on at the fire (each memory is told once per teller). */
+  told?: boolean;
 }

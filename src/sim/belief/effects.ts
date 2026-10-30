@@ -218,12 +218,34 @@ export class BeliefEffects {
     }
   }
 
-  /** Sacred places get a cairn once belief is strong enough (built by the villagers). */
+  /** Sacred places grow cairn → shrine → temple as belief and the village grow (SPEC §11). */
   private sacredWorks(): void {
+    const sim = this.sim;
+    const pop = sim.villagers.alive.length;
     for (const b of this.b.active('SACRED_PLACE', T.sacredCairnAt)) {
-      if (b.marked || !b.area) continue;
-      const s = this.sim.village.placePrefab(this.sim, 'cairn', Math.round(b.area.x), Math.round(b.area.z), false, 6);
-      if (s) b.marked = true;
+      if (!b.area) continue;
+      if (b.workId !== undefined) {
+        const last = sim.village.byId(b.workId);
+        if (!last) {
+          // The builders gave up on it: try that stage again.
+          b.works--;
+          b.workId = undefined;
+        } else if (!last.complete) continue;
+      }
+      const next =
+        b.works === 0
+          ? 'cairn'
+          : b.works === 1 && b.strength >= T.sacredShrineAt && pop >= T.shrinePopulation
+            ? 'shrine'
+            : b.works === 2 && b.strength >= T.sacredTempleAt && pop >= T.templePopulation
+              ? 'temple'
+              : null;
+      if (!next) continue;
+      const s = sim.village.placePrefab(sim, next, Math.round(b.area.x), Math.round(b.area.z), false, next === 'cairn' ? 6 : 10);
+      if (s) {
+        b.works++;
+        b.workId = s.id;
+      }
     }
   }
 
@@ -253,7 +275,9 @@ export class BeliefEffects {
 
     // Offerings: food left at the fire for a god that must be fed.
     for (const b of this.b.active('OFFERING')) {
-      const amount = b.strength * sim.villagers.alive.length * T.offeringPerCapita * b.escalation;
+      // Nobody gives away the last of the grain: offerings come out of the surplus.
+      const surplus = sim.village.store.food - sim.villagers.alive.length * T.offeringReservePerCapita;
+      const amount = Math.min(b.strength * sim.villagers.alive.length * T.offeringPerCapita * b.escalation, Math.max(0, surplus) * T.offeringSurplusShare);
       if (amount <= 0) continue;
       sim.village.store.food = Math.max(0, sim.village.store.food - amount);
       this.b.lastOfferingTick = sim.tick;
@@ -261,6 +285,7 @@ export class BeliefEffects {
     }
 
     this.deeds(present);
+    this.b.tellRumors(present);
     this.b.spreadAtGathering(present);
   }
 

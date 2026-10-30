@@ -1,14 +1,15 @@
 import { DeedLog, featureLabel } from '../omens/context';
-import type { Omen, OmenMemoryRecord } from '../omens/types';
+import type { FeatureCategory, Omen, OmenMemoryRecord } from '../omens/types';
 import { responseOf } from '../omens/types';
 import type { Rng } from '../rng';
 import type { Sim } from '../Sim';
-import { TICKS_PER_DAY } from '../time';
+import { TICKS_PER_DAY, TICKS_PER_YEAR } from '../time';
 import { TUNING } from '../tuning';
 import type { Villager, VillagerId } from '../villagers/types';
 import {
   BELIEF_TYPES,
   DEPICTION_FROM_OMEN,
+  DEPICTION_WEIGHT,
   DEPICTION_WORDS,
   PERSONALITIES,
   PRIEST_BIAS,
@@ -17,7 +18,7 @@ import {
   type PriestBias,
   type PriestPersonality,
 } from './catalog';
-import { attribute, salience, valenceFor, type Attribution, type SalienceRow, type WrongDoing } from './interpret';
+import { attribute, readingOf, salience, valenceFor, type Attribution, type SalienceRow, type WrongDoing } from './interpret';
 
 const T = TUNING.belief;
 
@@ -54,8 +55,17 @@ export interface Belief {
   escalation: number;
   /** Highest threshold announced: 0 none, 1 drives behavior, 2 doctrine. */
   level: number;
-  /** One-off world changes already made (markers, cairn). */
+  /** One-off world changes already made (marker-stones). */
   marked: boolean;
+  /** Sacred works raised so far: 0 none, 1 cairn, 2 shrine, 3 temple. */
+  works: number;
+  /** The latest of those works (a structure id). */
+  workId?: number;
+  /** Everyone who saw one of its origin omens; when all are dead it becomes tradition. */
+  witnesses: VillagerId[];
+  /** Belief gained by seeing for oneself vs. from retold stories (for drift). */
+  seen: number;
+  heard: number;
   /** Daily strength samples for the God's Eye graph. */
   history: number[];
 }
@@ -74,6 +84,19 @@ interface Expectation {
   beliefId: string;
   until: number;
 }
+
+/** Plausible stand-ins when a retelling swaps a detail (SPEC §12). */
+const SWAP_FALLBACK: Record<string, string[]> = {
+  activity: ['activity:dance', 'activity:farming', 'activity:gathering', 'activity:praying', 'activity:woodcutting', 'activity:building'],
+  place: ['place:eastHill', 'place:ridge', 'place:river', 'place:well', 'place:fields', 'place:fire', 'place:coast'],
+  deed: ['deed:theft', 'deed:fight'],
+  time: ['time:dawn', 'time:dusk', 'time:night', 'time:fullMoon'],
+  event: ['event:birth', 'event:death'],
+  condition: ['condition:drought', 'condition:storm'],
+};
+
+/** Belief types a retold story can found (attitudes come from witnessing only). */
+const ATTRIBUTION_OK = new Set<BeliefType>(['RITUAL', 'TABOO_ACT', 'SACRED_PLACE', 'CURSED_PLACE', 'CHOSEN_ONE', 'OUTCAST', 'PORTENT']);
 
 const PLACE_AREA: Record<string, number> = {
   'place:eastHill': TUNING.terrain.hillRadius * 0.75,
@@ -125,9 +148,13 @@ export class BeliefSystem {
     return out;
   }
 
-  /** Named places from M5's sacred geography; none yet. */
-  placeName(_key: string): string | undefined {
-    return undefined;
+  /** Names the people gave places (SPEC §11). */
+  placeName(key: string): string | undefined {
+    return this.sim.myth?.places.name(key);
+  }
+
+  omen(id: string): Omen | undefined {
+    return this.omens.find((o) => o.id === id);
   }
 
   nextOmenId(): string {
@@ -169,7 +196,7 @@ export class BeliefSystem {
 
   // ------------------------------------------------------------------ helpers
 
-  private ensure(type: BeliefType, subject: string, response: string | undefined, omen: Omen | null): Belief {
+  private ensure(type: BeliefType, subject: string, response: string | undefined, omen: Omen | null, areaOmen: Omen | null = omen): Belief {
     const k = this.key(type, subject, response);
     let b = this.beliefs.get(k);
     if (!b) {
@@ -190,13 +217,20 @@ export class BeliefSystem {
         escalation: 1,
         level: 0,
         marked: false,
+        works: 0,
+        witnesses: [],
+        seen: 0,
+        heard: 0,
         history: [],
       };
       if (type === 'DEPICTION') b.traits = {};
-      if (type === 'CURSED_PLACE' || type === 'SACRED_PLACE') b.area = this.areaFor(subject, omen);
+      if (type === 'CURSED_PLACE' || type === 'SACRED_PLACE') b.area = this.areaFor(subject, areaOmen);
       this.beliefs.set(k, b);
     }
-    if (omen && !b.originOmenIds.includes(omen.id) && b.originOmenIds.length < 8) b.originOmenIds.push(omen.id);
+    if (omen && !b.originOmenIds.includes(omen.id) && b.originOmenIds.length < 8) {
+      b.originOmenIds.push(omen.id);
+      for (const id of omen.witnesses) if (!b.witnesses.includes(id) && b.witnesses.length < 80) b.witnesses.push(id);
+    }
     return b;
   }
 
@@ -207,7 +241,7 @@ export class BeliefSystem {
     const r = PLACE_AREA[subject];
     if (subject === 'place:eastHill') return { x: L.eastHill.x, z: L.eastHill.z, r: r! };
     if (subject === 'place:fire') return { x: sim.village.center.x, z: sim.village.center.z, r: r! };
-    if (subject === 'place:well' || subject.startsWith('place:hut:') || subject.startsWith('place:cairn:')) {
+    if (subject === 'place:well' || /^place:(hut|cairn|shrine|temple|statue):/.test(subject)) {
       const s = subject === 'place:well' ? sim.village.structures.find((x) => x.kind === 'well') : sim.village.byId(Number(subject.split(':')[2]));
       if (s) return { x: s.x0 + s.w / 2, z: s.z0 + s.d / 2, r: r ?? 4 };
     }
@@ -216,6 +250,17 @@ export class BeliefSystem {
       return { x: g.x0 + g.w / 2, z: g.z0 + g.d / 2, r: 5 };
     }
     if (subject === 'place:ridge' && !omen) return { x: L.ridgePeak.x, z: L.ridgePeak.z, r: 10 };
+    const site = sim.myth?.places.site(subject);
+    if (site) return { x: site.x, z: site.z, r: site.r };
+    if (!omen && subject === 'place:fields' && sim.village.fields[0]) {
+      const f = sim.village.fields[0];
+      return { x: f.x0 + f.w / 2, z: f.z0 + f.d / 2, r: 6 };
+    }
+    if (!omen && subject === 'place:river') {
+      const c = sim.village.center;
+      const p = [...L.riverPath].sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z))[0];
+      if (p) return { x: p.x, z: p.z, r: 6 };
+    }
     return { x: omen?.position.x ?? sim.village.center.x, z: omen?.position.z ?? sim.village.center.z, r: 7 };
   }
 
@@ -296,7 +341,9 @@ export class BeliefSystem {
         if (a.type === 'RITUAL' && !b.place) b.place = this.ritualPlace(omen);
         // The priest's favorite readings take hold faster; vivid harm or help, more strongly.
         const preferred = bias.prefers.includes(a.type) ? 1.3 : 1;
-        this.gain(b, w, T.formationRate * a.confidence * mag * tf * a.weight * preferred * Math.min(1.4, Math.abs(val) * 1.5 + 0.3));
+        const amount = T.formationRate * a.confidence * mag * tf * a.weight * preferred * Math.min(1.4, Math.abs(val) * 1.5 + 0.3);
+        this.gain(b, w, amount);
+        b.seen += amount;
         b.valence = b.valence * 0.8 + (good ? 1 : -1) * 0.2;
         readings.set(b.id, (readings.get(b.id) ?? 0) + 1);
       }
@@ -379,7 +426,7 @@ export class BeliefSystem {
     const traits = DEPICTION_FROM_OMEN[kind];
     if (!traits) return;
     const b = this.ensure('DEPICTION', 'god', undefined, null);
-    const mystic = this.personality === 'mystic' ? 1.6 : 1;
+    const mystic = (this.personality === 'mystic' ? 1.6 : 1) * (DEPICTION_WEIGHT[kind] ?? 1);
     for (const [axis, t] of traits) b.traits![`${axis}:${t}`] = (b.traits![`${axis}:${t}`] ?? 0) + mag * mystic * 0.1;
     this.gain(b, w, 0.05 * mag * mystic);
   }
@@ -392,9 +439,19 @@ export class BeliefSystem {
   }
 
   remember(w: Villager, omen: Omen, cause: string, valence: number, hearsay: boolean): void {
-    const m: OmenMemoryRecord = { omenId: omen.id, tick: omen.tick, kind: omen.kind, cause, valence, magnitude: omen.magnitude, hearsay };
+    const place = omen.kind === 'dream' ? '' : this.placeOf(omen);
+    this.store(w, { omenId: omen.id, tick: omen.tick, kind: omen.kind, cause, place, valence, magnitude: omen.magnitude, hearsay, retold: 0 });
+  }
+
+  private store(w: Villager, m: OmenMemoryRecord): void {
     w.memories.push(m);
     if (w.memories.length > 24) w.memories.shift();
+  }
+
+  /** The nearest named place in an omen's context, or ''. */
+  placeOf(omen: Omen): string {
+    const places = omen.context.filter((f) => f.category === 'place' && f.key !== 'place:valley' && !f.key.startsWith('place:hut:')).sort((a, b) => a.distance - b.distance);
+    return places[0] && places[0].distance <= 4 ? places[0].key : '';
   }
 
   /** Form or reinforce a belief for one villager directly (dreams, teaching). */
@@ -471,6 +528,77 @@ export class BeliefSystem {
     }
   }
 
+  // ------------------------------------------------------------------ rumor (SPEC §12)
+
+  /**
+   * At the fire, people retell what they remember. Each retelling can grow the omen,
+   * swap a detail for a plausible one, or lose where it happened; listeners who
+   * weren't there form beliefs from the story as they heard it, at hearsay weight.
+   */
+  tellRumors(present: Villager[]): void {
+    const R = TUNING.rumor;
+    if (present.length < 2) return;
+    const outcast = new Set(this.active('OUTCAST').map((b) => Number(b.subject.slice(7))));
+    const tick = this.sim.tick;
+    // Decide what everyone will tell before anyone hears anything: a story moves one
+    // listener further per evening, not across the whole village in one night.
+    const tellings: [Villager, OmenMemoryRecord][] = [];
+    for (const teller of present) {
+      if (outcast.has(teller.id) || teller.lifeStage === 'child') continue;
+      const stories = teller.memories
+        .filter((m) => !m.told && m.kind !== 'dream' && m.cause && tick - m.tick < R.maxAgeDays * TICKS_PER_DAY && Math.min(1, m.magnitude) * Math.abs(m.valence) >= R.minInterest)
+        .slice(-(teller.traits.includes('gossip') ? 2 : 1));
+      for (const m of stories) tellings.push([teller, m]);
+    }
+    for (const [teller, m] of tellings) {
+      const gossip = teller.traits.includes('gossip');
+      m.told = true;
+      const audience = this.rng
+        .shuffle(present.filter((v) => v !== teller && !outcast.has(v.id) && !v.memories.some((x) => x.omenId === m.omenId)))
+        .slice(0, gossip ? R.gossipListeners : R.listeners);
+      for (const l of audience) this.hear(l, this.mutate(m, gossip, present, l));
+    }
+    this.refreshStrengths();
+  }
+
+  /** One retelling: it grows, may swap a detail, may lose its place. Gossips embroider more. */
+  private mutate(m: OmenMemoryRecord, gossip: boolean, present: Villager[], listener: Villager): OmenMemoryRecord {
+    const R = TUNING.rumor;
+    const k = gossip ? R.gossipMutation : 1;
+    const out: OmenMemoryRecord = { omenId: m.omenId, tick: m.tick, kind: m.kind, cause: m.cause, place: m.place, valence: m.valence, magnitude: m.magnitude, hearsay: true, retold: m.retold + 1 };
+    out.magnitude = Math.min(R.maxMagnitude, m.magnitude * this.rng.range(R.magnitudeGrowthMin, R.magnitudeGrowthMax));
+    if (this.rng.chance(R.swapDetailChance * k)) out.cause = this.plausibleSwap(m, present, listener) ?? m.cause;
+    if (out.place && this.rng.chance(R.dropPlaceChance * k)) out.place = '';
+    return out;
+  }
+
+  private plausibleSwap(m: OmenMemoryRecord, present: Villager[], listener: Villager): string | null {
+    const cat = m.cause.split(':')[0]!;
+    const pool = new Set<string>();
+    for (const f of this.omen(m.omenId)?.context ?? []) if (f.category === cat && f.key !== m.cause && f.key !== 'place:valley') pool.add(f.key);
+    if (cat === 'person') for (const v of present) if (v !== listener && `person:${v.id}` !== m.cause) pool.add(`person:${v.id}`);
+    for (const key of SWAP_FALLBACK[cat] ?? []) if (key !== m.cause) pool.add(key);
+    const list = [...pool];
+    return list.length ? this.rng.pick(list) : null;
+  }
+
+  /** A listener takes in a story: remembered as hearsay, believed a little (×hearsayWeight). */
+  private hear(l: Villager, m: OmenMemoryRecord): void {
+    this.store(l, m);
+    const cat = m.cause.split(':')[0] as FeatureCategory;
+    const omen = this.omen(m.omenId) ?? null;
+    const a = readingOf({ key: m.cause, category: cat, intensity: 0, distance: 0, recency: 0 }, m, m.valence >= 0, 1, 1);
+    if (!ATTRIBUTION_OK.has(a.type)) return;
+    // A swapped detail points somewhere the omen never was: its ground comes from the name alone.
+    const faithful = !!omen?.context.some((f) => f.key === m.cause);
+    const b = this.ensure(a.type, a.subject, a.response, omen, faithful ? omen : null);
+    if (a.type === 'RITUAL' && !b.place) b.place = m.place || 'place:fire';
+    const skeptic = l.traits.includes('skeptic') ? 0.5 : 1;
+    const amount = T.formationRate * TUNING.rumor.hearsayWeight * Math.min(1.5, m.magnitude) * Math.min(1.2, Math.abs(m.valence) * 1.5 + 0.3) * skeptic * this.traitFactor(l) * 0.6;
+    this.gain(b, l, amount);
+    b.heard += amount;
+  }
+
   /** At the evening fire, people tell each other what they believe (SPEC §12, simple form). */
   spreadAtGathering(present: Villager[]): void {
     if (present.length < 2) return;
@@ -511,6 +639,17 @@ export class BeliefSystem {
       if (b) this.contradict(b);
       return false;
     });
+    // A belief nobody alive saw begin is tradition: it holds steady, but its reason fades (SPEC §12).
+    for (const b of this.beliefs.values()) {
+      if (b.isTradition || !b.witnesses.length || b.type === 'DEPICTION' || b.type === 'TEMPERAMENT') continue;
+      if (b.strength < T.behaviorThreshold || tick - b.bornTick < TICKS_PER_YEAR) continue;
+      if (b.witnesses.some((id) => this.sim.villagers.byId(id)?.alive)) continue;
+      b.isTradition = true;
+      this.sim.events.push(tick, { type: 'tradition', beliefId: b.id });
+    }
+    // The image of the god follows recent omens; old impressions fade.
+    const dep = this.beliefs.get(this.key('DEPICTION', 'god'));
+    if (dep?.traits) for (const k of Object.keys(dep.traits)) dep.traits[k]! *= T.depictionFadePerDay;
     const bias = this.bias;
     // Offerings relax back toward normal while nothing bad follows.
     for (const b of this.beliefs.values()) if (b.type === 'OFFERING') b.escalation = Math.max(1, b.escalation * 0.93);
@@ -520,7 +659,7 @@ export class BeliefSystem {
         const v = this.sim.villagers.byId(id);
         if (!v) continue;
         const k = v.traits.includes('skeptic') ? T.skepticDecay : v.traits.includes('devout') ? T.devoutDecay : 1;
-        const ns = s * (1 - T.decayPerDay * k * failing);
+        const ns = s * (1 - T.decayPerDay * k * failing * (b.isTradition ? T.traditionDecay : 1));
         if (ns < 0.02) b.holders.delete(id);
         else b.holders.set(id, ns);
       }

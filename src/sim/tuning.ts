@@ -288,6 +288,10 @@ export const TUNING = {
     /** Personal strengths fade by this fraction per day (×trait modifiers). */
     decayPerDay: 0.012,
     skepticDecay: 2,
+    /** Traditions barely fade (×this on decay): nobody remembers why, so nobody doubts. */
+    traditionDecay: 0.25,
+    /** DEPICTION trait votes fade by this factor per day, so the image follows recent omens. */
+    depictionFadePerDay: 0.994,
     devoutDecay: 0.5,
     /** Evening telling at the fire: listeners gain this × teller strength. */
     spreadRate: 0.12,
@@ -302,11 +306,19 @@ export const TUNING = {
     cursedPathCost: 12,
     cursedMarkerCount: 6,
     sacredCairnAt: 0.45,
+    /** Cairn → shrine → temple (SPEC §11): strength and population needed for each. */
+    sacredShrineAt: 0.5,
+    shrinePopulation: 22,
+    sacredTempleAt: 0.62,
+    templePopulation: 40,
     pilgrimageChance: 0.15,
     outcastExileAt: 0.6,
     /** Food offered per person per day at full OFFERING strength. */
     offeringPerCapita: 0.25,
     offeringEscalation: 1.5,
+    /** Food per person kept back from offerings, and the most of the rest given in one evening. */
+    offeringReservePerCapita: 3,
+    offeringSurplusShare: 0.25,
     ritualTicks: 40,
     /** Doctrine rituals are held as festivals every this many days. */
     festivalEveryDays: 3,
@@ -319,10 +331,51 @@ export const TUNING = {
 
   rumor: {
     hearsayWeight: 0.5,
+    /** Stories older than this are no longer told. */
+    maxAgeDays: 36,
+    /** magnitude × |valence| below this isn't worth telling. */
+    minInterest: 0.08,
+    listeners: 3,
+    gossipListeners: 5,
+    /** Gossips' retellings swap and drop details this many times as often. */
+    gossipMutation: 2,
+    /** Retold magnitude stops growing here (a 1.0 omen can become a 3.0 legend). */
+    maxMagnitude: 3,
     magnitudeGrowthMin: 1.1,
     magnitudeGrowthMax: 1.4,
     swapDetailChance: 0.15,
     dropPlaceChance: 0.1,
+  },
+
+  myth: {
+    /** A first statue needs this much DEPICTION strength and this many people. */
+    statueAt: 0.1,
+    statuePopulation: 12,
+    /** A new statue when the image has changed this much (statues.ts depictionDistance)… */
+    statueShift: 1.5,
+    /** …and has stayed changed this many days, at most once per this many years. */
+    statueStableDays: 4,
+    statueMinYears: 6,
+    /** Daily chance an old statue loses another block. */
+    ruinDecayChance: 0.06,
+    /** Daily chance an abandoned hut on cursed ground loses a block. */
+    abandonedDecayChance: 0.25,
+    /** Omens become legends (the myth record) above this magnitude, or with deaths… */
+    legendMagnitude: 0.55,
+    /** …and get their own verse above this, or with deaths. */
+    verseMagnitude: 0.7,
+    minWitnesses: 3,
+    /** At priest succession legends' numbers inflate by this range. */
+    inflateMin: 1.3,
+    inflateMax: 2.2,
+    /** Nobody counts past this. */
+    maxCount: 99,
+    /** Doctrine verses of one belief type per chapter. */
+    versesPerTypePerEra: 2,
+    /** Fame (magnitude × witnesses) an omen family needs before it names the god. */
+    nameFame: 12,
+    /** A place gets a name after this many notable omens there (deaths or terrain count double). */
+    placeOmens: 2,
   },
 
   warning: {

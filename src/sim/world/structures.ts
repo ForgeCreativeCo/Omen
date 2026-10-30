@@ -3,7 +3,7 @@ import { M } from './materials';
 import { LEGEND, prefabSize, type PrefabDef } from './prefabs';
 import type { VoxelWorld } from './VoxelWorld';
 
-export type StructureKind = 'hut' | 'field' | 'well' | 'firePit' | 'grave' | 'cairn';
+export type StructureKind = 'hut' | 'field' | 'well' | 'firePit' | 'grave' | 'cairn' | 'shrine' | 'temple' | 'statue';
 
 export interface BuildStep {
   x: number;
@@ -45,6 +45,8 @@ export interface Structure {
   complete: boolean;
   /** Damaged below the destroyed threshold (fire, lightning, terrain). */
   destroyed: boolean;
+  /** Left to weather (old statues): never repaired. */
+  ruined?: boolean;
   bornTick: number;
   /** Last tick a block was placed (or the structure was planned); stalled sites get abandoned. */
   progressTick: number;

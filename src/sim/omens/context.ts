@@ -148,9 +148,11 @@ export function placesNear(sim: Sim, x: number, z: number, radius: number): { ke
     if (s.kind === 'field') fields = Math.min(fields, d);
     else if (s.kind === 'well') add('place:well', d - 1);
     else if (s.kind === 'hut' && s.residents.length) add(`place:hut:${s.id}`, d - 0.5);
-    else if (s.kind === 'cairn') add(`place:cairn:${s.id}`, d - 1);
+    else if (s.kind === 'cairn' || s.kind === 'shrine' || s.kind === 'temple' || (s.kind === 'statue' && !s.ruined)) add(`place:${s.kind}:${s.id}`, d - 1);
   }
   add('place:fields', fields - 1);
+  // Places that exist because the god reshaped the land there.
+  for (const site of sim.myth?.places.sites ?? []) add(site.key, Math.hypot(x - site.x, z - site.z) - site.r);
   if (v.graveyard) {
     const g = v.graveyard;
     add('place:graveyard', Math.hypot(Math.max(g.x0 - x, 0, x - (g.x0 + g.w)), Math.max(g.z0 - z, 0, z - (g.z0 + g.d))));
@@ -309,7 +311,7 @@ const OTHER_LABEL: Record<string, string> = {
   'time:winter': 'winter',
   'time:festival': 'the festival',
   'condition:drought': 'the drought',
-  'condition:storm': 'storms',
+  'condition:storm': 'the storm',
 };
 
 /** Human words for a feature key, as villagers would say it. */
@@ -323,7 +325,8 @@ export function featureLabel(sim: Sim, key: string): string {
       const owner = h?.residents.map((id) => sim.villagers.byId(id)).find((p) => p && p.lifeStage !== 'child');
       return owner ? `${owner.name}'s hut` : 'an empty hut';
     }
-    if (a === 'cairn') return 'the cairn';
+    if (a === 'cairn' || a === 'shrine' || a === 'temple' || a === 'statue') return `the ${a}`;
+    if (a === 'site') return sim.belief.placeName(key) ?? 'the shaped ground';
     return sim.belief.placeName(key) ?? PLACE_LABEL[a!] ?? a!;
   }
   return OTHER_LABEL[key] ?? key;

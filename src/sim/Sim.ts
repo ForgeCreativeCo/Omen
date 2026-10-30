@@ -1,6 +1,7 @@
 import { BeliefSystem } from './belief/BeliefSystem';
 import { BeliefEffects } from './belief/effects';
 import { EventLog, type DeathCause } from './events';
+import { MythSystem } from './myth/Myth';
 import { OmenRecorder } from './omens/OmenRecorder';
 import { Miracles, type CastFailure, type Command } from './miracles/Miracles';
 import { Rng } from './rng';
@@ -60,6 +61,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly miracles: Miracles;
   readonly belief: BeliefSystem;
   readonly effects: BeliefEffects;
+  readonly myth: MythSystem;
   private readonly recorder: OmenRecorder;
   readonly mode: GameMode;
   /** Every command applied, in order (SPEC §0 determinism). */
@@ -89,6 +91,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.belief = new BeliefSystem(this, this.rng.fork('belief'));
     this.effects = new BeliefEffects(this, this.rng.fork('effects'));
     this.recorder = new OmenRecorder(this, this.rng.fork('omens'));
+    this.myth = new MythSystem(this, this.rng.fork('myth'));
     this.village.forbidden = (x, z) => this.effects.isCursed(x, z);
     this.village.attraction = () => this.effects.sacredArea();
     this.mode = opts.mode ?? 'sandbox';
@@ -180,6 +183,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.villagers.step();
     this.recorder.step();
     this.effects.step();
+    this.myth.step();
 
     // Late in the evening gathering, people talk: beliefs spread around the fire.
     const duskMark = TUNING.villagers.gatheringEndsAt - 0.04;
@@ -189,6 +193,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.villagers.newDay();
       this.belief.newDay();
       this.effects.dawn();
+      this.myth.dawn();
       this.village.population = this.villagers.alive.length;
       this.village.inspect(this);
       this.village.plan(this);

@@ -29,6 +29,11 @@ export type SimEventBody =
   | { type: 'omen'; omenId: string }
   | { type: 'beliefLevel'; beliefId: string; level: 'behavior' | 'doctrine' | 'died' }
   | { type: 'priest'; id: number; personality: string }
+  | { type: 'tradition'; beliefId: string }
+  | { type: 'placeNamed'; key: string; name: string }
+  | { type: 'godNamed'; name: string; old: string }
+  | { type: 'verse'; verseId: number }
+  | { type: 'ruined'; structureId: number; kind: string }
   | { type: 'exiled'; id: number }
   | { type: 'prophecy'; beliefId: string; good: boolean }
   | { type: 'ritual'; beliefId: string; activity: string; x: number; z: number }

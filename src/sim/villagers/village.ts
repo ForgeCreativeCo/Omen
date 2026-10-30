@@ -4,7 +4,7 @@ import { TUNING } from '../tuning';
 import { CROP_STAGES, M, material } from '../world/materials';
 import type { NavGrid } from '../world/nav';
 import { NEIGHBORS8 } from '../world/nav';
-import { prefabsOf, type PrefabKind } from '../world/prefabs';
+import { prefabsOf, type PrefabDef, type PrefabKind } from '../world/prefabs';
 import {
   firstDamagedStep,
   integrity,
@@ -322,15 +322,20 @@ export class Village {
 
   /** Plan a prefab near a point. `nearOnly` limits the search to that radius (e.g. a cairn at a sacred spot). */
   placePrefab(host: VillageHost, kind: PrefabKind, nearX: number, nearZ: number, instant: boolean, nearOnly?: number): Structure | null {
-    const variants = prefabsOf(kind);
-    const p = this.rng.pick(variants);
+    return this.placeDef(host, this.rng.pick(prefabsOf(kind)), nearX, nearZ, instant, nearOnly);
+  }
+
+  /** Plan any blueprint (listed prefab or generated, like a statue) near a point. */
+  placeDef(host: VillageHost, p: PrefabDef, nearX: number, nearZ: number, instant: boolean, nearOnly?: number): Structure | null {
+    const kind = p.kind;
+    const fixed = kind === 'firePit' || kind === 'well' || kind === 'grave' || kind === 'cairn';
     // Rotation depends on where the site lands; try the rotation toward center for a provisional size.
     for (const rot of [0, 1]) {
       const { w, d } = rotatedSize(p, rot);
       const clearance = kind === 'grave' ? 1 : 6;
       const accept = (x0: number, z0: number) => {
         const r = rotationToward(x0 + w / 2, z0 + d / 2, this.center.x + 0.5, this.center.z + 0.5);
-        return (r & 1) === rot || kind === 'firePit' || kind === 'well' || kind === 'cairn';
+        return (r & 1) === rot || fixed;
       };
       // Prefer the compact village radius; spread out to the full radius when it's full.
       const site =
@@ -339,10 +344,7 @@ export class Village {
           : (this.findSite(nearX, nearZ, w, d, this.maxRadius, clearance, accept) ??
             this.findSite(nearX, nearZ, w, d, B.maxRadius, clearance, accept));
       if (!site) continue;
-      const finalRot =
-        kind === 'firePit' || kind === 'well' || kind === 'grave' || kind === 'cairn'
-          ? rot
-          : rotationToward(site.x0 + w / 2, site.z0 + d / 2, this.center.x + 0.5, this.center.z + 0.5);
+      const finalRot = fixed ? rot : rotationToward(site.x0 + w / 2, site.z0 + d / 2, this.center.x + 0.5, this.center.z + 0.5);
       const s = this.newStructure(kind, p.variant, host.tick);
       s.x0 = site.x0;
       s.z0 = site.z0;
@@ -429,7 +431,7 @@ export class Village {
   /** Cost of a build step in stores; null if free. */
   stepCost(mat: number): 'wood' | 'stone' | null {
     if (mat === M.PLANK || mat === M.THATCH || mat === M.WOOD) return 'wood';
-    if (mat === M.STONE || mat === M.SHRINE_STONE || mat === M.MARKER_STONE) return 'stone';
+    if (mat === M.STONE || mat === M.SHRINE_STONE || mat === M.MARKER_STONE || mat >= M.STATUE_FIRE || mat === M.STATUE_STONE) return 'stone';
     return null;
   }
 
@@ -463,7 +465,7 @@ export class Village {
   /** Structures with blocks left to place, oldest first. */
   constructionSites(): Structure[] {
     return this.structures.filter(
-      (s) => s.kind !== 'field' && s.kind !== 'grave' && !s.complete && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2),
+      (s) => s.kind !== 'field' && s.kind !== 'grave' && !s.complete && !s.ruined && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2),
     );
   }
 
@@ -660,6 +662,16 @@ export class Village {
 
   /** Put a grave mound in the graveyard (next free plot). */
   placeGrave(host: VillageHost): Structure | null {
+    // Once a place is holy, the dead go there, even if the old graveyard has room (SPEC §11).
+    const pull = this.attraction();
+    const g0 = this.graveyard;
+    if (pull && g0 && Math.hypot(g0.x0 + 2.5 - pull.x, g0.z0 + 2.5 - pull.z) > 14) {
+      const site = this.findSite(Math.round(pull.x), Math.round(pull.z), 5, 5, 10, 2);
+      if (site) {
+        this.graveyard = { x0: site.x0, z0: site.z0, w: 5, d: 5, used: 0 };
+        this.markOccupied(this.graveyard, GRAVEYARD);
+      }
+    }
     if (!this.graveyard || this.graveyard.used >= 9) {
       this.reserveGraveyard();
       if (!this.graveyard) return null;
@@ -740,7 +752,7 @@ export class Village {
   /** Daily: notice damage. Damaged buildings reopen for repair; badly damaged ones count as destroyed. */
   inspect(host: VillageHost): void {
     for (const s of this.structures) {
-      if (s.kind === 'field' || s.kind === 'grave' || !s.complete) continue;
+      if (s.kind === 'field' || s.kind === 'grave' || s.ruined || !s.complete) continue;
       const bad = firstDamagedStep(this.world, s);
       if (bad < 0) continue;
       if (!s.destroyed && integrity(this.world, s) < B.destroyedBelow) {

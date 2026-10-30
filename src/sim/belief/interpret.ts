@@ -160,7 +160,8 @@ export function attribute(rows: SalienceRow[], omen: Omen, valence: number, bias
   return out;
 }
 
-function readingOf(f: ContextFeature, omen: Omen, good: boolean, weight: number, confidence: number): Attribution {
+/** The belief a feature becomes when credited or blamed for an omen (also used for retold stories). */
+export function readingOf(f: ContextFeature, omen: Pick<Omen, 'kind'>, good: boolean, weight: number, confidence: number): Attribution {
   let type = ATTRIBUTION[good ? 'good' : 'bad'][f.category];
   let subject = f.key;
   // Special readings.

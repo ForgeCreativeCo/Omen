@@ -55,6 +55,11 @@ export const M = {
   EMBER: 19,
   FLOWER_RED: 20,
   FLOWER_GOLD: 21,
+  STATUE_FIRE: 22,
+  STATUE_WATER: 23,
+  STATUE_GROWTH: 24,
+  STATUE_GOLD: 25,
+  RUIN_STONE: 26,
 } as const;
 
 type Props = Partial<Omit<MaterialDef, 'id' | 'name' | 'color'>>;
@@ -108,10 +113,16 @@ export const MATERIALS: readonly MaterialDef[] = [
   def(M.ASH, 'ash', 0x5b5652, { fertility: 1 }),
   def(M.MARKER_STONE, 'markerStone', 0xb3aea3),
   def(M.SHRINE_STONE, 'shrineStone', 0xd8cdb4),
-  def(M.STATUE_STONE, 'statueStone', 0xc4c0b8),
+  def(M.STATUE_STONE, 'statueStone', 0xc4c0b8, { walkable: false }),
   def(M.EMBER, 'ember', 0xff7a2a, { walkable: false }),
   def(M.FLOWER_RED, 'flowerRed', 0xe0607a, { solid: false, walkable: false, passable: true, decor: true, flammability: 0.3, burnsTo: M.AIR }),
   def(M.FLOWER_GOLD, 'flowerGold', 0xf2c94c, { solid: false, walkable: false, passable: true, decor: true, flammability: 0.3, burnsTo: M.AIR }),
+  // Statue accents (SPEC §11): element colors and gold eyes; ruins weather to mossy stone.
+  def(M.STATUE_FIRE, 'statueFire', 0xd0613a, { walkable: false }),
+  def(M.STATUE_WATER, 'statueWater', 0x5b8fc4, { walkable: false }),
+  def(M.STATUE_GROWTH, 'statueGrowth', 0x6f9f4e, { walkable: false }),
+  def(M.STATUE_GOLD, 'statueGold', 0xf0c64a, { walkable: false }),
+  def(M.RUIN_STONE, 'ruinStone', 0x8d9278),
 ];
 
 // Catch table/ID drift at load time.

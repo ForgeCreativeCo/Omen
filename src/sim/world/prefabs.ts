@@ -7,10 +7,11 @@ import { M, type MaterialId } from './materials';
  * above ground), so a well can sink into the ground with -1.
  *
  * Legend: P plank, T thatch, W wood, S stone, E ember, D dirt, A water, H shrine-stone, K marker-stone,
+ * U statue stone, F/V/G statue fire/water/growth, O gold, R ruin stone,
  * '.' clear to air, ' ' leave untouched.
  */
 
-export type PrefabKind = 'hut' | 'well' | 'firePit' | 'grave' | 'cairn';
+export type PrefabKind = 'hut' | 'well' | 'firePit' | 'grave' | 'cairn' | 'shrine' | 'temple' | 'statue';
 
 export interface PrefabDef {
   kind: PrefabKind;
@@ -31,6 +32,12 @@ export const LEGEND: Record<string, MaterialId> = {
   A: M.WATER,
   H: M.SHRINE_STONE,
   K: M.MARKER_STONE,
+  U: M.STATUE_STONE,
+  F: M.STATUE_FIRE,
+  V: M.STATUE_WATER,
+  G: M.STATUE_GROWTH,
+  O: M.STATUE_GOLD,
+  R: M.RUIN_STONE,
   '.': M.AIR,
 };
 
@@ -96,6 +103,33 @@ export const PREFABS: readonly PrefabDef[] = [
     layers: [['.H.', 'HHH', '.H.'], ['...', '.H.', '...'], ['...', '.K.', '...']],
   },
   {
+    // Cairn → shrine → temple as a sacred place grows (SPEC §11).
+    kind: 'shrine',
+    variant: 'posts',
+    yOffset: 0,
+    layers: [
+      ['SSSSS', 'SHHHS', 'SHHHS', 'SHHHS', 'SSSSS'],
+      ['W...W', '.....', '..H..', '.....', 'W...W'],
+      ['W...W', '.....', '.....', '.....', 'W...W'],
+      ['PPPPP', 'P...P', 'P...P', 'P...P', 'PPPPP'],
+      ['.....', '.PPP.', '.PHP.', '.PPP.', '.....'],
+    ],
+  },
+  {
+    kind: 'temple',
+    variant: 'columns',
+    yOffset: 0,
+    layers: [
+      ['SSSSSSS', 'SSSSSSS', 'SSSSSSS', 'SSSSSSS', 'SSSSSSS', 'SSSSSSS', 'SSSSSSS'],
+      ['H.H.H.H', '.......', 'H.....H', '...H...', 'H.....H', '.......', 'H.H.H.H'],
+      ['H.H.H.H', '.......', 'H.....H', '.......', 'H.....H', '.......', 'H.H.H.H'],
+      ['H.H.H.H', '.......', 'H.....H', '.......', 'H.....H', '.......', 'H.H.H.H'],
+      ['SSSSSSS', 'SSSSSSS', 'SSSSSSS', 'SSSSSSS', 'SSSSSSS', 'SSSSSSS', 'SSSSSSS'],
+      ['.......', '.SSSSS.', '.SSSSS.', '.SSHSS.', '.SSSSS.', '.SSSSS.', '.......'],
+      ['.......', '.......', '..SSS..', '..SHS..', '..SSS..', '.......', '.......'],
+    ],
+  },
+  {
     kind: 'grave',
     variant: 'mound',
     yOffset: 0,
@@ -103,6 +137,7 @@ export const PREFABS: readonly PrefabDef[] = [
   },
 ];
 
+/** Statues are generated (myth/statues.ts), not listed here. */
 export function prefabsOf(kind: PrefabKind): PrefabDef[] {
   return PREFABS.filter((p) => p.kind === kind);
 }

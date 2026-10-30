@@ -222,6 +222,14 @@ export const DEPICTION_FROM_OMEN: Record<string, [DepictionAxis, string][]> = {
   dream: [['feature', 'eyes']],
 };
 
+/** How much each omen kind shapes the image: everyday weather barely registers. */
+export const DEPICTION_WEIGHT: Record<string, number> = {
+  naturalRain: 0.15,
+  storm: 0.5,
+  drought: 0.5,
+  naturalLightning: 0.7,
+};
+
 export const DEPICTION_WORDS: Record<string, string> = {
   fire: 'burning',
   water: 'weeping',
