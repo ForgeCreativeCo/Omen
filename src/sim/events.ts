@@ -44,7 +44,7 @@ export type SimEventBody =
   | { type: 'ruined'; structureId: number; kind: string }
   | { type: 'exiled'; id: number }
   | { type: 'prophecy'; beliefId: string; good: boolean }
-  | { type: 'ritual'; beliefId: string; activity: string; x: number; z: number }
+  | { type: 'ritual'; beliefId: string; activity: string; x: number; z: number; villagerId?: number }
   | { type: 'fireStarted'; x: number; y: number; z: number }
   | { type: 'birth'; id: number; parents: number[] }
   | { type: 'death'; id: number; cause: DeathCause; x: number; z: number }

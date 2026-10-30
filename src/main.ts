@@ -14,6 +14,8 @@ import { Inspector } from './ui/Inspector';
 import { MiracleController } from './ui/MiracleController';
 import { Toasts } from './ui/Toasts';
 import { GoalsPanel } from './ui/GoalsPanel';
+import { Reactions } from './ui/Reactions';
+import { SeasonReport } from './ui/SeasonReport';
 import { DebugPanel } from './debug/DebugPanel';
 
 const params = new URLSearchParams(location.search);
@@ -50,6 +52,9 @@ const beliefs = new BeliefsPanel(hudRoot, sim);
 const book = new HolyBookPanel(hudRoot, sim);
 // The title screen's idle island has no purposes.
 const goals = chosen ? new GoalsPanel(hudRoot, sim) : null;
+// What they make of it: words over witnesses' heads, and a card each season.
+const reactions = chosen ? new Reactions(hudRoot, renderer) : null;
+const report = chosen ? new SeasonReport(hudRoot, sim, () => beliefs.toggle(true)) : null;
 beliefs.onVerse = (id) => book.showVerse(id);
 hudRoot.querySelector('.hud-beliefs')!.addEventListener('click', () => beliefs.toggle());
 hudRoot.querySelector('.hud-book')!.addEventListener('click', () => book.toggle());
@@ -162,6 +167,11 @@ function frame(now: number): void {
   if (goals) {
     goals.covered = inspector.villagerId >= 0 || tutorial.running || miracles.armed !== null;
     goals.update(dt);
+  }
+  reactions?.update(sim, dt);
+  if (report) {
+    report.covered = tutorial.running || !beliefs.el.hidden || book.open || end !== null;
+    report.update(dt);
   }
   checkOutcome();
   tutorial.update();

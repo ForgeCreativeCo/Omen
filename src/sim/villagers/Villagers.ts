@@ -653,7 +653,7 @@ export class Villagers {
       case 'ritual':
       case 'pilgrimage': {
         if (a.workLeft === TUNING.belief.ritualTicks || a.workLeft === 30) {
-          sim.events.push(sim.tick, { type: 'ritual', beliefId: '', activity: a.ritual ?? 'pray', x: a.tx, z: a.tz });
+          sim.events.push(sim.tick, { type: 'ritual', beliefId: '', activity: a.ritual ?? 'pray', x: a.tx, z: a.tz, villagerId: v.id });
         }
         if (--a.workLeft > 0) return;
         // The rite is done: now the god is expected to answer (SPEC §8 step 5).

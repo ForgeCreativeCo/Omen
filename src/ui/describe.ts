@@ -78,3 +78,59 @@ const HEARSAY_TEXT: Record<OmenKind, string> = {
   blight: 'a {size}withering',
   meteor: 'a {size}falling star',
 };
+
+const RESPONSE_WORD: Record<string, string> = {
+  rain: 'rain',
+  lightning: 'fire from the sky',
+  bloom: 'a harvest',
+  light: 'the light',
+  blessing: 'a blessing',
+  favor: 'your favor',
+  wrath: 'mercy',
+  shapeEarth: 'the earth to move',
+  meteor: 'a sign',
+};
+
+/** "Dancing for rain!" */
+export function ritualLine(sim: Sim, activity: string, response: string | undefined): string {
+  const act = featureLabel(sim, `activity:${activity}`);
+  return `${act.charAt(0).toUpperCase()}${act.slice(1)} for ${RESPONSE_WORD[response ?? ''] ?? 'a sign'}!`;
+}
+
+const pick = (lines: string[], seed: number) => lines[Math.abs(seed) % lines.length]!;
+
+/**
+ * What a witness says right after an omen, from how they read it: what they
+ * blamed or credited and whether it felt like a blessing or a curse.
+ */
+export function reactionLine(sim: Sim, v: { id: number }, m: OmenMemoryRecord, o: Omen): string {
+  const good = m.valence > 0.15;
+  const bad = m.valence < -0.15;
+  const seed = v.id * 7 + o.tick;
+  if (o.kind === 'blessing' && o.outcomes.some((x) => x.entity === `person:${v.id}`)) return pick(['I feel warm all through!', 'The god touched me!', 'I am not afraid anymore.'], seed);
+  if (!m.cause) {
+    if (good) return pick(['A wonder!', 'Someone up there is kind.', 'Did you see that?'], seed);
+    if (bad) return pick(['Something is angry with us.', 'What did we do?', 'Hide!'], seed);
+    return pick(['What was that?', 'Was that a sign?'], seed);
+  }
+  const [cat, id] = m.cause.split(':');
+  const label = featureLabel(sim, m.cause);
+  const Label = label.charAt(0).toUpperCase() + label.slice(1);
+  // 'the fields', 'the graves'
+  const is = /^the \w+s$/.test(label) ? 'are' : 'is';
+  switch (cat) {
+    case 'place':
+      return good ? pick([`${Label} ${is} holy!`, `The god loves ${label}.`], seed) : bad ? pick([`${Label} ${is} cursed.`, `Stay away from ${label}.`], seed) : `Something about ${label}...`;
+    case 'activity':
+      return good ? pick([`It answers our ${label}!`, `The god likes ${label}.`], seed) : bad ? pick([`Our ${label} angered it!`, `No more ${label}.`], seed) : `Was it the ${label}?`;
+    case 'person':
+      if (Number(id) === v.id) return good ? 'It chose me!' : bad ? 'What did I do?' : 'Why me?';
+      return good ? pick([`${label} is favored.`, `The god watches over ${label}.`], seed) : bad ? pick([`It's ${label}'s fault.`, `${label} brought this on us.`], seed) : `Why ${label}?`;
+    case 'deed':
+      return bad ? `This is for the ${label}.` : `It rewards ${label}.`;
+    case 'time':
+      return good ? `It comes at ${label}.` : bad ? `Beware ${label}.` : `Again at ${label}...`;
+    default:
+      return good ? `It's because of ${label}. A good sign.` : bad ? `It's because of ${label}. A bad sign.` : `Because of ${label}?`;
+  }
+}
