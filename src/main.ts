@@ -1,9 +1,11 @@
-import { Sim } from './sim/Sim';
+import { Sim, type GameMode } from './sim/Sim';
 import { FixedLoop } from './loop';
 import { GameRenderer } from './render/GameRenderer';
 import { Hud } from './ui/Hud';
 import { BeliefsPanel } from './ui/BeliefsPanel';
 import { HolyBookPanel } from './ui/HolyBookPanel';
+import { EndScreen, randomSeed, startGame, TitleScreen, Vision } from './ui/Screens';
+import { Tutorial } from './ui/Tutorial';
 import { Inspector } from './ui/Inspector';
 import { MiracleController } from './ui/MiracleController';
 import { Toasts } from './ui/Toasts';
@@ -11,8 +13,13 @@ import { DebugPanel } from './debug/DebugPanel';
 
 const params = new URLSearchParams(location.search);
 const seed = params.get('seed') ?? 'omen';
+// No mode yet: the title screen, over a sandbox island that just lives.
+const chosen = params.get('mode');
+const mode: GameMode = chosen === 'warning' ? 'warning' : 'sandbox';
 
-const sim = new Sim({ seed });
+// ?years=N shortens the Warning (testing, or a quick game).
+const years = Number(params.get('years')) || undefined;
+const sim = new Sim({ seed, mode, floodInYears: years });
 const loop = new FixedLoop(sim);
 const renderer = new GameRenderer(document.getElementById('app')!, sim);
 const hudRoot = document.getElementById('hud')!;
@@ -26,6 +33,51 @@ const book = new HolyBookPanel(hudRoot, sim);
 beliefs.onVerse = (id) => book.showVerse(id);
 hudRoot.querySelector('.hud-beliefs')!.addEventListener('click', () => beliefs.toggle());
 hudRoot.querySelector('.hud-book')!.addEventListener('click', () => book.toggle());
+
+const tutorial = new Tutorial(hudRoot, {
+  sim,
+  renderer,
+  loop,
+  inspectorOpen: () => inspector.villagerId >= 0,
+  beliefsOpen: () => !beliefs.el.hidden,
+  book,
+});
+hudRoot.querySelector('.hud-help')!.addEventListener('click', () => (tutorial.running ? tutorial.finish() : tutorial.start()));
+// First time in a game, the tutorial starts by itself (after the Warning's vision).
+const firstTime = !Tutorial.seen();
+
+if (!chosen) {
+  document.body.classList.add('at-title');
+  new TitleScreen(hudRoot, seed);
+} else if (sim.warning) {
+  // The opening vision: the player alone sees the sea at the height it will reach.
+  loop.setSpeedIndex(0);
+  const c = sim.island.landmarks.center;
+  renderer.setFloodPreview(sim.warning.disaster.safeAbove, c.x, c.z);
+  new Vision(hudRoot, Math.round(sim.warning.yearsLeft), () => {
+    renderer.setFloodPreview(null);
+    loop.setSpeedIndex(1);
+    if (firstTime) tutorial.start();
+  });
+} else if (firstTime) tutorial.start();
+
+let end: EndScreen | null = null;
+function checkOutcome(): void {
+  if (end || !sim.warning?.outcome) return;
+  loop.setSpeedIndex(0);
+  end = new EndScreen(hudRoot, sim, {
+    book: () => {
+      book.setTruth(true);
+      book.toggle(true);
+    },
+    watch: () => {
+      end?.close();
+      loop.setSpeedIndex(1);
+    },
+    again: () => startGame('warning', randomSeed()),
+    title: () => startGame(null, seed),
+  });
+}
 
 renderer.onTap = (x, y) => {
   // An armed miracle takes the tap; otherwise taps select villagers.
@@ -56,6 +108,8 @@ function frame(now: number): void {
   debug.update(dt);
   beliefs.update(dt);
   book.update(dt);
+  checkOutcome();
+  tutorial.update();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

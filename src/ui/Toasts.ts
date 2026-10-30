@@ -86,6 +86,8 @@ export class Toasts {
         if (e.kind === 'statue') return `A statue of ${sim.myth.god} stands finished.`;
         if (e.kind === 'shrine' || e.kind === 'temple' || e.kind === 'cairn') return `The people have raised a ${e.kind}.`;
         return null;
+      case 'flood':
+        return e.phase === 'strike' ? '<b>The sea is rising.</b>' : e.phase === 'peak' ? 'The water has stopped rising.' : null;
       case 'ruined':
         return 'The old statue is left to weather.';
       case 'destroyed':

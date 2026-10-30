@@ -62,6 +62,19 @@ export class HolyBookPanel {
     });
   }
 
+  /** Turn "Show the Truth" on or off from outside (the end screen). */
+  setTruth(on: boolean): void {
+    const box = this.el.querySelector<HTMLInputElement>('.hb-truth input')!;
+    box.checked = on;
+    this.truth = on;
+    this.el.classList.toggle('truth', on);
+    if (this.open) this.render(true);
+  }
+
+  get showingTruth(): boolean {
+    return this.truth;
+  }
+
   get open(): boolean {
     return !this.el.hidden;
   }

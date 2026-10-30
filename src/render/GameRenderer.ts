@@ -43,11 +43,58 @@ export class GameRenderer {
   /** Tool that may take over drags (miracle brushes). */
   pointerHook: PointerHook | null = null;
   private readonly world: Sim['world'];
+  private floodPlane: THREE.Mesh | null = null;
+  private guide: THREE.Group | null = null;
   private elapsed = 0;
   private pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
   private frameSamples = 0;
   private frameTimeSum = 0;
   readonly stats: RenderStats = { drawCalls: 0, triangles: 0, remeshed: 0, pixelRatio: this.pixelRatio };
+
+  /**
+   * The Warning's opening vision: a ghost of the sea at the height it will reach,
+   * over the island centered at (cx, cz) in voxel coords. null hides it.
+   */
+  setFloodPreview(level: number | null, cx = 0, cz = 0): void {
+    if (level === null) {
+      if (this.floodPlane) this.floodPlane.visible = false;
+      return;
+    }
+    if (!this.floodPlane) {
+      const r = TUNING.terrain.platformRadius + 4;
+      this.floodPlane = new THREE.Mesh(
+        new THREE.CircleGeometry(r, 64).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x2f6aa8, transparent: true, opacity: 0.6, depthWrite: false }),
+      );
+      this.floodPlane.renderOrder = 3;
+      this.scene.add(this.floodPlane);
+    }
+    const half = TUNING.world.sizeX / 2;
+    this.floodPlane.position.set(cx - half, level + 1, cz - half);
+    this.floodPlane.visible = true;
+  }
+
+  /** Tutorial marker: a soft beam and ring over voxel column (x, z). null hides it. */
+  setGuide(x: number | null, z = 0): void {
+    if (x === null) {
+      if (this.guide) this.guide.visible = false;
+      return;
+    }
+    if (!this.guide) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 0.35, depthWrite: false });
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 14, 16, 1, true).translate(0, 7, 0), mat);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.1, 40).rotateX(-Math.PI / 2), mat.clone());
+      ring.name = 'ring';
+      this.guide = new THREE.Group();
+      this.guide.add(beam, ring);
+      this.guide.renderOrder = 4;
+      this.scene.add(this.guide);
+    }
+    const half = TUNING.world.sizeX / 2;
+    const y = this.world.topY(Math.floor(x), Math.floor(z)) + 1.05;
+    this.guide.position.set(Math.floor(x) + 0.5 - half, y, Math.floor(z) + 0.5 - half);
+    this.guide.visible = true;
+  }
 
   constructor(container: HTMLElement, sim: Sim) {
     this.world = sim.world;
@@ -190,6 +237,11 @@ export class GameRenderer {
     this.witnessLines.update(sim, this.elapsed);
     this.villagers.update(sim, alpha, dt, this.elapsed);
     this.orbit.update(Math.min(dt, 0.1));
+    if (this.guide?.visible) {
+      const ring = this.guide.getObjectByName('ring');
+      const k = 1 + 0.25 * Math.sin(this.elapsed * 3);
+      ring?.scale.set(k, 1, k);
+    }
     const shake = Math.max(this.fx.shake, this.miracleFx.shake);
     if (shake > 0) {
       const s = shake * 0.35;
