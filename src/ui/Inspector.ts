@@ -93,12 +93,13 @@ export class Inspector {
     // Their view of the god, in the shape they imagine it (SPEC §15: "fears the Burning Hand").
     const depiction = sim.belief.beliefs.get(sim.belief.key('DEPICTION', 'god'));
     const image = depiction && (depiction.holders.get(v.id) ?? 0) > 0.05 ? `, ${sim.belief.depictionPhrase(depiction)}` : '';
+    const god = sim.myth.god;
     const view =
       v.faith.love + v.faith.fear < 0.15
-        ? 'barely thinks of the god'
+        ? `barely thinks of ${god}`
         : v.faith.love >= v.faith.fear
-          ? `loves the god${image}`
-          : `fears the god${image}`;
+          ? `loves ${god}${image}`
+          : `fears ${god}${image}`;
     const held = [...sim.belief.beliefs.values()]
       .map((b) => ({ b, s: b.holders.get(v.id) ?? 0 }))
       .filter((x) => x.s >= 0.08 && x.b.type !== 'DEPICTION')

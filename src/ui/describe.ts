@@ -44,8 +44,25 @@ const MEMORY_TEXT: Record<OmenKind, string> = {
 /** A villager's memory, in their own terms. */
 export function describeMemory(sim: Sim, m: OmenMemoryRecord): string {
   const what = MEMORY_TEXT[m.kind];
+  // Retold stories grow: by the third telling a strike is a terrible one.
+  const size = m.magnitude >= 1.6 ? 'terrible ' : m.magnitude >= 1.1 ? 'great ' : '';
   const verb = m.kind === 'dream' ? 'Had ' : m.hearsay ? 'Heard of ' : 'Saw ';
-  const cause = m.cause ? ` (because of ${featureLabel(sim, m.cause)})` : '';
+  const told = m.hearsay ? `, so the story goes${m.retold > 1 ? ` (told ${m.retold} times over)` : ''}` : '';
+  const where = m.place && m.kind !== 'dream' ? ` at ${featureLabel(sim, m.place)}` : '';
+  const cause = m.cause ? ` because of ${featureLabel(sim, m.cause)}` : '';
   const feel = m.valence > 0.15 ? ' A blessing.' : m.valence < -0.15 ? ' A curse.' : '';
-  return `${verb}${what}${cause}.${feel}`;
+  const body = m.hearsay ? HEARSAY_TEXT[m.kind].replace('{size}', size) : what;
+  return `${verb}${body}${where}${cause}${told}.${feel}`;
 }
+
+const HEARSAY_TEXT: Record<OmenKind, string> = {
+  rain: 'a {size}rain from a single cloud',
+  naturalRain: '{size}rain',
+  storm: 'a {size}storm',
+  lightning: 'a {size}lightning strike',
+  naturalLightning: 'a {size}lightning strike',
+  shapeEarth: 'a {size}shaking of the earth',
+  bloom: 'a {size}blooming',
+  dream: 'a dream',
+  drought: 'a {size}drought',
+};

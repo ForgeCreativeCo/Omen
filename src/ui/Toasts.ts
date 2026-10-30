@@ -74,6 +74,20 @@ export class Toasts {
         return `${who(e.id)} has been sent away.`;
       case 'dream':
         return `${who(e.villagerId)} stirs in their sleep.`;
+      case 'tradition': {
+        const b = sim.belief.beliefs.get(e.beliefId);
+        return b ? `The last who saw it are gone. Now tradition: <i>${sim.belief.statement(b)}</i>` : null;
+      }
+      case 'placeNamed':
+        return `The people now speak of <b>${e.name}</b>.`;
+      case 'godNamed':
+        return e.old ? `They no longer say ${e.old}. The god is now <b>${e.name}</b>.` : `The people have named the god: <b>${e.name}</b>.`;
+      case 'built':
+        if (e.kind === 'statue') return `A statue of ${sim.myth.god} stands finished.`;
+        if (e.kind === 'shrine' || e.kind === 'temple' || e.kind === 'cairn') return `The people have raised a ${e.kind}.`;
+        return null;
+      case 'ruined':
+        return 'The old statue is left to weather.';
       case 'destroyed':
         return `A ${e.kind === 'hut' ? 'hut' : e.kind} was destroyed.`;
       default:

@@ -46,6 +46,7 @@ export class DebugPanel {
         <button data-act="omen">Omen near village</button>
         <button data-act="day">+1 day</button>
         <button data-act="year">+1 year</button>
+        <button data-act="decade">+10 years</button>
       </div>`;
     this.statsEl = this.el.querySelector('.dbg-stats')!;
     this.omenEl = this.el.querySelector('.dbg-omen')!;
@@ -116,6 +117,9 @@ export class DebugPanel {
       case 'year':
         for (let i = 0; i < TICKS_PER_YEAR; i++) sim.step();
         break;
+      case 'decade':
+        for (let i = 0; i < TICKS_PER_YEAR * 10; i++) sim.step();
+        break;
     }
   }
 
@@ -138,6 +142,7 @@ export class DebugPanel {
       `tick ${s.tick} (${this.tickRate.toFixed(0)}/s)  draw ${r.drawCalls}  tris ${(r.triangles / 1000).toFixed(0)}k  res ${r.pixelRatio}×`,
       `villagers ${s.villagers.alive.length}  huts ${v.huts.filter((h) => v.usableHut(h)).length}/${v.huts.length}  fields ${v.fields.length}  food ${v.store.food.toFixed(0)}`,
       `weather ${s.weather.precipitation}${s.weather.drought ? '+drought' : ''}  burning ${s.fire.burning.size}  omens ${s.belief.omens.length}  beliefs ${s.belief.beliefs.size}`,
+      `myth: ${s.myth.god}  verses ${s.myth.book.verses().length}  legends ${s.myth.legends.length}  statues ${s.myth.statues.length} (${s.myth.statues.filter((x) => x.ruined).length} ruined)  places ${s.myth.places.all.length}`,
     ].join('\n');
   }
 

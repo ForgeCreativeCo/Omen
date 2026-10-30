@@ -28,6 +28,7 @@ export class Hud {
         <span class="hud-seed" title="Island seed"></span>
         <button class="hud-new" title="Generate a new island">New island</button>
         <button class="hud-beliefs" title="Village Beliefs (V)">Beliefs</button>
+        <button class="hud-book" title="The Holy Book (H)">Holy Book</button>
         <button class="hud-tilt" title="Tilt-shift (T)">Tilt-shift</button>
       </div>
       <div class="hud-panel hud-village"></div>

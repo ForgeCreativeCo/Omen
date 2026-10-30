@@ -14,6 +14,8 @@ export class BeliefsPanel {
   readonly el: HTMLElement;
   private open = new Set<string>();
   private timer = 1;
+  /** Opens the Holy Book at a verse; set by main. */
+  onVerse: (verseId: number) => void = () => {};
 
   constructor(root: HTMLElement, private readonly sim: Sim) {
     this.el = document.createElement('div');
@@ -23,6 +25,8 @@ export class BeliefsPanel {
     this.el.addEventListener('click', (e) => {
       const t = e.target as HTMLElement;
       if (t.closest('[data-close]')) return this.toggle(false);
+      const verse = t.closest<HTMLElement>('[data-verse]');
+      if (verse) return this.onVerse(Number(verse.dataset.verse));
       const row = t.closest<HTMLElement>('[data-belief]');
       if (!row) return;
       const id = row.dataset.belief!;
@@ -81,8 +85,9 @@ export class BeliefsPanel {
           open
             ? `<div class="bp-more">
                  <div><b>${def.label}.</b> ${def.effect}</div>
-                 <div class="bp-stats">${pct}% · held by ${holders} · ${b.confirmations} confirmations, ${b.contradictions} doubts${b.isTradition ? ' · tradition' : ''}</div>
+                 <div class="bp-stats">${pct}% · held by ${holders} · ${b.confirmations} confirmations, ${b.contradictions} doubts${b.isTradition ? ' · tradition (no living witness)' : ''}</div>
                  ${origins ? `<div class="bp-origin">Began with:</div><ul>${origins}</ul>` : '<div class="bp-origin">Began with a dream, or with talk at the fire.</div>'}
+                 ${b.scriptureRefs.length ? `<button class="bp-verse" data-verse="${b.scriptureRefs[0]}">Read it in the Holy Book</button>` : ''}
                </div>`
             : ''
         }
