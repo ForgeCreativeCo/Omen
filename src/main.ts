@@ -2,6 +2,7 @@ import { Sim } from './sim/Sim';
 import { FixedLoop } from './loop';
 import { GameRenderer } from './render/GameRenderer';
 import { Hud } from './ui/Hud';
+import { BeliefsPanel } from './ui/BeliefsPanel';
 import { Inspector } from './ui/Inspector';
 import { MiracleController } from './ui/MiracleController';
 import { Toasts } from './ui/Toasts';
@@ -19,6 +20,8 @@ const toasts = new Toasts(hudRoot);
 const inspector = new Inspector(hudRoot, () => (renderer.villagers.selectedId = -1));
 const miracles = new MiracleController(hudRoot, sim, renderer, loop, toasts);
 const debug = new DebugPanel(hudRoot, sim, renderer);
+const beliefs = new BeliefsPanel(hudRoot, sim);
+hudRoot.querySelector('.hud-beliefs')!.addEventListener('click', () => beliefs.toggle());
 
 renderer.onTap = (x, y) => {
   // An armed miracle takes the tap; otherwise taps select villagers.
@@ -29,10 +32,11 @@ renderer.onTap = (x, y) => {
 };
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && inspector.villagerId >= 0 && !miracles.armed) inspector.close();
+  if (e.code === 'KeyV' && !(e.target instanceof HTMLInputElement)) beliefs.toggle();
 });
 
 // Dev-only handle for poking at state from the console.
-if (import.meta.env.DEV) Object.assign(window, { omen: { sim, loop, renderer, debug, miracles } });
+if (import.meta.env.DEV) Object.assign(window, { omen: { sim, loop, renderer, debug, miracles, inspector, beliefs } });
 
 let last = performance.now();
 function frame(now: number): void {
@@ -46,6 +50,7 @@ function frame(now: number): void {
   toasts.update(sim);
   inspector.update(sim, dt);
   debug.update(dt);
+  beliefs.update(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

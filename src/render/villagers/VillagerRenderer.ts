@@ -192,10 +192,22 @@ export class VillagerRenderer {
       this.lastSeen.set(v.id, { id: v.id, x, y, z, yaw, scale, role: v.role, t: 0 });
       if (v.inside) continue;
 
+      const rite = (v.action?.kind === 'ritual' || v.action?.kind === 'pilgrimage') && v.action.phase === 'work' ? v.action.ritual : undefined;
       const working = v.action?.phase === 'work' && v.action.kind !== 'sleep' && v.action.kind !== 'gathering';
-      const bob = moving ? Math.abs(Math.sin(time * 11 + v.id)) * 0.08 : 0;
-      const tilt = working ? Math.sin(time * 8 + v.id) * 0.18 + 0.15 : moving ? 0.06 : 0;
-      place(v.id, x, y + bob, z, yaw, scale, tilt, v.role, v.carrying?.kind ?? null, v.lying);
+      let bob = moving ? Math.abs(Math.sin(time * 11 + v.id)) * 0.08 : 0;
+      let tilt = working ? Math.sin(time * 8 + v.id) * 0.18 + 0.15 : moving ? 0.06 : 0;
+      let spin = yaw;
+      if (rite === 'dance') {
+        // Hop and turn.
+        bob = Math.abs(Math.sin(time * 7 + v.id)) * 0.35;
+        spin = yaw + time * 3 + v.id;
+        tilt = Math.sin(time * 7 + v.id) * 0.12;
+      } else if (rite === 'pray') {
+        // A slow bow.
+        bob = 0;
+        tilt = 0.45 + Math.sin(time * 1.5 + v.id) * 0.15;
+      }
+      place(v.id, x, y + bob, z, spin, scale, tilt, v.role, v.carrying?.kind ?? null, v.lying);
       if (v.id === this.selectedId) {
         this.ring.visible = true;
         this.ring.position.set(x + this.offsetX, y + 0.05, z + this.offsetZ);

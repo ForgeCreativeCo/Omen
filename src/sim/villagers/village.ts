@@ -572,6 +572,8 @@ export class Village {
       if (seen.has(k)) continue;
       seen.add(k);
       if (Math.abs(x - t.x) > 3 || Math.abs(z - t.z) > 3 || y < t.y || y > t.y + 9) continue;
+      // Never take a hut's wooden posts along with a neighboring tree.
+      if (this.structureAt(x, z)) continue;
       const id = this.world.get(x, y, z);
       if (id !== M.WOOD && id !== M.LEAVES && id !== M.PINE_LEAVES) continue;
       if (id === M.WOOD) trunk++;

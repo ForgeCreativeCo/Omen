@@ -1,4 +1,5 @@
 import type { Sim } from '../sim/Sim';
+import { describeMemory } from './describe';
 import type { Action, Villager } from '../sim/villagers/types';
 
 const ACTIVITY: Record<string, string> = {
@@ -86,13 +87,24 @@ export class Inspector {
     const home = v.homeId >= 0 ? sim.village.byId(v.homeId) : undefined;
     const status = v.alive
       ? activity(v, v.action)
-      : `died ${v.deathCause === 'oldAge' ? 'of old age' : v.deathCause === 'starvation' ? 'of hunger' : `by ${v.deathCause}`}`;
+      : v.deathCause === 'exiled'
+        ? 'sent away from the village'
+        : `died ${v.deathCause === 'oldAge' ? 'of old age' : v.deathCause === 'starvation' ? 'of hunger' : `by ${v.deathCause}`}`;
+    // Their view of the god, in the shape they imagine it (SPEC §15: "fears the Burning Hand").
+    const depiction = sim.belief.beliefs.get(sim.belief.key('DEPICTION', 'god'));
+    const image = depiction && (depiction.holders.get(v.id) ?? 0) > 0.05 ? `, ${sim.belief.depictionPhrase(depiction)}` : '';
     const view =
       v.faith.love + v.faith.fear < 0.15
         ? 'barely thinks of the god'
         : v.faith.love >= v.faith.fear
-          ? 'loves the god'
-          : 'fears the god';
+          ? `loves the god${image}`
+          : `fears the god${image}`;
+    const held = [...sim.belief.beliefs.values()]
+      .map((b) => ({ b, s: b.holders.get(v.id) ?? 0 }))
+      .filter((x) => x.s >= 0.08 && x.b.type !== 'DEPICTION')
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 6);
+    const memories = v.memories.slice(-4).reverse();
     this.el.innerHTML = `
       <button class="ins-close" data-close aria-label="Close">×</button>
       <h2>${v.name}</h2>
@@ -109,9 +121,11 @@ export class Inspector {
       </dl>
       <div class="ins-section">Remembers</div>
       ${v.dreams.length ? v.dreams.slice(-3).map((d) => `<div class="ins-dream">Dreamt of ${d.symbols.join(', ')}</div>`).join('') : ''}
+      ${memories.map((m) => `<div class="ins-memory">${describeMemory(sim, m)}</div>`).join('')}
       <div class="ins-empty">${v.memories.length || v.dreams.length ? '' : 'No omens yet.'}</div>
       <div class="ins-section">Believes</div>
-      <div class="ins-empty">${v.beliefStrengths.size ? '' : 'Nothing yet.'}</div>`;
+      ${held.map(({ b, s }) => `<div class="ins-belief"><span>${sim.belief.statement(b)}</span><div><i style="width:${Math.round(s * 100)}%"></i></div></div>`).join('')}
+      <div class="ins-empty">${held.length ? '' : 'Nothing yet.'}</div>`;
   }
 }
 

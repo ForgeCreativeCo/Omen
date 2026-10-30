@@ -624,3 +624,232 @@ body {
   bottom: auto;
   top: 64px;
 }
+
+/* ---- Village Beliefs */
+.beliefs-panel {
+  top: 64px;
+  right: 12px;
+  width: 340px;
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
+  font-size: 13px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(243, 233, 216, 0.3) transparent;
+}
+
+.beliefs-panel h2 {
+  margin: 0 0 2px;
+  font-size: 18px;
+  font-weight: normal;
+  color: var(--hud-accent);
+}
+
+.bp-priest {
+  opacity: 0.75;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.bp-row {
+  padding: 6px 4px;
+  border-top: 1px solid rgba(243, 233, 216, 0.1);
+  cursor: pointer;
+}
+
+.bp-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bp-head {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.bp-icon {
+  width: 16px;
+  color: var(--hud-accent);
+  text-align: center;
+  flex: none;
+}
+
+.bp-text {
+  flex: 1;
+  font-style: italic;
+}
+
+.bp-tag {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid rgba(243, 233, 216, 0.35);
+  border-radius: 999px;
+  padding: 0 6px;
+  opacity: 0.8;
+  flex: none;
+}
+
+.bp-tag.doctrine {
+  color: var(--hud-accent);
+  border-color: var(--hud-accent);
+}
+
+.bp-bar {
+  position: relative;
+  height: 5px;
+  margin: 5px 0 0 22px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.bp-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #a98a52, #f0cf7f);
+}
+
+.bp-bar s {
+  position: absolute;
+  top: -2px;
+  width: 1px;
+  height: 9px;
+  background: rgba(243, 233, 216, 0.45);
+}
+
+.bp-more {
+  margin: 6px 0 0 22px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bp-stats,
+.bp-origin {
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+.bp-more ul {
+  margin: 2px 0 0;
+  padding-left: 16px;
+}
+
+.ins-memory {
+  font-size: 12px;
+  margin: 2px 0;
+}
+
+.ins-belief {
+  font-size: 12px;
+  margin: 3px 0;
+}
+
+.ins-belief span {
+  font-style: italic;
+}
+
+.ins-belief div {
+  height: 3px;
+  margin-top: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ins-belief i {
+  display: block;
+  height: 100%;
+  background: #f0cf7f;
+}
+
+/* ---- God's Eye additions */
+.debug {
+  width: 420px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  bottom: auto;
+  top: 64px;
+  right: 12px;
+  scrollbar-width: thin;
+}
+
+.dbg-sub {
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.dbg-sub .divine,
+.dbg-sub b.divine {
+  color: #ffd36e;
+}
+
+.dbg-omen-what {
+  font-size: 12px;
+  margin: 2px 0 4px;
+}
+
+.dbg-salience {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: ui-monospace, monospace;
+  font-size: 10.5px;
+}
+
+.dbg-salience th {
+  text-align: right;
+  font-weight: normal;
+  opacity: 0.6;
+}
+
+.dbg-salience th:first-child,
+.dbg-salience td:first-child {
+  text-align: left;
+  font-family: Georgia, serif;
+}
+
+.dbg-salience td {
+  text-align: right;
+  padding: 1px 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dbg-salience td small {
+  opacity: 0.5;
+}
+
+.dbg-salience tr.win td {
+  color: #ffd36e;
+}
+
+.dbg-readings {
+  margin: 2px 0;
+  padding-left: 16px;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.dbg-graph {
+  width: 100%;
+  height: 90px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.dbg-legend {
+  font-size: 11px;
+}
+
+.dbg-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* God's Eye on the left so it doesn't cover the Beliefs panel. */
+.debug {
+  right: auto;
+  left: 12px;
+}

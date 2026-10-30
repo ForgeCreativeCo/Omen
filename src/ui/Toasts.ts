@@ -24,14 +24,14 @@ export class Toasts {
   show(html: string): void {
     const now = performance.now();
     this.recent = this.recent.filter((t) => now - t < 4000);
-    if (this.recent.length >= 3) return;
+    if (this.recent.length >= 4) return;
     this.recent.push(now);
     const t = document.createElement('div');
     t.className = 'toast';
     t.innerHTML = html;
     this.el.prepend(t);
-    setTimeout(() => t.classList.add('out'), 3800);
-    setTimeout(() => t.remove(), 4500);
+    setTimeout(() => t.classList.add('out'), 5200);
+    setTimeout(() => t.remove(), 6000);
   }
 
   update(sim: Sim): void {
@@ -57,6 +57,21 @@ export class Toasts {
         return 'The drought breaks.';
       case 'fireStarted':
         return 'Fire!';
+      case 'beliefLevel': {
+        const b = sim.belief.beliefs.get(e.beliefId);
+        if (!b || b.type === 'TEMPERAMENT') return null;
+        if (e.level === 'behavior') return `A new belief has taken hold: <i>${sim.belief.statement(b)}</i>`;
+        if (e.level === 'doctrine') return `Now doctrine: <i>${sim.belief.statement(b)}</i>`;
+        return null;
+      }
+      case 'priest':
+        return e.id >= 0 ? `${who(e.id)} is now the high priest <small>(${e.personality})</small>.` : null;
+      case 'prophecy': {
+        const b = sim.belief.beliefs.get(e.beliefId);
+        return b ? `The priest foretells ${e.good ? 'good fortune' : 'hard times'}: <i>${sim.belief.statement(b)}</i>` : null;
+      }
+      case 'exiled':
+        return `${who(e.id)} has been sent away.`;
       case 'dream':
         return `${who(e.villagerId)} stirs in their sleep.`;
       case 'destroyed':
