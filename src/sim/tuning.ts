@@ -75,7 +75,139 @@ export const TUNING = {
     startCount: 20,
     softCap: 150,
     lifespanYears: 45,
+    /** Personal lifespan = lifespanYears ± this. */
+    lifespanJitter: 8,
     generationYears: 25,
+    adultAge: 14,
+    elderAge: 38,
+    /** Walking speed in voxels per tick. */
+    speed: 0.6,
+    childSpeedFactor: 0.8,
+    /** Hunger 0 = full, 1 = starving. Rise per day. */
+    hungerPerDay: 0.8,
+    childHungerFactor: 0.6,
+    /** Food eaten per meal, and hunger it removes. */
+    mealFood: 0.5,
+    mealRelief: 0.55,
+    eatWhenHungerAbove: 0.3,
+    /** Above this hunger a villager breaks off work to eat. */
+    hungryEnoughToStopWork: 0.8,
+    /** Days at full hunger before death. */
+    starveDays: 3,
+    energyPerDay: 0.9,
+    sleepRecoverPerDay: 4,
+    /** Day fractions for the schedule (0 = midnight). */
+    workEndsAt: 0.72,
+    gatheringEndsAt: 0.86,
+    /** Ticks between re-evaluations while busy (staggered per villager). */
+    thinkInterval: 30,
+    /** A* searches allowed per tick across the whole village. */
+    pathBudgetPerTick: 6,
+    pathMaxExpand: 9000,
+    /** Daily chance two single adults pair up. */
+    pairChancePerDay: 0.12,
+    pairMaxAgeGap: 12,
+    birthChancePerDay: 0.028,
+    fertileMinAge: 17,
+    fertileMaxAge: 40,
+    maxChildrenPerCouple: 4,
+    /** Births need at least this much food stored per person. */
+    birthFoodPerCapita: 4,
+    /** Death chance per tick while standing in or beside fire. */
+    fireDeathChancePerTick: 0.03,
+    fleeFireRadius: 6,
+    lightningKillRadius: 1.6,
+  },
+
+  /** Work and resources. Durations are in ticks. */
+  work: {
+    farmOpTicks: 5,
+    chopTicks: 26,
+    quarryTicks: 22,
+    forageTicks: 18,
+    buildTicksPerBlock: 4,
+    woodPerTrunkBlock: 2,
+    woodPerTreeBonus: 2,
+    stonePerTrip: 3,
+    /** Gatherers stop chopping / quarrying above these stocks and forage instead. */
+    woodTarget: 150,
+    stoneTarget: 40,
+    foodPerForage: 2.5,
+    /** Forage only while stored food per person is below this. */
+    forageBelowFoodPerCapita: 2.5,
+    /** Gatherers stop foraging (and rest) above this much food per person. */
+    forageAboveCapitaStops: 12,
+    /** Children this old help forage when food is short. */
+    childForageAge: 8,
+    startFood: 130,
+    /** Stored food above this much per person rots at spoilagePerDay. */
+    spoilFreePerCapita: 10,
+    spoilagePerDay: 0.04,
+    startWood: 40,
+    startStone: 20,
+    /** New trees sprout per day (chance, may be >1 for multiple). */
+    treeSproutPerDay: 1.4,
+  },
+
+  farming: {
+    fieldSize: 4,
+    /** Growth per tick at ideal conditions; 1 = ripe. ≈ 3 days. */
+    growthPerTick: 1 / 600,
+    seasonGrowth: [1, 1.1, 0.6, 0] as readonly number[],
+    yieldPerTile: 1.3,
+    /** Field moisture decay per day by season. */
+    moistureDecayPerDay: [0.12, 0.2, 0.12, 0.05] as readonly number[],
+    rainMoisturePerTick: 0.01,
+    /** Fields within this distance of water never fall below riverMoisture. */
+    riverReach: 4,
+    riverMoisture: 0.35,
+    /** Below this, growing crops lose health. */
+    witherBelow: 0.05,
+    witherPerDay: 0.35,
+    fieldsPerPerson: 1 / 4,
+  },
+
+  building: {
+    hutCapacity: 5,
+    /** Plan a new hut when free beds drop below this. */
+    spareBeds: 3,
+    wellAtPopulation: 12,
+    baseRadius: 10,
+    radiusPerPerson: 0.3,
+    maxRadius: 40,
+    /** A damaged structure below this fraction of correct blocks counts as destroyed. */
+    destroyedBelow: 0.6,
+    /** Unstarted construction sites are dropped after this many days without progress. */
+    abandonAfterDays: 8,
+  },
+
+  weather: {
+    /** Chance a shower starts on a given day, by season (spring, summer, autumn, winter). */
+    rainChancePerDay: [0.6, 0.35, 0.5, 0.3] as readonly number[],
+    stormShare: [0.15, 0.35, 0.2, 0.1] as readonly number[],
+    rainTicks: [30, 90] as readonly number[],
+    stormTicks: [50, 110] as readonly number[],
+    /** Natural strikes per tick during a storm. */
+    stormLightningPerTick: 0.015,
+    /** Chance a drought begins, checked at each season start. */
+    droughtChance: [0.08, 0.25, 0.12, 0.02] as readonly number[],
+    droughtDays: [3, 6] as readonly number[],
+    droughtRainFactor: 0.12,
+    /** Global soil moisture (drives fire dryness). */
+    moistureDecayPerDay: 0.3,
+    rainMoisturePerTick: 0.008,
+    windChangePerTick: 0.004,
+  },
+
+  fire: {
+    /** Chance per tick a burning voxel ignites a given flammable neighbor, × flammability × dryness. */
+    spreadPerTick: 0.045,
+    burnTicks: [30, 60] as readonly number[],
+    /** Chance per tick that rain puts out a burning voxel. */
+    rainDouse: 0.08,
+    maxBurning: 600,
+    lightningIgniteChance: 0.6,
+    ashRegrowDays: [4, 9] as readonly number[],
   },
 
   belief: {

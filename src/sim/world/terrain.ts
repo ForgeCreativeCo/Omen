@@ -33,6 +33,8 @@ export interface Island {
   world: VoxelWorld;
   /** Top solid terrain y per column (x + z * sizeX), ignoring trees; -1 off the platform. */
   ground: Int16Array;
+  /** Trunk base (first wood voxel) of every tree planted at generation. */
+  trees: Point3[];
   /** Top water y per column, or -1 if the column holds no water. */
   waterTop: Int16Array;
   landmarks: Landmarks;
@@ -328,6 +330,7 @@ export function generateIsland(rng: Rng): Island {
   }
 
   // ---- 5. Trees --------------------------------------------------------------
+  const trees: Point3[] = [];
   const taken = new Uint8Array(sizeX * sizeZ);
   const treeOk = (x: number, z: number) => {
     const k = idx(x, z);
@@ -351,6 +354,7 @@ export function generateIsland(rng: Rng): Island {
       taken[idx(x, z)] = 1;
       const pine = h > T.valleyHeight + 7;
       plantTree(world, x, h + 1, z, pine, rng);
+      trees.push({ x, y: h + 1, z });
     }
   }
 
@@ -370,6 +374,7 @@ export function generateIsland(rng: Rng): Island {
   return {
     world,
     ground,
+    trees,
     waterTop,
     landmarks: {
       center: { x: cx, z: cz },
@@ -386,7 +391,7 @@ export function generateIsland(rng: Rng): Island {
   };
 }
 
-function plantTree(world: VoxelWorld, x: number, y: number, z: number, pine: boolean, rng: Rng): void {
+export function plantTree(world: VoxelWorld, x: number, y: number, z: number, pine: boolean, rng: Rng): void {
   const trunk = rng.int(3, pine ? 4 : 5);
   const put = (px: number, py: number, pz: number, m: MaterialId) => {
     if (py < world.sizeY && world.get(px, py, pz) === M.AIR) world.set(px, py, pz, m);

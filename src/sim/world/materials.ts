@@ -10,13 +10,17 @@ export interface MaterialDef {
   name: string;
   /** Base color, sRGB hex. */
   color: number;
-  /** Occupies space and blocks movement and light. */
+  /** Rendered as a cube and hides neighbor faces. */
   solid: boolean;
   liquid: boolean;
   /** Can be stood on top of. */
   walkable: boolean;
+  /** Villagers can walk through it (air, foliage, crops). */
+  passable: boolean;
   flammable: boolean;
-  /** 0..1, how well crops grow on or next to it. */
+  /** 0..1, how readily it catches from a burning neighbor. */
+  flammability: number;
+  /** 0..1, how well crops grow on it. */
   fertility: number;
   /** What it becomes after burning, or null if it doesn't burn. */
   burnsTo: MaterialId | null;
@@ -46,54 +50,61 @@ export const M = {
   MARKER_STONE: 16,
   SHRINE_STONE: 17,
   STATUE_STONE: 18,
+  EMBER: 19,
 } as const;
 
-type Partial0 = Partial<Omit<MaterialDef, 'id' | 'name' | 'color'>>;
+type Props = Partial<Omit<MaterialDef, 'id' | 'name' | 'color'>>;
 
 const DEFAULTS: Omit<MaterialDef, 'id' | 'name' | 'color'> = {
   solid: true,
   liquid: false,
   walkable: true,
+  passable: false,
   flammable: false,
+  flammability: 0,
   fertility: 0,
   burnsTo: null,
   seasonTint: 0,
   cropStage: 0,
 };
 
-function def(id: MaterialId, name: string, color: number, props: Partial0 = {}): MaterialDef {
-  return { ...DEFAULTS, ...props, id, name, color };
+function def(id: MaterialId, name: string, color: number, props: Props = {}): MaterialDef {
+  const m = { ...DEFAULTS, ...props, id, name, color };
+  m.flammable = m.flammability > 0;
+  return m;
 }
 
 const crop = (stage: number, color: number) =>
   def(M.CROP_1 + stage - 1, `crop${stage}`, color, {
-    flammable: true,
-    burnsTo: M.ASH,
-    fertility: 0.8,
+    walkable: false,
+    passable: true,
+    flammability: 0.4,
+    burnsTo: M.AIR,
     seasonTint: 0.3,
     cropStage: stage,
   });
 
 export const MATERIALS: readonly MaterialDef[] = [
-  def(M.AIR, 'air', 0x000000, { solid: false, walkable: false }),
-  def(M.GRASS, 'grass', 0x7da453, { flammable: true, burnsTo: M.ASH, fertility: 0.6, seasonTint: 1 }),
+  def(M.AIR, 'air', 0x000000, { solid: false, walkable: false, passable: true }),
+  def(M.GRASS, 'grass', 0x7da453, { flammability: 0.15, burnsTo: M.ASH, fertility: 0.6, seasonTint: 1 }),
   def(M.DIRT, 'dirt', 0x8a6646, { fertility: 0.5 }),
   def(M.STONE, 'stone', 0x8e8b86),
   def(M.SAND, 'sand', 0xdcc995, { fertility: 0.1 }),
   def(M.WATER, 'water', 0x4f8fb3, { solid: false, liquid: true, walkable: false }),
-  def(M.WOOD, 'wood', 0x6b4a2f, { walkable: false, flammable: true, burnsTo: M.ASH }),
-  def(M.LEAVES, 'leaves', 0x5f9440, { walkable: false, flammable: true, burnsTo: M.AIR, seasonTint: 1.2 }),
-  def(M.PINE_LEAVES, 'pineLeaves', 0x3f6b45, { walkable: false, flammable: true, burnsTo: M.AIR, seasonTint: 0.25 }),
+  def(M.WOOD, 'wood', 0x6b4a2f, { walkable: false, flammability: 0.45, burnsTo: M.ASH }),
+  def(M.LEAVES, 'leaves', 0x5f9440, { walkable: false, passable: true, flammability: 0.6, burnsTo: M.AIR, seasonTint: 1.2 }),
+  def(M.PINE_LEAVES, 'pineLeaves', 0x3f6b45, { walkable: false, passable: true, flammability: 0.5, burnsTo: M.AIR, seasonTint: 0.25 }),
   crop(1, 0x8fae5a),
   crop(2, 0x9fbf4f),
   crop(3, 0xc9c25a),
   crop(4, 0xe0b94a),
-  def(M.THATCH, 'thatch', 0xc8a964, { flammable: true, burnsTo: M.ASH }),
-  def(M.PLANK, 'plank', 0xa47b52, { flammable: true, burnsTo: M.ASH }),
+  def(M.THATCH, 'thatch', 0xc8a964, { flammability: 0.8, burnsTo: M.ASH }),
+  def(M.PLANK, 'plank', 0xa47b52, { flammability: 0.5, burnsTo: M.ASH }),
   def(M.ASH, 'ash', 0x5b5652, { fertility: 1 }),
   def(M.MARKER_STONE, 'markerStone', 0xb3aea3),
   def(M.SHRINE_STONE, 'shrineStone', 0xd8cdb4),
   def(M.STATUE_STONE, 'statueStone', 0xc4c0b8),
+  def(M.EMBER, 'ember', 0xff7a2a, { walkable: false }),
 ];
 
 // Catch table/ID drift at load time.
@@ -107,3 +118,5 @@ export function material(id: MaterialId): MaterialDef {
 
 export const isSolid = (id: MaterialId) => material(id).solid;
 export const isLiquid = (id: MaterialId) => material(id).liquid;
+
+export const CROP_STAGES: readonly MaterialId[] = [M.CROP_1, M.CROP_2, M.CROP_3, M.CROP_4];

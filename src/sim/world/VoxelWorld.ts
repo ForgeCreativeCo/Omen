@@ -14,6 +14,8 @@ export class VoxelWorld {
   readonly chunksZ: number;
   private readonly chunks: (Uint8Array | null)[];
   readonly chunkVersions: Uint32Array;
+  /** Called after every effective voxel change (nav grid, structures, etc.). */
+  readonly listeners: ((x: number, y: number, z: number, from: MaterialId, to: MaterialId) => void)[] = [];
 
   constructor(
     readonly sizeX: number,
@@ -60,8 +62,10 @@ export class VoxelWorld {
       this.chunks[ci] = chunk;
     }
     const li = ((y % s) * s + (z % s)) * s + (x % s);
-    if (chunk[li] === id) return;
+    const old = chunk[li] as MaterialId;
+    if (old === id) return;
     chunk[li] = id;
+    for (const fn of this.listeners) fn(x, y, z, old, id);
     this.touch(cx, cy, cz);
     const lx = x % s, ly = y % s, lz = z % s;
     if (lx === 0) this.touch(cx - 1, cy, cz);
