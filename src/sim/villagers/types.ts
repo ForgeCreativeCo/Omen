@@ -38,6 +38,12 @@ export interface Action {
   treeIndex: number;
 }
 
+/** A dream the god sent (SPEC §6); interpreted in M4. */
+export interface DreamRecord {
+  tick: number;
+  symbols: string[];
+}
+
 /** Placeholder for M4: a villager's personal copy of an omen. */
 export interface OmenMemory {
   omenId: string;
@@ -62,6 +68,7 @@ export interface Villager {
   childIds: VillagerId[];
   memories: OmenMemory[];
   beliefStrengths: Map<string, number>;
+  dreams: DreamRecord[];
 
   alive: boolean;
   bornTick: number;

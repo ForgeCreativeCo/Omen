@@ -1,4 +1,5 @@
 import { EventLog, type DeathCause } from './events';
+import { Miracles, type CastFailure, type Command } from './miracles/Miracles';
 import { Rng } from './rng';
 import { calendarAt, SEASONS, TICKS_PER_DAY, type Calendar } from './time';
 import { TUNING } from './tuning';
@@ -17,6 +18,16 @@ export interface SimOptions {
   seed: number | string;
   /** Skip founding the village (terrain-only tests). */
   noVillage?: boolean;
+  /** Game mode; sandbox keeps a Grace floor (SPEC §14). */
+  mode?: GameMode;
+}
+
+export type GameMode = 'sandbox' | 'warning';
+
+/** A player command as recorded: replaying these against the same seed reproduces the game. */
+export interface LoggedCommand {
+  tick: number;
+  cmd: Command;
 }
 
 export interface LightningResult {
@@ -43,6 +54,11 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly fire: Fire;
   readonly village: Village;
   readonly villagers: Villagers;
+  readonly miracles: Miracles;
+  readonly mode: GameMode;
+  /** Every command applied, in order (SPEC §0 determinism). */
+  readonly inputLog: LoggedCommand[] = [];
+  private pending: Command[] = [];
   private readonly lightningRng: Rng;
   tick = 0;
   private cal: Calendar = calendarAt(0);
@@ -63,6 +79,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.island.trees,
     );
     this.villagers = new Villagers(this, this.rng.fork('villagers'));
+    this.miracles = new Miracles(this, this.rng.fork('miracles'));
+    this.mode = opts.mode ?? 'sandbox';
     if (!opts.noVillage) this.found();
   }
 
@@ -118,11 +136,31 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     people.newDayRolesAndHomes();
   }
 
+  /** Queue a player command; it takes effect at the start of the next tick. */
+  enqueue(cmd: Command): void {
+    this.pending.push(cmd);
+  }
+
+  /** Failures of the commands applied on the most recent tick (for UI feedback). */
+  lastFailures: CastFailure[] = [];
+
   /** Advance exactly one fixed tick. */
   step(): void {
     this.tick++;
     this.cal = calendarAt(this.tick);
     const newDay = this.tick % TICKS_PER_DAY === 0;
+
+    // Player input first, so a replayed log lands on exactly the same tick.
+    this.lastFailures = [];
+    if (this.pending.length) {
+      for (const cmd of this.pending) {
+        this.inputLog.push({ tick: this.tick, cmd });
+        const fail = this.miracles.apply(cmd);
+        if (fail) this.lastFailures.push(fail);
+      }
+      this.pending = [];
+    }
+    this.miracles.step();
 
     this.weather.step(this);
     this.fire.step(this);
@@ -179,7 +217,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
    * A lightning strike at column (x, z): blasts a few voxels, may start a fire,
    * kills anyone right there. Shared by storms and (M3) the Lightning miracle.
    */
-  strikeLightning(x: number, z: number, divine: boolean): LightningResult {
+  strikeLightning(x: number, z: number, divine: boolean, aimX?: number, aimZ?: number): LightningResult {
     const w = this.world;
     const rng = this.lightningRng;
     const y = w.topY(x, z);
@@ -209,7 +247,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
         }
       }
     }
-    this.events.push(this.tick, { type: 'lightning', x, y, z, divine, killed, fire });
+    this.events.push(this.tick, { type: 'lightning', x, y, z, divine, killed, fire, aimX, aimZ });
     if (fire) this.emitFireStarted(x, y, z);
     return { x, y, z, killed, fire };
   }

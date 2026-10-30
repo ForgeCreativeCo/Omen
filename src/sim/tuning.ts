@@ -210,6 +210,47 @@ export const TUNING = {
     ashRegrowDays: [4, 9] as readonly number[],
   },
 
+  /** The god's power (SPEC §10). Rates are per in-game day. */
+  grace: {
+    start: 60,
+    capBase: 50,
+    capPerBeliever: 3,
+    regenBasePerDay: 18,
+    /** Extra regen per day per unit of summed villager faith (love + fear). */
+    regenPerFaithPerDay: 5,
+    /** Sandbox: Grace never regenerates below this floor, so the god can't fade out entirely. */
+    sandboxFloor: 15,
+  },
+
+  /** Miracle numbers (SPEC §6). Costs in Grace, durations in ticks. */
+  miracles: {
+    rain: { cost: 10, cooldown: 20, radius: 6, durationTicks: 90, moisturePerTick: 0.02, dousePerTick: 0.3 },
+    lightning: {
+      cost: 25,
+      cooldown: 15,
+      radius: 1.5,
+      /** Aim error: a normal spread (std dev, voxels) plus an occasional wide miss. */
+      spread: 1.2,
+      wildMissChance: 0.15,
+      wildMissDistance: 4,
+      scorchRadius: 2.2,
+      injureRadius: 3.5,
+    },
+    shapeEarth: {
+      cost: 3,
+      cooldown: 0,
+      radius: 3,
+      /** Ticks between brush strokes while painting. */
+      strokeInterval: 3,
+      /** Chance per touched structure block that it shakes loose. */
+      collapseChance: 0.25,
+      minY: 4,
+      maxY: 40,
+    },
+    bloom: { cost: 12, cooldown: 20, radius: 5, flowerChance: 0.25, saplings: 2 },
+    dream: { cost: 40, cooldownDays: 2, symbols: 3 },
+  },
+
   belief: {
     /** Below this a belief dies (SPEC §8 step 5). */
     deathThreshold: 0.05,

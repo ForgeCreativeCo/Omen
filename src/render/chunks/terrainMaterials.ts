@@ -13,6 +13,8 @@ export const terrainUniforms = {
   uFadeLow: { value: -38 },
   uFadeHigh: { value: -12 },
   uTime: { value: 0 },
+  /** Up to four wet patches (scene x, z, radius, strength) darkening the ground under rain. */
+  uWet: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) },
 };
 
 function patchCommon(shader: THREE.WebGLProgramParametersWithUniforms): void {
@@ -50,6 +52,7 @@ function patchCommon(shader: THREE.WebGLProgramParametersWithUniforms): void {
      uniform float uFadeLow;
      uniform float uFadeHigh;
      uniform float uTime;
+     uniform vec4 uWet[4];
      varying vec3 vWorld;
      varying float vUpness;`,
   );
@@ -62,10 +65,22 @@ export function createTerrainMaterial(): THREE.MeshLambertMaterial {
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
   mat.onBeforeCompile = (shader) => {
     patchCommon(shader);
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <opaque_fragment>',
-      `#include <opaque_fragment>${fade}`,
-    );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+         {
+           // Ground under a rain cloud darkens, and dries again slowly.
+           float wet = 0.0;
+           for (int i = 0; i < 4; i++) {
+             vec4 w = uWet[i];
+             float d = length(vWorld.xz - w.xy);
+             wet = max(wet, w.w * (1.0 - smoothstep(w.z * 0.6, w.z, d)));
+           }
+           diffuseColor.rgb *= 1.0 - 0.38 * wet;
+         }`,
+      )
+      .replace('#include <opaque_fragment>', `#include <opaque_fragment>${fade}`);
   };
   mat.customProgramCacheKey = () => 'omen-terrain';
   return mat;

@@ -10,7 +10,22 @@ export type SimEventBody =
   | { type: 'rainEnd' }
   | { type: 'droughtStart' }
   | { type: 'droughtEnd' }
-  | { type: 'lightning'; x: number; y: number; z: number; divine: boolean; killed: number[]; fire: boolean }
+  | {
+      type: 'lightning';
+      x: number;
+      y: number;
+      z: number;
+      divine: boolean;
+      killed: number[];
+      fire: boolean;
+      /** Where the god actually aimed (divine strikes only). */
+      aimX?: number;
+      aimZ?: number;
+    }
+  | { type: 'miracleRain'; cloudId: number; x: number; z: number; radius: number }
+  | { type: 'earthShaped'; x: number; z: number; radius: number; raise: boolean; columns: number; shaken: number }
+  | { type: 'bloom'; x: number; z: number; radius: number; crops: number; flowers: number }
+  | { type: 'dream'; villagerId: number; symbols: string[] }
   | { type: 'fireStarted'; x: number; y: number; z: number }
   | { type: 'birth'; id: number; parents: number[] }
   | { type: 'death'; id: number; cause: DeathCause; x: number; z: number }

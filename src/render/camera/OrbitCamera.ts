@@ -1,5 +1,12 @@
 import * as THREE from 'three';
 
+export interface PointerHook {
+  /** Return true to claim this press; the camera then ignores it until release. */
+  down(e: PointerEvent): boolean;
+  move(e: PointerEvent): void;
+  up(e: PointerEvent): void;
+}
+
 export interface OrbitCameraOptions {
   /** Pan target stays within this radius of the origin. */
   boundsRadius: number;
@@ -12,6 +19,8 @@ export interface OrbitCameraOptions {
   groundHeightAt: (x: number, z: number) => number;
   /** Called for a click/tap that didn't turn into a drag. */
   onTap?: (clientX: number, clientY: number) => void;
+  /** Lets a tool (a miracle brush) take over a left-drag or one-finger drag instead of panning. */
+  pointerHook?: PointerHook;
 }
 
 const DAMPING = 10;
@@ -40,6 +49,8 @@ export class OrbitCamera {
   private gesture: { dist: number; angle: number; midY: number } | null = null;
   private readonly keys = new Set<string>();
   private tapStart: { x: number; y: number; t: number; id: number } | null = null;
+  /** Pointer currently owned by the pointer hook, or -1. */
+  private claimed = -1;
 
   constructor(
     readonly camera: THREE.PerspectiveCamera,
@@ -76,6 +87,13 @@ export class OrbitCamera {
   }
 
   private onDown(e: PointerEvent): void {
+    if (this.claimed !== -1) return;
+    if (this.pointers.size === 0 && e.button === 0 && this.opts.pointerHook?.down(e)) {
+      this.claimed = e.pointerId;
+      this.dom.setPointerCapture(e.pointerId);
+      this.tapStart = null;
+      return;
+    }
     this.tapStart = this.pointers.size === 0 && e.button === 0 ? { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId } : null;
     this.dom.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -88,6 +106,11 @@ export class OrbitCamera {
   }
 
   private onUp(e: PointerEvent): void {
+    if (e.pointerId === this.claimed) {
+      this.claimed = -1;
+      this.opts.pointerHook?.up(e);
+      return;
+    }
     const tap = this.tapStart;
     if (tap && tap.id === e.pointerId && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 6 && performance.now() - tap.t < 450) {
       this.opts.onTap?.(e.clientX, e.clientY);
@@ -99,6 +122,10 @@ export class OrbitCamera {
   }
 
   private onMove(e: PointerEvent): void {
+    if (e.pointerId === this.claimed) {
+      this.opts.pointerHook?.move(e);
+      return;
+    }
     const prev = this.pointers.get(e.pointerId);
     if (!prev) return;
     const dx = e.clientX - prev.x;

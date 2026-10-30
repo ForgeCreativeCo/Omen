@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import type { Sim } from '../sim/Sim';
 import { DAYS_PER_YEAR, TICKS_PER_DAY } from '../sim/time';
 import { TUNING } from '../sim/tuning';
-import { OrbitCamera } from './camera/OrbitCamera';
+import { OrbitCamera, type PointerHook } from './camera/OrbitCamera';
+import { pickGround, type GroundHit } from './picking';
 import { TerrainRenderer } from './chunks/TerrainRenderer';
 import { Environment } from './Environment';
 import { PostFX } from './post/PostFX';
 import { VillagerRenderer } from './villagers/VillagerRenderer';
 import { WeatherFx } from './vfx/WeatherFx';
+import { MiracleFx } from './vfx/MiracleFx';
 
 const MAX_PIXEL_RATIO = 1.5;
 const MIN_PIXEL_RATIO = 0.75;
@@ -32,9 +34,13 @@ export class GameRenderer {
   private readonly env = new Environment();
   readonly villagers: VillagerRenderer;
   readonly fx: WeatherFx;
+  readonly miracleFx: MiracleFx;
   private readonly raycaster = new THREE.Raycaster();
   /** Fired on a tap/click that wasn't a drag (screen coords). */
   onTap: ((x: number, y: number) => void) | null = null;
+  /** Tool that may take over drags (miracle brushes). */
+  pointerHook: PointerHook | null = null;
+  private readonly world: Sim['world'];
   private elapsed = 0;
   private pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
   private frameSamples = 0;
@@ -42,6 +48,7 @@ export class GameRenderer {
   readonly stats: RenderStats = { drawCalls: 0, triangles: 0, remeshed: 0, pixelRatio: this.pixelRatio };
 
   constructor(container: HTMLElement, sim: Sim) {
+    this.world = sim.world;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -56,7 +63,8 @@ export class GameRenderer {
     const half0 = TUNING.world.sizeX / 2;
     this.villagers = new VillagerRenderer(-half0, -half0);
     this.fx = new WeatherFx(-half0, -half0);
-    this.scene.add(this.villagers.group, this.fx.group);
+    this.miracleFx = new MiracleFx(-half0, -half0);
+    this.scene.add(this.villagers.group, this.fx.group, this.miracleFx.group);
 
     const half = TUNING.world.sizeX / 2;
     const ground = sim.island.ground;
@@ -68,6 +76,11 @@ export class GameRenderer {
       minPitch: 25,
       maxPitch: 75,
       onTap: (x, y) => this.onTap?.(x, y),
+      pointerHook: {
+        down: (e) => this.pointerHook?.down(e) ?? false,
+        move: (e) => this.pointerHook?.move(e),
+        up: (e) => this.pointerHook?.up(e),
+      },
       groundHeightAt: (x, z) => {
         // Scene → voxel coords; average a small area so the target glides over bumps.
         let sum = 0;
@@ -91,6 +104,32 @@ export class GameRenderer {
     this.post = new PostFX(this.renderer, this.scene, this.camera);
     window.addEventListener('resize', () => this.resize());
     this.resize();
+  }
+
+  /** The voxel under a screen point (ground or water), or null. */
+  groundAt(clientX: number, clientY: number): GroundHit | null {
+    const el = this.renderer.domElement;
+    return pickGround(this.world, this.camera, (clientX / el.clientWidth) * 2 - 1, -(clientY / el.clientHeight) * 2 + 1);
+  }
+
+  /** Nearest sleeping villager to a screen point (indoor sleepers count, at their door), or -1. */
+  pickSleeper(sim: Sim, clientX: number, clientY: number): number {
+    const el = this.renderer.domElement;
+    const half = TUNING.world.sizeX / 2;
+    const p = new THREE.Vector3();
+    let best = -1;
+    let bestD = 44;
+    for (const v of sim.villagers.alive) {
+      if (v.action?.kind !== 'sleep' || v.action.phase !== 'work') continue;
+      p.set(v.x - half, v.y + 2.4, v.z - half).project(this.camera);
+      if (p.z > 1) continue;
+      const d = Math.hypot(((p.x + 1) / 2) * el.clientWidth - clientX, ((1 - p.y) / 2) * el.clientHeight - clientY);
+      if (d < bestD) {
+        bestD = d;
+        best = v.id;
+      }
+    }
+    return best;
   }
 
   /** Villager id under a screen point, or -1. */
@@ -143,10 +182,12 @@ export class GameRenderer {
     this.terrain.update();
     const night = this.env.update(dayFrac, yearFrac, this.elapsed, dt, this.fx.overcast, this.fx.flash);
     this.fx.update(sim, dt, this.elapsed, night);
+    this.miracleFx.update(sim, dt, this.elapsed);
     this.villagers.update(sim, alpha, dt, this.elapsed);
     this.orbit.update(Math.min(dt, 0.1));
-    if (this.fx.shake > 0) {
-      const s = this.fx.shake * 0.35;
+    const shake = Math.max(this.fx.shake, this.miracleFx.shake);
+    if (shake > 0) {
+      const s = shake * 0.35;
       this.camera.position.x += Math.sin(this.elapsed * 61) * s;
       this.camera.position.y += Math.sin(this.elapsed * 47) * s;
     }

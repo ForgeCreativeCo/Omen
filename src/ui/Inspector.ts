@@ -108,7 +108,8 @@ export class Inspector {
         <dt>The god</dt><dd>${view}</dd>
       </dl>
       <div class="ins-section">Remembers</div>
-      <div class="ins-empty">${v.memories.length ? '' : 'No omens yet.'}</div>
+      ${v.dreams.length ? v.dreams.slice(-3).map((d) => `<div class="ins-dream">Dreamt of ${d.symbols.join(', ')}</div>`).join('') : ''}
+      <div class="ins-empty">${v.memories.length || v.dreams.length ? '' : 'No omens yet.'}</div>
       <div class="ins-section">Believes</div>
       <div class="ins-empty">${v.beliefStrengths.size ? '' : 'Nothing yet.'}</div>`;
   }

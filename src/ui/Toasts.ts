@@ -57,6 +57,8 @@ export class Toasts {
         return 'The drought breaks.';
       case 'fireStarted':
         return 'Fire!';
+      case 'dream':
+        return `${who(e.villagerId)} stirs in their sleep.`;
       case 'destroyed':
         return `A ${e.kind === 'hut' ? 'hut' : e.kind} was destroyed.`;
       default:

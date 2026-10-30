@@ -80,6 +80,7 @@ export class Villagers {
       childIds: [],
       memories: [],
       beliefStrengths: new Map(),
+      dreams: [],
       alive: true,
       bornTick: this.sim.tick - Math.round(opts.age * DAYS_PER_YEAR * TICKS_PER_DAY),
       deathTick: -1,

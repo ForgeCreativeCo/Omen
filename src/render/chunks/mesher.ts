@@ -39,6 +39,7 @@ function hexToLinear(hex: number): [number, number, number] {
 const LINEAR = MATERIALS.map((m) => hexToLinear(m.color));
 const SOLID = Uint8Array.from(MATERIALS, (m) => (m.solid ? 1 : 0));
 const TINT = MATERIALS.map((m) => m.seasonTint);
+const DECOR = Uint8Array.from(MATERIALS, (m) => (m.decor ? 1 : 0));
 const SHORE_FOAM = hexToLinear(0xa9d4e0);
 
 /** AO level (0 = fully occluded … 3 = open) → brightness. */
@@ -213,6 +214,25 @@ export function meshVoxels(col: ColumnVoxels): ColumnMesh {
         const x = x0 + lx;
         const z = z0 + lz;
 
+        if (DECOR[id]) {
+          // Flowers: a small cube sitting on the ground, all six faces, no AO.
+          const base = LINEAR[id]!;
+          const j = 1 + (hash3(x, y, z) * 2 - 1) * 0.12;
+          const s = 0.18;
+          const ox = x + 0.5 + (hash3(z, y, x) - 0.5) * 0.4;
+          const oz = z + 0.5 + (hash3(y, x, z) - 0.5) * 0.4;
+          const h = 0.3;
+          for (const fd of faceData) {
+            for (let k = 0; k < 4; k++) {
+              const c = fd.corners[k]!;
+              verts[k * 3] = ox + (c.px - 0.5) * 2 * s;
+              verts[k * 3 + 1] = y + c.py * h;
+              verts[k * 3 + 2] = oz + (c.pz - 0.5) * 2 * s;
+            }
+            opaque.quad(verts, fd.f.n, base[0] * j, base[1] * j, base[2] * j, fullAo, 0);
+          }
+          continue;
+        }
         if (id === M.WATER) {
           // Water: faces only toward air, top dropped a little, lighter at the shore.
           const surface = vox[i + strideY] === M.AIR;

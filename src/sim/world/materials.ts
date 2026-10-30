@@ -28,6 +28,8 @@ export interface MaterialDef {
   seasonTint: number;
   /** Growth stage for crop materials (1-based), 0 otherwise. */
   cropStage: number;
+  /** Small decorative voxel (flowers): drawn as a little cube, never blocks anything. */
+  decor: boolean;
 }
 
 export const M = {
@@ -51,6 +53,8 @@ export const M = {
   SHRINE_STONE: 17,
   STATUE_STONE: 18,
   EMBER: 19,
+  FLOWER_RED: 20,
+  FLOWER_GOLD: 21,
 } as const;
 
 type Props = Partial<Omit<MaterialDef, 'id' | 'name' | 'color'>>;
@@ -66,6 +70,7 @@ const DEFAULTS: Omit<MaterialDef, 'id' | 'name' | 'color'> = {
   burnsTo: null,
   seasonTint: 0,
   cropStage: 0,
+  decor: false,
 };
 
 function def(id: MaterialId, name: string, color: number, props: Props = {}): MaterialDef {
@@ -105,6 +110,8 @@ export const MATERIALS: readonly MaterialDef[] = [
   def(M.SHRINE_STONE, 'shrineStone', 0xd8cdb4),
   def(M.STATUE_STONE, 'statueStone', 0xc4c0b8),
   def(M.EMBER, 'ember', 0xff7a2a, { walkable: false }),
+  def(M.FLOWER_RED, 'flowerRed', 0xe0607a, { solid: false, walkable: false, passable: true, decor: true, flammability: 0.3, burnsTo: M.AIR }),
+  def(M.FLOWER_GOLD, 'flowerGold', 0xf2c94c, { solid: false, walkable: false, passable: true, decor: true, flammability: 0.3, burnsTo: M.AIR }),
 ];
 
 // Catch table/ID drift at load time.

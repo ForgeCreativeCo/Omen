@@ -575,6 +575,26 @@ export class Village {
     return trunk * WORK.woodPerTrunkBlock + WORK.woodPerTreeBonus;
   }
 
+  /** The structure whose footprint covers (x, z), if any. */
+  structureAt(x: number, z: number): Structure | undefined {
+    if (!this.nav.inBounds(x, z)) return undefined;
+    const id = this.occupancy[x + z * this.world.sizeX] as number;
+    return id > 0 ? this.byId(id) : undefined;
+  }
+
+  /** Room for a tree here: grass, clear of buildings, and open sky above. */
+  canPlantTree(x: number, z: number): boolean {
+    const h = this.nav.at(x, z);
+    if (h < 0 || this.world.get(x, h, z) !== M.GRASS) return false;
+    for (let dz = -2; dz <= 2; dz++)
+      for (let dx = -2; dx <= 2; dx++) {
+        if (this.occupied(x + dx, z + dz)) return false;
+        const hh = this.nav.at(x + dx, z + dz);
+        if (hh >= 0 && !this.clearAbove(x + dx, z + dz, Math.max(h, hh), 7)) return false;
+      }
+    return true;
+  }
+
   /** Daily: a few new trees sprout near existing ones, away from the village core. */
   sproutTrees(): void {
     let n = Math.floor(WORK.treeSproutPerDay) + (this.rng.chance(WORK.treeSproutPerDay % 1) ? 1 : 0);

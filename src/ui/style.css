@@ -343,3 +343,284 @@ body {
   scrollbar-width: thin;
   scrollbar-color: rgba(243, 233, 216, 0.3) transparent;
 }
+
+/* ---- Miracles */
+.miracle-dock {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.miracle-dock > .hud-panel {
+  position: relative;
+}
+
+.miracle-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+.grace {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.grace-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.grace-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c9a24a, #f3d98a);
+  box-shadow: 0 0 8px rgba(243, 217, 138, 0.6);
+  transition: width 0.25s;
+}
+
+.grace-text {
+  font-family: ui-monospace, monospace;
+  min-width: 64px;
+  text-align: right;
+  opacity: 0.85;
+}
+
+.miracle-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.miracle {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto;
+  justify-items: center;
+  gap: 1px;
+  width: 74px;
+  padding: 6px 4px 4px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--hud-fg);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(243, 233, 216, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.miracle:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.miracle.armed {
+  border-color: var(--hud-accent);
+  color: var(--hud-accent);
+  box-shadow: 0 0 12px rgba(226, 178, 106, 0.45);
+}
+
+.miracle.poor .m-cost {
+  color: #e48a73;
+}
+
+.miracle.dim {
+  opacity: 0.5;
+}
+
+.m-cost {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  opacity: 0.75;
+}
+
+/* Cooldown: a dark sweep that shrinks as it recharges. */
+.m-cool {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: var(--p, 0%);
+  background: rgba(10, 8, 6, 0.55);
+  pointer-events: none;
+}
+
+.miracle-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.miracle-hint b {
+  color: var(--hud-accent);
+  font-weight: normal;
+}
+
+.miracle-hint button {
+  font: inherit;
+  color: var(--hud-fg);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(243, 233, 216, 0.25);
+  border-radius: 6px;
+  padding: 4px 10px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.miracle-hint .seg {
+  display: inline-flex;
+}
+
+.miracle-hint .seg button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.miracle-hint .seg button:last-child {
+  border-radius: 0 6px 6px 0;
+  border-left: 0;
+}
+
+.miracle-hint .seg button.on {
+  color: var(--hud-accent);
+  border-color: var(--hud-accent);
+}
+
+.miracle-hint .cancel {
+  color: #f0b7a6;
+}
+
+.toasts {
+  bottom: 150px;
+}
+
+/* ---- Dream picker */
+.dream-picker {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 32px));
+  padding: 16px;
+  background: rgba(28, 24, 44, 0.9);
+  box-shadow: 0 0 40px rgba(150, 130, 255, 0.25);
+}
+
+.dp-title {
+  font-size: 18px;
+}
+
+.dp-title b {
+  color: #cfc4ff;
+  font-weight: normal;
+}
+
+.dp-sub {
+  opacity: 0.7;
+  font-size: 13px;
+  margin: 2px 0 10px;
+}
+
+.dp-slots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.dp-slots .slot {
+  width: 52px;
+  height: 52px;
+  border: 1px dashed rgba(207, 196, 255, 0.5);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #efeaff;
+  filter: drop-shadow(0 0 6px rgba(190, 170, 255, 0.8));
+}
+
+.dp-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.dp-grid button {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  font: inherit;
+  font-size: 10px;
+  color: var(--hud-fg);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(207, 196, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.dp-grid button.on {
+  color: #efeaff;
+  border-color: #cfc4ff;
+  background: rgba(190, 170, 255, 0.18);
+}
+
+.dp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dp-actions button {
+  font: inherit;
+  color: var(--hud-fg);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(243, 233, 216, 0.25);
+  border-radius: 6px;
+  padding: 6px 12px;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.dp-actions .primary {
+  border-color: #cfc4ff;
+  color: #efeaff;
+}
+
+.dp-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  .miracle {
+    width: 56px;
+    font-size: 9px;
+  }
+  .dp-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.ins-dream {
+  color: #cfc4ff;
+  font-style: italic;
+}
+
+/* Keep the perf readout clear of the miracle dock. */
+.hud-fps {
+  bottom: auto;
+  top: 64px;
+}
