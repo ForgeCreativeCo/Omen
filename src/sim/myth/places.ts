@@ -7,7 +7,19 @@ export interface NamedSite {
 }
 
 /** Why a place got its name: picks the adjective (and the verse's explanation). */
-export type NamingReason = 'lightning' | 'storm' | 'rain' | 'raised' | 'lowered' | 'flooded' | 'bloom' | 'drought' | 'sacred' | 'cursed';
+export type NamingReason =
+  | 'lightning'
+  | 'storm'
+  | 'rain'
+  | 'raised'
+  | 'lowered'
+  | 'flooded'
+  | 'bloom'
+  | 'drought'
+  | 'sacred'
+  | 'cursed'
+  | 'blight'
+  | 'star';
 
 export const PLACE_ADJ: Record<NamingReason, string[]> = {
   lightning: ['Burned', 'Scorched', 'Struck', 'Blackened'],
@@ -20,6 +32,8 @@ export const PLACE_ADJ: Record<NamingReason, string[]> = {
   drought: ['Thirsting', 'Cracked'],
   sacred: ['Holy', 'Blessed', 'Bright'],
   cursed: ['Forbidden', 'Silent', 'Black'],
+  blight: ['Withered', 'Barren', 'Ashen'],
+  star: ['Star-fallen', 'Sky-struck', 'Shining'],
 };
 
 /** The noun for a landmark, by place key ('' = not nameable). */
@@ -50,7 +64,7 @@ export function placeNoun(key: string): string {
 }
 
 /** Nouns for new places made by Shape Earth. */
-export const SITE_NOUN = { raised: ['Mound', 'Tor', 'Knoll'], lowered: ['Crater', 'Hollow', 'Pit'], flooded: ['Crater', 'Pool', 'Mere'] };
+export const SITE_NOUN = { raised: ['Mound', 'Tor', 'Knoll'], lowered: ['Crater', 'Hollow', 'Pit'], flooded: ['Crater', 'Pool', 'Mere'], crater: ['Crater', 'Star-Pit', 'Hollow'] };
 
 /**
  * The names the people use for places (SPEC §11: "the land remembers"). A name,

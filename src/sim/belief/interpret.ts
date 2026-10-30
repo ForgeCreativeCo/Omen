@@ -31,6 +31,10 @@ export const BASE_VALENCE: Record<OmenKind, number> = {
   naturalLightning: -0.35,
   shapeEarth: -0.15,
   drought: -0.5,
+  light: 0.45,
+  blessing: 0.5,
+  blight: -0.5,
+  meteor: -0.25,
 };
 
 /** Who did what to whom lately, for "the thief got what he deserved" readings. */
@@ -78,6 +82,12 @@ export function valenceFor(omen: Omen, w: Villager, bias: PriestBias, wrongs: Wr
       case 'landRaised':
       case 'landLowered':
         v -= 0.05;
+        break;
+      case 'cropsWithered':
+        v -= 0.35;
+        break;
+      case 'blessed':
+        v += who === w.id ? 0.5 : ours ? 0.3 : 0.05;
         break;
     }
   }

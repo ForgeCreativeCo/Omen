@@ -4,6 +4,7 @@ import type { DreamSymbol } from '../../sim/miracles/defs';
 import { Rng } from '../../sim/rng';
 import type { Sim } from '../../sim/Sim';
 import { SYMBOL_PATHS } from '../../ui/symbols';
+import { TUNING } from '../../sim/tuning';
 import { terrainUniforms } from '../chunks/terrainMaterials';
 
 const SPARKS = 900;
@@ -19,6 +20,14 @@ interface WetPatch {
   cloudId: number;
 }
 
+interface Beam {
+  outer: THREE.Mesh;
+  inner: THREE.Mesh;
+  fade: number;
+  x: number;
+  z: number;
+}
+
 interface Glyph {
   sprite: THREE.Sprite;
   t: number;
@@ -29,7 +38,8 @@ interface Glyph {
 /**
  * Effects for the god's acts (SPEC §16): voxel rain clouds with local rain and wet
  * ground, Shape Earth dust, Bloom sparkles, dream glyphs over the sleeper (seen by
- * the player only), sleeper markers while Dream is armed, and the targeting reticle.
+ * the player only), sleeper markers while Dream is armed, and the targeting reticle;
+ * pillars of Holy Light, the blessing glow, blight's dead dust, and falling stars.
  */
 export class MiracleFx {
   readonly group = new THREE.Group();
@@ -67,6 +77,12 @@ export class MiracleFx {
   private glyphs: Glyph[] = [];
   private readonly markers: THREE.InstancedMesh;
   showSleepers = false;
+
+  // Holy Light and Falling Stars
+  private readonly beams = new Map<number, Beam>();
+  private readonly beamGeo = new THREE.CylinderGeometry(1, 1, 1, 28, 1, true);
+  private readonly starHead: THREE.Mesh;
+  private readonly starGlow: THREE.Sprite;
 
   // Reticle
   private readonly reticle: THREE.Mesh;
@@ -144,6 +160,55 @@ export class MiracleFx {
     this.reticle.renderOrder = 10;
     this.reticle.visible = false;
     this.group.add(this.reticle);
+
+    this.starHead = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(0.9, 1),
+      new THREE.MeshBasicMaterial({ color: 0xfff1c8, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    this.starHead.visible = false;
+    this.group.add(this.starHead);
+    const g = document.createElement('canvas');
+    g.width = g.height = 64;
+    const c = g.getContext('2d')!;
+    const grad = c.createRadialGradient(32, 32, 2, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,240,200,1)');
+    grad.addColorStop(0.4, 'rgba(255,190,110,0.45)');
+    grad.addColorStop(1, 'rgba(255,160,80,0)');
+    c.fillStyle = grad;
+    c.fillRect(0, 0, 64, 64);
+    const tex = new THREE.CanvasTexture(g);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this.starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    this.starGlow.scale.setScalar(7);
+    this.starGlow.visible = false;
+    this.group.add(this.starGlow);
+  }
+
+  private beamMesh(color: number, opacity: number): THREE.Mesh {
+    const m = new THREE.Mesh(
+      this.beamGeo,
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    m.frustumCulled = false;
+    this.group.add(m);
+    return m;
+  }
+
+  /** A ring of sparks bursting out from a point. */
+  private burst(x: number, y: number, z: number, n: number, speed: number, cols: number[], life: number, grav: number): void {
+    for (let i = 0; i < n; i++) {
+      const a = this.rng.range(0, Math.PI * 2);
+      const up = this.rng.range(0.2, 1);
+      const s = speed * this.rng.range(0.4, 1);
+      this.spark(x, y, z, Math.cos(a) * s, up * s, Math.sin(a) * s, this.rng.pick(cols), this.rng.range(life * 0.5, life), grav);
+    }
   }
 
   /** Show the targeting ring at a voxel (world coords), sized to the miracle radius. */
@@ -232,6 +297,47 @@ export class MiracleFx {
           this.spark(x + ox, y, z + oz, this.rng.jitter(0.4), this.rng.range(1, 3), this.rng.jitter(0.4), col, this.rng.range(0.8, 1.8), -0.6);
         }
         break;
+      case 'blessing': {
+        const v = sim.villagers.byId(e.villagerId);
+        const y = v ? v.y + 1 : sim.world.topY(Math.floor(e.x), Math.floor(e.z)) + 1;
+        for (let i = 0; i < 70; i++) {
+          const a = (i / 70) * Math.PI * 2;
+          this.spark(e.x + ox + Math.cos(a) * 0.7, y + this.rng.range(0, 0.6), e.z + oz + Math.sin(a) * 0.7, Math.cos(a) * 0.3, this.rng.range(1.2, 2.6), Math.sin(a) * 0.3, this.rng.pick([0xfff0b0, 0xffd66e, 0xffffff]), this.rng.range(1, 2), -0.3);
+        }
+        this.burst(e.x + ox, y + 1.2, e.z + oz, 40, 2.2, [0xffe7a0, 0xfff7da], 1.2, -0.8);
+        break;
+      }
+      case 'blight':
+        for (let i = 0; i < 26 + e.crops; i++) {
+          const a = this.rng.range(0, Math.PI * 2);
+          const r = Math.sqrt(this.rng.next()) * e.radius;
+          const x = Math.round(e.x + Math.cos(a) * r);
+          const z = Math.round(e.z + Math.sin(a) * r);
+          this.dustAt(x + 0.5 + ox, sim.world.topY(x, z) + 1, z + 0.5 + oz);
+        }
+        for (let i = 0; i < 110; i++) {
+          const a = this.rng.range(0, Math.PI * 2);
+          const r = Math.sqrt(this.rng.next()) * e.radius;
+          const x = e.x + Math.cos(a) * r;
+          const z = e.z + Math.sin(a) * r;
+          const y = sim.world.topY(Math.floor(x), Math.floor(z)) + this.rng.range(1.5, 3.5);
+          this.spark(x + ox, y, z + oz, this.rng.jitter(0.2), this.rng.range(-0.4, 0.2), this.rng.jitter(0.2), this.rng.pick([0x6b5a7a, 0x4d4a3a, 0x7a6a52]), this.rng.range(1.2, 2.4), -0.5);
+        }
+        break;
+      case 'meteor': {
+        const y = e.y + 1;
+        this.burst(e.x + 0.5 + ox, y, e.z + 0.5 + oz, 260, 9, [0xffe2a0, 0xff9a4a, 0xffffff, 0xa8e4ff], 1.8, -9);
+        for (let i = 0; i < 90; i++) {
+          const a = this.rng.range(0, Math.PI * 2);
+          const r = this.rng.range(0, 6);
+          const x = Math.round(e.x + Math.cos(a) * r);
+          const z = Math.round(e.z + Math.sin(a) * r);
+          this.dustAt(x + 0.5 + ox, sim.world.topY(x, z) + 1, z + 0.5 + oz);
+        }
+        this.shake = Math.max(this.shake, 1.2);
+        this.flash = 1;
+        break;
+      }
       case 'dream': {
         const v = sim.villagers.byId(e.villagerId);
         if (!v) break;
@@ -254,14 +360,66 @@ export class MiracleFx {
 
   /** Small camera shake request (rumble), read by the renderer. */
   shake = 0;
+  /** A bright flash (a star landing), 1 → 0, read by the renderer. */
+  flash = 0;
 
-  update(sim: Sim, dt: number, time: number): void {
+  update(sim: Sim, dt: number, time: number, alpha = 0): void {
     if (this.lastSeq < 0) this.lastSeq = sim.events.lastSeq;
     for (const e of sim.events.since(this.lastSeq)) this.onEvent(sim, e);
     this.lastSeq = sim.events.lastSeq;
     const ox = this.offsetX;
     const oz = this.offsetZ;
     this.shake = Math.max(0, this.shake - dt * 2);
+    this.flash = Math.max(0, this.flash - dt * 2.5);
+
+    // ---- pillars of Holy Light: fade in, shimmer, fade out
+    const liveBeams = new Set(sim.miracles.beams.map((b) => b.id));
+    for (const b of sim.miracles.beams) {
+      if (this.beams.has(b.id)) continue;
+      this.beams.set(b.id, { outer: this.beamMesh(0xffd98a, 0.22), inner: this.beamMesh(0xfff6dc, 0.5), fade: 0, x: b.x, z: b.z });
+    }
+    for (const [id, bm] of this.beams) {
+      bm.fade = liveBeams.has(id) ? Math.min(1, bm.fade + dt * 1.2) : bm.fade - dt * 0.6;
+      if (bm.fade <= 0) {
+        for (const m of [bm.outer, bm.inner]) {
+          this.group.remove(m);
+          (m.material as THREE.Material).dispose();
+        }
+        this.beams.delete(id);
+        continue;
+      }
+      const ground = sim.world.topY(Math.floor(bm.x), Math.floor(bm.z)) + 1;
+      const h = 70;
+      const wob = 1 + Math.sin(time * 3 + id) * 0.05;
+      bm.outer.position.set(bm.x + ox, ground + h / 2, bm.z + oz);
+      bm.outer.scale.set(2.4 * wob, h, 2.4 * wob);
+      (bm.outer.material as THREE.MeshBasicMaterial).opacity = 0.22 * bm.fade;
+      bm.inner.position.copy(bm.outer.position);
+      bm.inner.scale.set(0.9, h, 0.9);
+      (bm.inner.material as THREE.MeshBasicMaterial).opacity = 0.5 * bm.fade;
+      // Motes rise through it.
+      if (liveBeams.has(id) && this.rng.chance(Math.min(1, dt * 40))) {
+        const a = this.rng.range(0, Math.PI * 2);
+        const r = this.rng.range(0, 2);
+        this.spark(bm.x + ox + Math.cos(a) * r, ground, bm.z + oz + Math.sin(a) * r, 0, this.rng.range(2, 5), 0, this.rng.pick([0xfff2c2, 0xffd98a]), this.rng.range(1.5, 3), 0);
+      }
+    }
+
+    // ---- falling stars: a glowing head on a slant, trailing fire
+    const star = sim.miracles.falling[0];
+    this.starHead.visible = this.starGlow.visible = !!star;
+    if (star) {
+      const total = TUNING.miracles.meteor.fallTicks;
+      const k = Math.max(0, Math.min(1, 1 - (star.impactTick - sim.tick - alpha) / total));
+      const gy = sim.world.topY(Math.floor(star.x), Math.floor(star.z)) + 1;
+      const fx = star.x + ox + 45 * (1 - k);
+      const fy = gy + 80 * (1 - k);
+      const fz = star.z + oz - 25 * (1 - k);
+      this.starHead.position.set(fx, fy, fz);
+      this.starGlow.position.set(fx, fy, fz);
+      for (let i = 0; i < 6; i++)
+        this.spark(fx + this.rng.jitter(0.6), fy + this.rng.jitter(0.6), fz + this.rng.jitter(0.6), this.rng.jitter(0.5), this.rng.jitter(0.5), this.rng.jitter(0.5), this.rng.pick([0xffc27a, 0xff8a3a, 0xfff0c8]), this.rng.range(0.4, 1.1), 0);
+    }
 
     // ---- clouds (smoothly follow the sim's cloud positions; fade in/out)
     const live = new Set(sim.miracles.clouds.map((c) => c.id));

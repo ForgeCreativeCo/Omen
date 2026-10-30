@@ -155,6 +155,25 @@ export class Soundscape {
       case 'flood':
         if (e.phase === 'strike') this.rumble(2.5);
         break;
+      case 'holyLight':
+        if (this.ok('choir', 2)) this.choir();
+        break;
+      case 'blessing':
+        if (this.ok('bless', 0.6)) this.chime(0.6);
+        break;
+      case 'blight':
+        if (this.ok('blight', 0.8)) this.wither();
+        break;
+      case 'meteorFall':
+        if (this.ok('whoosh', 1)) this.whoosh();
+        break;
+      case 'meteor':
+        this.thunder(1);
+        this.rumble(3);
+        break;
+      case 'milestone':
+        if (this.ok('milestone', 2)) this.chime(1, 0.6);
+        break;
     }
   }
 
@@ -218,9 +237,39 @@ export class Soundscape {
     this.tone('sine', 48, 36, this.env(0.25, 0.1, seconds), seconds);
   }
 
-  private chime(): void {
+  private chime(pitch = 1, gap = 0.09): void {
     // A rising pentatonic arpeggio.
-    [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach((hz, i) => this.tone('sine', hz, hz, this.env(0.07, 0.01, 1.4, i * 0.09), 1.5, i * 0.09));
+    [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach((hz, i) => this.tone('sine', hz * pitch, hz * pitch, this.env(0.07, 0.01, 1.4, i * gap), 1.5, i * gap));
+  }
+
+  /** Holy Light: a slow, open chord, like voices far off. */
+  private choir(): void {
+    for (const hz of [220, 277.18, 329.63, 440, 554.37]) {
+      this.tone('triangle', hz, hz * 1.003, this.env(0.035, 1.2, 3.2), 4.5);
+      this.tone('sine', hz * 2, hz * 2.004, this.env(0.012, 1.6, 2.6), 4.3);
+    }
+  }
+
+  /** Blight: a dry hiss falling away, and a sour low note. */
+  private wither(): void {
+    this.noiseShot('bandpass', 900, this.env(0.12, 0.2, 1.6), 2);
+    this.tone('sawtooth', 140, 70, this.env(0.05, 0.1, 1.6), 1.8);
+  }
+
+  /** A falling star: rising, brightening rush of air. */
+  private whoosh(): void {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 1.2;
+    const t = ctx.currentTime;
+    f.frequency.setValueAtTime(300, t);
+    f.frequency.exponentialRampToValueAtTime(3000, t + 1.4);
+    src.connect(f).connect(this.env(0.3, 1.2, 0.3));
+    src.start(t);
+    src.stop(t + 1.7);
   }
 
   private shimmer(): void {

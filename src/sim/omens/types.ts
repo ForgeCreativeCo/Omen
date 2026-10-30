@@ -7,6 +7,10 @@ export type OmenKind =
   | 'shapeEarth'
   | 'bloom'
   | 'dream'
+  | 'light'
+  | 'blessing'
+  | 'blight'
+  | 'meteor'
   | 'naturalRain'
   | 'storm'
   | 'naturalLightning'
@@ -52,7 +56,9 @@ export type OutcomeType =
   | 'fireDoused'
   | 'hutDamaged'
   | 'landRaised'
-  | 'landLowered';
+  | 'landLowered'
+  | 'cropsWithered'
+  | 'blessed';
 
 export interface Outcome {
   type: OutcomeType;

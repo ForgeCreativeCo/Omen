@@ -37,6 +37,10 @@ const FAMILY: Partial<Record<OmenKind, string>> = {
   shapeEarth: 'earth',
   bloom: 'bloom',
   drought: 'drought',
+  light: 'light',
+  blessing: 'blessing',
+  blight: 'blight',
+  meteor: 'meteor',
 };
 
 const TRUE_NAME: Record<OmenKind, string> = {
@@ -45,6 +49,10 @@ const TRUE_NAME: Record<OmenKind, string> = {
   shapeEarth: 'your Shape Earth',
   bloom: 'your Bloom',
   dream: 'your Dream',
+  light: 'your Holy Light',
+  blessing: 'your Blessing',
+  blight: 'your Blight',
+  meteor: 'your Falling Star',
   naturalRain: 'an ordinary shower',
   storm: 'a natural storm',
   naturalLightning: 'a natural lightning strike',
@@ -260,6 +268,9 @@ export class MythSystem {
     else if (o.kind === 'storm' && f.deaths) reason = 'storm';
     else if (o.kind === 'rain') reason = 'rain';
     else if (o.kind === 'bloom') reason = 'bloom';
+    else if (o.kind === 'light') reason = 'sacred';
+    else if (o.kind === 'blight') reason = 'blight';
+    else if (o.kind === 'meteor') reason = 'star';
     else if (o.kind === 'shapeEarth') {
       const raised = o.outcomes.some((x) => x.type === 'landRaised');
       const top = this.sim.world.topY(o.position.x, o.position.z);
@@ -267,6 +278,13 @@ export class MythSystem {
     }
     if (!reason) return;
 
+    // A fallen star always makes a place: the crater, with the stone in it.
+    if (o.kind === 'meteor') {
+      if (pl.siteAt(o.position.x, o.position.z)) return;
+      const site = pl.addSite(o.position.x, o.position.z, Math.max(3, o.radius));
+      this.give(site.key, reason, f, this.rng.pick(SITE_NOUN.crater));
+      return;
+    }
     if (o.kind === 'shapeEarth') {
       if (o.magnitude < 0.45 || pl.siteAt(o.position.x, o.position.z)) return;
       // Reshaping a landmark names it; reshaping open ground makes a new place.
@@ -314,6 +332,8 @@ export class MythSystem {
       drought: 'the sky closed above it',
       sacred: 'the god dwells there',
       cursed: 'the god hates it',
+      blight: 'the god withered it',
+      star: 'a star fell there',
     };
     this.addVerse('place', old ? '*' : 'new', { name, old, why: WHY[reason] }, {
       truth: f ? [this.truthLine(f)] : ['Named for what they believe about it, not for anything that happened there.'],

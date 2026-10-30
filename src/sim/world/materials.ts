@@ -60,6 +60,8 @@ export const M = {
   STATUE_GROWTH: 24,
   STATUE_GOLD: 25,
   RUIN_STONE: 26,
+  /** Left where a Falling Star landed. */
+  STAR_STONE: 27,
 } as const;
 
 type Props = Partial<Omit<MaterialDef, 'id' | 'name' | 'color'>>;
@@ -123,6 +125,7 @@ export const MATERIALS: readonly MaterialDef[] = [
   def(M.STATUE_GROWTH, 'statueGrowth', 0x6f9f4e, { walkable: false }),
   def(M.STATUE_GOLD, 'statueGold', 0xf0c64a, { walkable: false }),
   def(M.RUIN_STONE, 'ruinStone', 0x8d9278),
+  def(M.STAR_STONE, 'starStone', 0xa8e4ff),
 ];
 
 // Catch table/ID drift at load time.

@@ -159,6 +159,75 @@ export class OmenRecorder {
           sky: 2,
         });
         break;
+      case 'holyLight':
+        this.record({
+          kind: 'light',
+          isDivine: true,
+          position: { x: e.x, y: surfaceY(sim, Math.round(e.x), Math.round(e.z)), z: e.z },
+          radius: e.radius,
+          magnitude: 0.6,
+          outcomes: [],
+          range: TUNING.miracles.light.range,
+          // The pillar reaches the sky: hills hide its foot, not its top.
+          sky: 16,
+        });
+        break;
+      case 'blight':
+        this.record({
+          kind: 'blight',
+          isDivine: true,
+          position: { x: e.x, y: surfaceY(sim, Math.round(e.x), Math.round(e.z)), z: e.z },
+          radius: e.radius,
+          magnitude: 0.4 + Math.min(0.3, e.crops / 40),
+          outcomes: e.crops > 0 ? [{ type: 'cropsWithered', amount: e.crops }] : [],
+          range: 30,
+          sky: 2,
+        });
+        break;
+      case 'blessing': {
+        const v = sim.villagers.byId(e.villagerId);
+        if (!v) break;
+        this.record({
+          kind: 'blessing',
+          isDivine: true,
+          position: { x: Math.floor(e.x), y: Math.floor(v.y), z: Math.floor(e.z) },
+          radius: TUNING.miracles.bless.witnessRadius,
+          magnitude: 0.5,
+          outcomes: [{ type: 'blessed', entity: `person:${v.id}`, people: [v.id] }],
+          range: 24,
+          sky: 1,
+          affected: [v.id],
+          // The one who was touched knows, whatever they could see.
+          also: [v.id],
+        });
+        break;
+      }
+      case 'meteor': {
+        const r = TUNING.miracles.meteor;
+        const shaken = sim.villagers.alive.filter((v) => Math.hypot(v.x - (e.x + 0.5), v.z - (e.z + 0.5)) <= r.fearRadius).map((v) => v.id);
+        const outcomes: Outcome[] = [
+          ...e.killed.map((id): Outcome => ({ type: 'died', entity: `person:${id}`, people: [id] })),
+          ...e.wrecked.flatMap((id): Outcome[] => {
+            const h = sim.village.byId(id);
+            return h && h.kind === 'hut' ? [{ type: 'hutDamaged', entity: `structure:${id}`, people: [...h.residents] }] : [];
+          }),
+          { type: 'landLowered', amount: 20 },
+        ];
+        if (e.fire) outcomes.push({ type: 'fireStarted' });
+        // A falling star crosses the whole sky: anyone awake and outdoors sees it.
+        this.record({
+          kind: 'meteor',
+          isDivine: true,
+          position: { x: e.x, y: e.y, z: e.z },
+          radius: r.craterRadius + 1,
+          magnitude: 1,
+          outcomes,
+          range: 200,
+          everywhere: true,
+          affected: [...e.killed, ...shaken],
+        });
+        break;
+      }
       case 'dream': {
         const v = sim.villagers.byId(e.villagerId);
         if (!v) break;
@@ -234,11 +303,13 @@ export class OmenRecorder {
     everywhere?: boolean;
     affected?: VillagerId[];
     aim?: { x: number; z: number };
+    /** Witnesses regardless of sight (the one it happened to). */
+    also?: VillagerId[];
   }): void {
     const sim = this.sim;
     const target = { x: o.position.x + 0.5, y: o.position.y + 1 + (o.sky ?? 0), z: o.position.z + 0.5 };
     const witnesses = sim.villagers.alive
-      .filter((v) => this.sees(v, target, o.range, o.everywhere === true))
+      .filter((v) => o.also?.includes(v.id) || this.sees(v, target, o.range, o.everywhere === true))
       .map((v) => v.id);
     const omen: Omen = {
       id: sim.belief.nextOmenId(),

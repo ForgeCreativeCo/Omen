@@ -13,6 +13,10 @@ const KIND_TEXT: Record<OmenKind, string> = {
   bloom: 'Everything bloomed at once',
   dream: 'A dream came',
   drought: 'The rains stopped',
+  light: 'A pillar of light came down',
+  blessing: 'Someone was touched by the god',
+  blight: 'The land withered',
+  meteor: 'A star fell from the sky',
 };
 
 /** Where an omen happened, in the villagers' words (nearest named place). */
@@ -39,6 +43,10 @@ const MEMORY_TEXT: Record<OmenKind, string> = {
   bloom: 'everything bloom at once',
   dream: 'a dream',
   drought: 'the rains stop',
+  light: 'a pillar of light come down',
+  blessing: 'someone touched by the god',
+  blight: 'the land wither',
+  meteor: 'a star fall from the sky',
 };
 
 /** A villager's memory, in their own terms. */
@@ -65,4 +73,8 @@ const HEARSAY_TEXT: Record<OmenKind, string> = {
   bloom: 'a {size}blooming',
   dream: 'a dream',
   drought: 'a {size}drought',
+  light: 'a {size}pillar of light',
+  blessing: 'a {size}blessing',
+  blight: 'a {size}withering',
+  meteor: 'a {size}falling star',
 };

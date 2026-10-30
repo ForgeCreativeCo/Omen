@@ -112,6 +112,16 @@ export class FloodDisaster implements Disaster {
     return best;
   }
 
+  /** Do they trust a holy place whose top stays above the final water line? */
+  wouldReachSafety(v: Villager): boolean {
+    for (const b of this.sim.belief.active('SACRED_PLACE')) {
+      if (!b.area || (b.holders.get(v.id) ?? 0) < F.refugeTrust) continue;
+      const top = this.summit(b.id);
+      if (top && top.h > this.finalLevel) return true;
+    }
+    return false;
+  }
+
   /** The highest walkable cell of a sacred area (re-checked as the water climbs). */
   private summit(beliefId: string): { x: number; z: number; h: number } | null {
     const cached = this.refuges.get(beliefId);

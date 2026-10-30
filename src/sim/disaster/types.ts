@@ -22,6 +22,8 @@ export interface Disaster {
   step(): void;
   /** Where this villager runs while it unfolds, or null for ordinary behavior. */
   refugeFor(v: Villager): { x: number; z: number } | null;
+  /** If it struck today, would this villager run somewhere safe? (The player's gauge.) */
+  wouldReachSafety(v: Villager): boolean;
 }
 
 export type OutcomeReason = 'survived' | 'perished' | 'faithless' | 'extinct';

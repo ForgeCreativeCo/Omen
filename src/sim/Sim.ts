@@ -2,6 +2,7 @@ import { BeliefSystem } from './belief/BeliefSystem';
 import { BeliefEffects } from './belief/effects';
 import { EventLog, type DeathCause } from './events';
 import { MythSystem } from './myth/Myth';
+import { Milestones } from './milestones';
 import { WarningScenario } from './disaster/Warning';
 import { OmenRecorder } from './omens/OmenRecorder';
 import { Miracles, type CastFailure, type Command } from './miracles/Miracles';
@@ -65,6 +66,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly belief: BeliefSystem;
   readonly effects: BeliefEffects;
   readonly myth: MythSystem;
+  readonly milestones: Milestones;
   /** The Warning's countdown, disaster and verdict (null in sandbox). */
   readonly warning: WarningScenario | null;
   private readonly recorder: OmenRecorder;
@@ -97,6 +99,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.effects = new BeliefEffects(this, this.rng.fork('effects'));
     this.recorder = new OmenRecorder(this, this.rng.fork('omens'));
     this.myth = new MythSystem(this, this.rng.fork('myth'));
+    this.milestones = new Milestones(this);
     this.village.forbidden = (x, z) => this.effects.isCursed(x, z);
     this.village.attraction = () => this.effects.sacredArea();
     this.mode = opts.mode ?? 'sandbox';
@@ -191,6 +194,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.effects.step();
     this.myth.step();
     this.warning?.step();
+    this.milestones.step();
 
     // Late in the evening gathering, people talk: beliefs spread around the fire.
     const duskMark = TUNING.villagers.gatheringEndsAt - 0.04;

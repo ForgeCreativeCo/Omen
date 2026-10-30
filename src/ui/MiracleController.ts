@@ -1,6 +1,6 @@
 import type { FixedLoop } from '../loop';
 import type { GameRenderer } from '../render/GameRenderer';
-import { DREAM_SYMBOLS, MIRACLES, miracleDef, type DreamSymbol, type MiracleId } from '../sim/miracles/defs';
+import { DREAM_SYMBOLS, MIRACLES, miracleDef, type DreamSymbol, type MiracleId, type PointMiracle } from '../sim/miracles/defs';
 import type { CastFailure, Command } from '../sim/miracles/Miracles';
 import type { Sim } from '../sim/Sim';
 import { TUNING } from '../sim/tuning';
@@ -11,11 +11,11 @@ const FAILURE_TEXT: Record<CastFailure, string> = {
   grace: 'Not enough Grace.',
   cooldown: 'Not ready yet.',
   night: 'Dreams can only be sent at night.',
-  target: 'Choose someone who is asleep.',
+  target: 'Nobody there to receive it.',
   interval: '',
 };
 
-const HOTKEYS: Record<string, MiracleId> = { KeyR: 'rain', KeyL: 'lightning', KeyG: 'shapeEarth', KeyB: 'bloom', KeyN: 'dream' };
+const HOTKEYS: Record<string, MiracleId> = Object.fromEntries(MIRACLES.map((m) => [`Key${m.key}`, m.id]));
 /** Minimum real time between brush strokes / cloud drags sent to the sim. */
 const STROKE_MS = 90;
 
@@ -69,8 +69,8 @@ export class MiracleController {
       const b = document.createElement('button');
       b.className = 'miracle';
       b.dataset.id = m.id;
-      b.title = `${m.name} (${m.cost} Grace${m.targeting === 'brush' ? ' per stroke' : ''}): ${m.blurb}`;
-      b.innerHTML = `${svgIcon(MIRACLE_PATHS[m.id], 26)}<span class="m-name">${m.name}</span><span class="m-cost">${m.cost}</span><i class="m-cool"></i>`;
+      b.title = `${m.name} [${m.key}] (${m.cost} Grace${m.targeting === 'brush' ? ' per stroke' : ''}): ${m.blurb}`;
+      b.innerHTML = `${svgIcon(MIRACLE_PATHS[m.id], 26)}<span class="m-name">${m.name}</span><span class="m-cost">${m.cost}</span><span class="m-key">${m.key}</span><i class="m-cool"></i>`;
       b.addEventListener('click', () => (this.armed === m.id ? this.disarm() : this.arm(m.id)));
       list.appendChild(b);
       this.buttons.set(m.id, b);
@@ -152,8 +152,10 @@ export class MiracleController {
         ? 'Drag on the land.'
         : def.targeting === 'sleeper'
           ? 'Tap a sleeper (marked).'
-          : 'Tap the land.';
-    this.hint.innerHTML = `<b>${def.name}</b> <span>${how}</span>${modes}<button data-cancel class="cancel">Cancel</button>`;
+          : def.targeting === 'person'
+            ? 'Tap someone who is awake.'
+            : 'Tap the land.';
+    this.hint.innerHTML = `<b>${def.name}</b> <span>${how}</span>${modes}<button data-cancel class="cancel">Cancel</button><div class="m-blurb">${def.blurb}</div>`;
     this.hint.hidden = false;
   }
 
@@ -165,10 +167,16 @@ export class MiracleController {
       this.pickSleeper(clientX, clientY);
       return true;
     }
+    if (def.targeting === 'person') {
+      const id = this.view.pickVillager(this.sim, clientX, clientY);
+      if (id < 0) this.toast('target');
+      else this.send({ type: 'bless', villagerId: id }, 'bless');
+      return true;
+    }
     const hit = this.view.groundAt(clientX, clientY);
     if (!hit) return true;
     if (def.targeting === 'brush') this.stroke(hit.x, hit.z);
-    else this.send({ type: 'cast', miracle: def.id as 'rain' | 'lightning' | 'bloom', x: hit.x, z: hit.z }, def.id);
+    else this.send({ type: 'cast', miracle: def.id as PointMiracle, x: hit.x, z: hit.z }, def.id);
     return true;
   }
 
@@ -331,7 +339,7 @@ export class MiracleController {
       b.classList.toggle('dim', def.nightOnly && !m.isNight());
       (b.querySelector('.m-cool') as HTMLElement).style.setProperty('--p', `${(1 - ready) * 100}%`);
     }
-    if (this.armed && this.armed !== 'dream') {
+    if (this.armed && this.armed !== 'dream' && this.armed !== 'bless') {
       const fail = m.check(this.armed);
       this.view.miracleFx.setReticle(this.hover, miracleDef(this.armed).radius, !fail || fail === 'interval');
     } else {

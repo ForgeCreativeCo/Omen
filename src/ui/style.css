@@ -1853,3 +1853,243 @@ body.reduce-motion *::after {
     top: 158px;
   }
 }
+
+/* ---- More miracles: the bar wraps on narrow screens; hotkey letters */
+.miracle-buttons {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100vw - 48px);
+}
+
+.m-key {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  opacity: 0.45;
+}
+
+.miracle-hint {
+  max-width: min(560px, calc(100vw - 32px));
+}
+
+.m-blurb {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+@media (max-width: 1000px) {
+  .miracle {
+    width: 60px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .m-key {
+    display: none;
+  }
+}
+
+/* ---- Purposes */
+.goals {
+  left: 12px;
+  bottom: 12px;
+  width: 270px;
+  max-width: calc(100vw - 48px);
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.g-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: var(--hud-accent);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.g-head span:first-child {
+  flex: 1;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.g-count {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.g-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.g-list li {
+  margin-bottom: 6px;
+  opacity: 0.7;
+}
+
+.g-list li.g-now {
+  opacity: 1;
+}
+
+.g-list b {
+  color: #fff3dc;
+}
+
+.g-list small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.g-idea {
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: rgba(226, 178, 106, 0.1);
+  border-left: 2px solid var(--hud-accent);
+  border-radius: 4px;
+}
+
+.g-idea span {
+  margin-right: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hud-accent);
+}
+
+.g-all {
+  margin-top: 8px;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.g-safety {
+  margin-top: 8px;
+}
+
+.g-safety.compact {
+  margin-top: 4px;
+}
+
+.g-safe-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.g-safe-row small {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.g-safe-row b {
+  font-size: 15px;
+}
+
+.g-bar {
+  display: block;
+  height: 5px;
+  margin-top: 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.g-bar b {
+  display: block;
+  height: 100%;
+  transition: width 0.4s;
+}
+
+.g-safety .good {
+  color: #9fd88a;
+}
+.g-safety .mid {
+  color: #f1cf7a;
+}
+.g-safety .bad {
+  color: #e7836d;
+}
+.g-bar b.good {
+  background: #9fd88a;
+}
+.g-bar b.mid {
+  background: #f1cf7a;
+}
+.g-bar b.bad {
+  background: #e7836d;
+}
+
+.toast-purpose b {
+  color: var(--hud-accent);
+}
+
+/* The dock is centered; on mid-width screens the panel sits above it instead. */
+@media (max-width: 1280px) {
+  .goals {
+    bottom: 150px;
+  }
+}
+
+@media (max-width: 760px) {
+  .goals {
+    bottom: auto;
+    top: 158px;
+    width: 230px;
+  }
+}
+
+/* Centered with left: 50%, the dock would only get half the screen to lay out in. */
+.miracle-dock {
+  width: max-content;
+  max-width: calc(100vw - 24px);
+}
+
+@media (max-width: 760px) {
+  .miracle {
+    width: 50px;
+    padding: 5px 2px 3px;
+    font-size: 9px;
+  }
+  .miracle svg {
+    width: 22px;
+    height: 22px;
+  }
+  .miracle-buttons {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 760px) {
+  .goals {
+    max-height: calc(100vh - 330px);
+    overflow-y: auto;
+  }
+  .g-list li:not(.g-now) {
+    display: none;
+  }
+}
+
+.miracle-hint {
+  flex-wrap: wrap;
+}
+
+.m-blurb {
+  flex-basis: 100%;
+}

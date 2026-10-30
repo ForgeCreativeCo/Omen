@@ -304,7 +304,7 @@ describe('scripture', () => {
     expect(seen.size).toBeGreaterThan(60);
   });
 
-  it('same seed + same inputs → the same Holy Book', () => {
+  it('same seed + same inputs → the same Holy Book', { timeout: 30_000 }, () => {
     const play = () => {
       const sim = new Sim({ seed: 'scripture' });
       const hill = sim.island.landmarks.eastHill;

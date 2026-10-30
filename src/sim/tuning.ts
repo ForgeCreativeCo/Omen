@@ -257,6 +257,28 @@ export const TUNING = {
     },
     bloom: { cost: 12, cooldown: 20, radius: 5, flowerChance: 0.25, saplings: 2 },
     dream: { cost: 40, cooldownDays: 2, symbols: 3 },
+    /** Holy Light: a pillar of light, harmless and seen from far off. */
+    light: { cost: 22, cooldown: 40, radius: 3, durationTicks: 120, range: 60 },
+    /** Bless: one villager restored; people close by see the glow and feel it a little. */
+    bless: { cost: 15, cooldown: 25, witnessRadius: 2, love: 0.25, onlookerLove: 0.04, onlookerRadius: 8 },
+    /** Blight: crops wither and grass dies back. */
+    blight: { cost: 14, cooldown: 20, radius: 5, grassChance: 0.55 },
+    /** Falling Star: a meteor lands a few ticks after the cast. */
+    meteor: {
+      cost: 60,
+      cooldownDays: 4,
+      fallTicks: 10,
+      craterRadius: 4.5,
+      /** Crater depth at the center, voxels. */
+      depth: 4,
+      killRadius: 2.5,
+      /** Everyone this close is shaken. */
+      fearRadius: 14,
+      /** Chance per structure block in the crater that it's blown away. */
+      wreckChance: 0.75,
+      /** Fires started around the rim. */
+      fires: 4,
+    },
   },
 
   belief: {

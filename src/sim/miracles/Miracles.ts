@@ -4,7 +4,7 @@ import { TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
 import { CROP_STAGES, M, material, type MaterialId } from '../world/materials';
 import { plantTree } from '../world/terrain';
-import { DREAM_SYMBOLS, miracleDef, type DreamSymbol, type MiracleId } from './defs';
+import { DREAM_SYMBOLS, miracleDef, type DreamSymbol, type MiracleId, type PointMiracle } from './defs';
 
 const G = TUNING.grace;
 const MT = TUNING.miracles;
@@ -15,10 +15,11 @@ const MT = TUNING.miracles;
  * seed plus an input log reproduces a game exactly.
  */
 export type Command =
-  | { type: 'cast'; miracle: 'rain' | 'lightning' | 'bloom'; x: number; z: number }
+  | { type: 'cast'; miracle: PointMiracle; x: number; z: number }
   | { type: 'stroke'; x: number; z: number; raise: boolean }
   | { type: 'moveCloud'; cloudId: number; x: number; z: number }
-  | { type: 'dream'; villagerId: number; symbols: DreamSymbol[] };
+  | { type: 'dream'; villagerId: number; symbols: DreamSymbol[] }
+  | { type: 'bless'; villagerId: number };
 
 export type CastFailure = 'grace' | 'cooldown' | 'night' | 'target' | 'interval';
 
@@ -28,6 +29,22 @@ export interface RainCloud {
   z: number;
   radius: number;
   ticksLeft: number;
+}
+
+/** A pillar of Holy Light, standing for a while. */
+export interface LightBeam {
+  id: number;
+  x: number;
+  z: number;
+  radius: number;
+  ticksLeft: number;
+}
+
+/** A Falling Star on its way down. */
+export interface FallingStar {
+  x: number;
+  z: number;
+  impactTick: number;
 }
 
 /** Ground column top for reshaping: the highest terrain voxel, ignoring water, plants and decor. */
@@ -43,16 +60,29 @@ const NOT_GROUND = new Set<MaterialId>([
   M.CROP_4,
   M.FLOWER_RED,
   M.FLOWER_GOLD,
+  M.STAR_STONE,
 ]);
 
 /**
- * The god's side of the sim: Grace, cooldowns, and the five miracles (SPEC §6, §10).
+ * The god's side of the sim: Grace, cooldowns, and the miracles (SPEC §6, §10).
  */
 export class Miracles {
   grace: number = G.start;
   /** Tick at which each miracle is ready again. */
-  readonly readyAt: Record<MiracleId, number> = { rain: 0, lightning: 0, shapeEarth: 0, bloom: 0, dream: 0 };
+  readonly readyAt: Record<MiracleId, number> = {
+    rain: 0,
+    lightning: 0,
+    shapeEarth: 0,
+    bloom: 0,
+    dream: 0,
+    light: 0,
+    bless: 0,
+    blight: 0,
+    meteor: 0,
+  };
   readonly clouds: RainCloud[] = [];
+  readonly beams: LightBeam[] = [];
+  readonly falling: FallingStar[] = [];
   private nextCloudId = 1;
   private lastStrokeTick = -Infinity;
   /** Most recent outcome per command, for UI feedback. */
@@ -129,6 +159,16 @@ export class Miracles {
       }
     }
     for (let i = this.clouds.length - 1; i >= 0; i--) if (this.clouds[i]!.ticksLeft <= 0) this.clouds.splice(i, 1);
+
+    for (const b of this.beams) b.ticksLeft--;
+    for (let i = this.beams.length - 1; i >= 0; i--) if (this.beams[i]!.ticksLeft <= 0) this.beams.splice(i, 1);
+
+    for (let i = this.falling.length - 1; i >= 0; i--) {
+      const f = this.falling[i]!;
+      if (sim.tick < f.impactTick) continue;
+      this.falling.splice(i, 1);
+      this.impact(f.x, f.z);
+    }
   }
 
   // ------------------------------------------------------------------ commands
@@ -142,7 +182,10 @@ export class Miracles {
           this.spend(cmd.miracle);
           if (cmd.miracle === 'rain') this.rain(cmd.x, cmd.z);
           else if (cmd.miracle === 'lightning') this.lightning(cmd.x, cmd.z);
-          else this.bloom(cmd.x, cmd.z);
+          else if (cmd.miracle === 'bloom') this.bloom(cmd.x, cmd.z);
+          else if (cmd.miracle === 'light') this.light(cmd.x, cmd.z);
+          else if (cmd.miracle === 'blight') this.blight(cmd.x, cmd.z);
+          else this.meteor(cmd.x, cmd.z);
         }
         break;
       case 'stroke':
@@ -162,6 +205,13 @@ export class Miracles {
         } else fail = 'target';
         break;
       }
+      case 'bless':
+        fail = this.check('bless') ?? this.blessCheck(cmd.villagerId);
+        if (!fail) {
+          this.spend('bless');
+          this.bless(cmd.villagerId);
+        }
+        break;
       case 'dream':
         fail = this.check('dream') ?? this.dreamCheck(cmd.villagerId, cmd.symbols);
         if (!fail) {
@@ -339,6 +389,143 @@ export class Miracles {
       planted++;
     }
     sim.events.push(sim.tick, { type: 'bloom', x: cx, z: cz, radius: B.radius, crops, flowers });
+  }
+
+  /** A pillar of light. It does nothing at all, except be seen. */
+  private light(x: number, z: number): void {
+    const L = MT.light;
+    const b: LightBeam = { id: this.nextCloudId++, x, z, radius: L.radius, ticksLeft: L.durationTicks };
+    this.beams.push(b);
+    this.sim.events.push(this.sim.tick, { type: 'holyLight', beamId: b.id, x, z, radius: b.radius });
+  }
+
+  /** The opposite of Bloom: crops wither, flowers go, grass dies back to bare earth. */
+  private blight(cx: number, cz: number): void {
+    const sim = this.sim;
+    const w = sim.world;
+    const B = MT.blight;
+    let crops = 0;
+    for (const f of sim.village.fields) {
+      for (const t of f.tiles) {
+        if (t.state !== 2 || Math.hypot(t.x + 0.5 - cx, t.z + 0.5 - cz) > B.radius) continue;
+        // As if withered by drought, all at once.
+        w.set(t.x, t.y + 1, t.z, M.AIR);
+        t.state = 1;
+        t.progress = 0;
+        crops++;
+      }
+    }
+    const r = Math.ceil(B.radius);
+    for (let dz = -r; dz <= r; dz++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.hypot(dx, dz) > B.radius) continue;
+        const x = Math.round(cx) + dx;
+        const z = Math.round(cz) + dz;
+        const g = this.groundY(x, z);
+        if (g < 0) continue;
+        if (material(w.get(x, g + 1, z)).decor) w.set(x, g + 1, z, M.AIR);
+        if (w.get(x, g, z) === M.GRASS && !sim.village.structureAt(x, z) && this.rng.chance(B.grassChance)) w.set(x, g, z, M.DIRT);
+      }
+    sim.events.push(sim.tick, { type: 'blight', x: cx, z: cz, radius: B.radius, crops });
+  }
+
+  /** A star starts to fall; it lands a few ticks later. */
+  private meteor(x: number, z: number): void {
+    const sim = this.sim;
+    const impactTick = sim.tick + MT.meteor.fallTicks;
+    this.falling.push({ x, z, impactTick });
+    sim.events.push(sim.tick, { type: 'meteorFall', x, z, impactTick });
+  }
+
+  /** The star lands: a crater with star-stone at its heart, wrecked buildings, fire. */
+  private impact(cx: number, cz: number): void {
+    const sim = this.sim;
+    const w = sim.world;
+    const S = MT.meteor;
+    const sea = TUNING.terrain.seaLevel;
+    const ix = Math.max(2, Math.min(w.sizeX - 3, Math.round(cx)));
+    const iz = Math.max(2, Math.min(w.sizeZ - 3, Math.round(cz)));
+    const wrecked = new Set<number>();
+    const r = Math.ceil(S.craterRadius);
+    for (let dz = -r; dz <= r; dz++)
+      for (let dx = -r; dx <= r; dx++) {
+        const d = Math.hypot(dx, dz);
+        if (d > S.craterRadius) continue;
+        const x = ix + dx;
+        const z = iz + dz;
+        const s = sim.village.structureAt(x, z);
+        if (s && s.kind !== 'field') {
+          for (const st of s.steps) {
+            if (st.x !== x || st.z !== z || st.mat === M.AIR) continue;
+            if (w.get(st.x, st.y, st.z) === st.mat && this.rng.chance(S.wreckChance)) {
+              w.set(st.x, st.y, st.z, M.AIR);
+              wrecked.add(s.id);
+            }
+          }
+          continue;
+        }
+        const tree = sim.village.trees.find((t) => t.alive && t.x === x && t.z === z);
+        if (tree) sim.village.fell(tree);
+        const g = this.groundY(x, z);
+        if (g < 0) continue;
+        // Clear whatever stands on the ground, then dig the bowl.
+        for (let y = g + 1; y <= g + 2; y++) if (w.get(x, y, z) !== M.WATER) w.set(x, y, z, M.AIR);
+        const dig = Math.round(S.depth * (1 - d / (S.craterRadius + 0.5)));
+        let y = g;
+        for (let k = 0; k < dig && y > MT.shapeEarth.minY; k++, y--) w.set(x, y, z, y <= sea ? M.WATER : M.AIR);
+        const floor = w.get(x, y, z);
+        if (y > sea && floor !== M.WATER && floor !== M.AIR) w.set(x, y, z, d < 1.2 ? M.STAR_STONE : this.rng.chance(0.6) ? M.ASH : M.STONE);
+      }
+    const top = Math.max(0, w.topY(ix, iz));
+
+    const killed: number[] = [];
+    for (const v of [...sim.villagers.alive]) {
+      const d = Math.hypot(v.x - (ix + 0.5), v.z - (iz + 0.5));
+      if (d <= S.killRadius) {
+        killed.push(v.id);
+        sim.villagers.kill(v, 'meteor');
+      } else if (d <= S.fearRadius) v.needs.safety = 0;
+    }
+
+    // Fire catches around the rim, where there's anything to burn.
+    let fire = false;
+    let lit = 0;
+    for (let i = 0; i < S.fires * 4 && lit < S.fires; i++) {
+      const a = this.rng.range(0, Math.PI * 2);
+      const rr = S.craterRadius + this.rng.range(0, 2);
+      const x = Math.round(ix + Math.cos(a) * rr);
+      const z = Math.round(iz + Math.sin(a) * rr);
+      const y = w.topY(x, z);
+      if (y >= 0 && material(w.get(x, y, z)).flammable && sim.fire.ignite(x, y, z)) {
+        fire = true;
+        lit++;
+      }
+    }
+    sim.events.push(sim.tick, { type: 'meteor', x: ix, y: top, z: iz, killed, wrecked: [...wrecked], fire });
+    if (fire) sim.emitFireStarted(ix, top, iz);
+  }
+
+  private blessCheck(villagerId: number): CastFailure | null {
+    const v = this.sim.villagers.byId(villagerId);
+    if (!v?.alive || (v.action?.kind === 'sleep' && v.action.phase === 'work')) return 'target';
+    return null;
+  }
+
+  /** One person made whole. Being touched by a god is wonderful; seeing it, a little. */
+  private bless(villagerId: number): void {
+    const sim = this.sim;
+    const B = MT.bless;
+    const v = sim.villagers.byId(villagerId)!;
+    v.needs.hunger = 0;
+    v.needs.energy = 1;
+    v.needs.safety = 1;
+    v.faith.love = Math.min(1, v.faith.love + B.love);
+    v.faith.fear = Math.min(v.faith.fear, 1 - v.faith.love);
+    for (const o of sim.villagers.alive) {
+      if (o === v || o.inside || Math.hypot(o.x - v.x, o.z - v.z) > B.onlookerRadius) continue;
+      o.faith.love = Math.min(1 - o.faith.fear, o.faith.love + B.onlookerLove);
+    }
+    sim.events.push(sim.tick, { type: 'blessing', villagerId, x: v.x, z: v.z });
   }
 
   private dreamCheck(villagerId: number, symbols: DreamSymbol[]): CastFailure | null {

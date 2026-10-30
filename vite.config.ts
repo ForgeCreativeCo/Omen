@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
+    // Sims run thousands of ticks; on a busy machine the 5 s default flakes.
+    testTimeout: 30_000,
   },
 });

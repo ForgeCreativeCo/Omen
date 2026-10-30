@@ -13,6 +13,7 @@ import { Soundscape } from './audio/Soundscape';
 import { Inspector } from './ui/Inspector';
 import { MiracleController } from './ui/MiracleController';
 import { Toasts } from './ui/Toasts';
+import { GoalsPanel } from './ui/GoalsPanel';
 import { DebugPanel } from './debug/DebugPanel';
 
 const params = new URLSearchParams(location.search);
@@ -47,6 +48,8 @@ const miracles = new MiracleController(hudRoot, sim, renderer, loop, toasts);
 const debug = new DebugPanel(hudRoot, sim, renderer);
 const beliefs = new BeliefsPanel(hudRoot, sim);
 const book = new HolyBookPanel(hudRoot, sim);
+// The title screen's idle island has no purposes.
+const goals = chosen ? new GoalsPanel(hudRoot, sim) : null;
 beliefs.onVerse = (id) => book.showVerse(id);
 hudRoot.querySelector('.hud-beliefs')!.addEventListener('click', () => beliefs.toggle());
 hudRoot.querySelector('.hud-book')!.addEventListener('click', () => book.toggle());
@@ -156,6 +159,10 @@ function frame(now: number): void {
   debug.update(dt);
   beliefs.update(dt);
   book.update(dt);
+  if (goals) {
+    goals.covered = inspector.villagerId >= 0 || tutorial.running;
+    goals.update(dt);
+  }
   checkOutcome();
   tutorial.update();
   sound.update(sim, loop.speedIndex > 0, dt);

@@ -248,9 +248,9 @@ export class GameRenderer {
     const yearFrac = ((cal.day % DAYS_PER_YEAR) + dayFrac) / DAYS_PER_YEAR;
 
     this.terrain.update();
-    const night = this.env.update(dayFrac, yearFrac, this.elapsed, dt, this.fx.overcast, this.fx.flash * (this.reducedMotion ? 0.25 : 1));
+    const night = this.env.update(dayFrac, yearFrac, this.elapsed, dt, this.fx.overcast, Math.max(this.fx.flash, this.miracleFx.flash) * (this.reducedMotion ? 0.25 : 1));
     this.fx.update(sim, dt, this.elapsed, night);
-    this.miracleFx.update(sim, dt, this.elapsed);
+    this.miracleFx.update(sim, dt, this.elapsed, alpha);
     this.witnessLines.update(sim, this.elapsed);
     this.villagers.update(sim, alpha, dt, this.elapsed);
     this.orbit.update(Math.min(dt, 0.1));

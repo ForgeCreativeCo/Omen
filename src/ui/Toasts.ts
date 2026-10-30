@@ -1,4 +1,5 @@
 import type { SimEvent } from '../sim/events';
+import { MILESTONES } from '../sim/milestones';
 import type { Sim } from '../sim/Sim';
 
 const CAUSE: Record<string, string> = {
@@ -7,6 +8,7 @@ const CAUSE: Record<string, string> = {
   fire: 'was lost to fire',
   lightning: 'was struck by lightning',
   flood: 'drowned',
+  meteor: 'was killed by the falling star',
 };
 
 /** Short-lived notices for notable moments. Rate-limited so 16× stays readable. */
@@ -76,6 +78,14 @@ export class Toasts {
         return `${who(e.id)} has been sent away.`;
       case 'dream':
         return `${who(e.villagerId)} stirs in their sleep.`;
+      case 'blessing':
+        return `${who(e.villagerId)} glows.`;
+      case 'meteorFall':
+        return 'A star is falling.';
+      case 'milestone': {
+        const m = MILESTONES.find((x) => x.id === e.id);
+        return m ? `<span class="toast-purpose">Purpose fulfilled: <b>${m.title}</b></span>` : null;
+      }
       case 'tradition': {
         const b = sim.belief.beliefs.get(e.beliefId);
         return b ? `The last who saw it are gone. Now tradition: <i>${sim.belief.statement(b)}</i>` : null;

@@ -52,6 +52,10 @@ export const RESPONSE_PAST: Record<string, string[]> = {
   shapeEarth: ['moved the earth', 'took the land in hand'],
   drought: ['withheld the rain', 'closed the sky'],
   dream: ['spoke in dreams'],
+  light: ['set a pillar of light upon the earth', 'shone down upon the land'],
+  blessing: ['laid a hand upon one of the people', 'blessed one among us'],
+  blight: ['withered the land', 'struck the fields barren'],
+  meteor: ['cast down a star', 'threw a star upon the earth'],
 };
 
 /** What the god will do (follows "the god will …"). */
@@ -65,6 +69,10 @@ export const RESPONSE_FUTURE: Record<string, string[]> = {
   shapeEarth: ['move the earth'],
   drought: ['withhold the rain', 'close the sky'],
   dream: ['speak in dreams'],
+  light: ['shine upon us', 'send down the light'],
+  blessing: ['lay a hand upon the chosen', 'bless the faithful'],
+  blight: ['wither the fields', 'blight the land'],
+  meteor: ['cast down a star'],
 };
 
 /** Subjects as acts: [past clause, base phrase ("so it is that we …"), noun]. */
@@ -95,6 +103,10 @@ export const FAMILY_TITLE: Record<string, string[]> = {
   earth: ['the Shaking of the Land', 'the Breaking'],
   bloom: ['the Green Wonder', 'the Flowering'],
   drought: ['the Long Thirst', 'the Dry Years'],
+  light: ['the Pillar of Light', 'the Bright Day'],
+  blessing: ['the Laying of Hands', 'the Touch'],
+  blight: ['the Withering', 'the Blight'],
+  meteor: ['the Falling Star', 'the Night the Sky Fell'],
 };
 
 const COUNT_WORDS = ['', 'once', 'twice', 'thrice', 'four times', 'five times', 'six times', 'seven times', 'eight times', 'nine times', 'ten times', 'eleven times', 'a dozen times'];

@@ -26,6 +26,10 @@ const DEED: Record<string, string[]> = {
   rain: ['Weeps', 'Brings-the-Rain'],
   bloom: ['Wakes-the-Seed', 'Makes-Green'],
   drought: ['Drinks-the-River', 'Closes-the-Sky'],
+  light: ['Shines', 'Stands-in-Light'],
+  blessing: ['Lays-on-Hands', 'Chooses'],
+  blight: ['Withers', 'Eats-the-Harvest'],
+  meteor: ['Throws-Stars', 'Brings-Down-the-Sky'],
 };
 const KIN = new Set(['Father', 'Mother']);
 
@@ -37,6 +41,10 @@ export const NAME_WHY: Record<string, string> = {
   rain: 'it weeps upon the fields',
   bloom: 'it wakes the seed',
   drought: 'it closes the sky',
+  light: 'it stands in a pillar of light',
+  blessing: 'it lays its hand on those it chooses',
+  blight: 'it withers what it hates',
+  meteor: 'it throws down the stars',
 };
 
 /** Small stable string hash, so the same image and deeds always give the same name. */
