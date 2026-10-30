@@ -16,6 +16,8 @@ export class NavGrid {
   readonly height: Int16Array;
   /** Extra path cost per cell (beliefs will add to this, e.g. cursed ground). */
   readonly cost: Float32Array;
+  /** Cells closed to walking regardless of voxels (fire pits, wells). */
+  readonly blocked: Uint8Array;
   /** Bumped whenever any column's height changes; lets agents notice stale paths. */
   version = 0;
 
@@ -24,6 +26,7 @@ export class NavGrid {
     this.sizeZ = world.sizeZ;
     this.height = new Int16Array(this.sizeX * this.sizeZ);
     this.cost = new Float32Array(this.sizeX * this.sizeZ);
+    this.blocked = new Uint8Array(this.sizeX * this.sizeZ);
     for (let z = 0; z < this.sizeZ; z++) for (let x = 0; x < this.sizeX; x++) this.recompute(x, z);
     world.listeners.push((x, _y, z) => this.recompute(x, z));
   }
@@ -38,7 +41,9 @@ export class NavGrid {
 
   /** Stand height at (x, z), or -1 if not walkable / out of bounds. */
   at(x: number, z: number): number {
-    return this.inBounds(x, z) ? (this.height[x + z * this.sizeX] as number) : -1;
+    if (!this.inBounds(x, z)) return -1;
+    const k = x + z * this.sizeX;
+    return this.blocked[k] ? -1 : (this.height[k] as number);
   }
 
   walkable(x: number, z: number): boolean {
@@ -50,6 +55,13 @@ export class NavGrid {
     const ha = this.at(ax, az);
     const hb = this.at(bx, bz);
     return ha >= 0 && hb >= 0 && Math.abs(ha - hb) <= 1;
+  }
+
+  /** Close or reopen a cell to walking. */
+  setBlocked(x: number, z: number, blocked: boolean): void {
+    if (!this.inBounds(x, z)) return;
+    this.blocked[x + z * this.sizeX] = blocked ? 1 : 0;
+    this.version++;
   }
 
   private recompute(x: number, z: number): void {
@@ -76,7 +88,7 @@ export class NavGrid {
     const stack: number[] = [];
     let next = 0;
     for (let k = 0; k < label.length; k++) {
-      if (label[k] || (this.height[k] as number) < 0) continue;
+      if (label[k] || (this.height[k] as number) < 0 || this.blocked[k]) continue;
       next++;
       label[k] = next;
       stack.push(k);

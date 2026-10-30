@@ -7,6 +7,7 @@ import type { GameRenderer } from '../render/GameRenderer';
 export class Hud {
   private readonly calendarEl: HTMLElement;
   private readonly statsEl: HTMLElement;
+  private readonly villageEl: HTMLElement;
   private readonly tiltBtn: HTMLButtonElement;
   private readonly speedButtons: HTMLButtonElement[] = [];
   private frames = 0;
@@ -28,9 +29,11 @@ export class Hud {
         <button class="hud-new" title="Generate a new island">New island</button>
         <button class="hud-tilt" title="Tilt-shift (T)">Tilt-shift</button>
       </div>
+      <div class="hud-panel hud-village"></div>
       <div class="hud-panel hud-fps"></div>`;
     this.calendarEl = root.querySelector('.hud-calendar')!;
     this.statsEl = root.querySelector('.hud-fps')!;
+    this.villageEl = root.querySelector('.hud-village')!;
     this.tiltBtn = root.querySelector('.hud-tilt')!;
     root.querySelector('.hud-seed')!.textContent = `seed: ${seedLabel}`;
 
@@ -72,6 +75,16 @@ export class Hud {
     this.calendarEl.textContent = `${formatCalendar(c)} · ${c.timeOfDay}`;
     this.speedButtons.forEach((b, i) => b.classList.toggle('active', i === this.loop.speedIndex));
     this.tiltBtn.classList.toggle('active', this.view.post.enabled);
+    const vs = sim.village.store;
+    const w = sim.weather;
+    const sky = w.precipitation === 'storm' ? 'Storm' : w.raining ? 'Rain' : w.drought ? 'Drought' : '';
+    const stat = (label: string, value: number) => `<span><small>${label}</small> ${Math.floor(value)}</span>`;
+    this.villageEl.innerHTML =
+      stat('People', sim.villagers.alive.length) +
+      stat('Food', vs.food) +
+      stat('Wood', vs.wood) +
+      stat('Stone', vs.stone) +
+      (sky ? `<span class="hud-sky">${sky}</span>` : '');
 
     this.frames++;
     this.fpsTimer += dtSeconds;

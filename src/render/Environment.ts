@@ -159,7 +159,12 @@ export class Environment {
    * @param dayFraction 0..1, 0 = midnight
    * @param yearFraction 0..1 through the year, 0 = start of spring
    */
-  update(dayFraction: number, yearFraction: number, realTime: number, dt: number): void {
+  /**
+   * @param overcast 0..1 rain/storm gloom
+   * @param flash 0..1 lightning flash
+   * @returns 0..1 how dark it is (for fire glow)
+   */
+  update(dayFraction: number, yearFraction: number, realTime: number, dt: number, overcast = 0, flash = 0): number {
     // ---- palette
     let i = 0;
     while (i < DAY_KEYS.length - 2 && dayFraction > DAY_KEYS[i + 1]!.at) i++;
@@ -194,6 +199,21 @@ export class Environment {
     this.moon.position.set(-dir.x * 200, Math.abs(dir.y) * 150 + 60, -dir.z * 200);
     this.moon.intensity = 0.9 * night;
 
+    // ---- weather: storms grey the sky and dim the sun; lightning flashes everything
+    if (overcast > 0) {
+      const grey = tmpB.setHex(0x7d8794);
+      this.skyUniforms.uZenith.value.lerp(grey, overcast * 0.7);
+      this.horizon.lerp(grey, overcast * 0.6);
+      this.skyUniforms.uHorizon.value.copy(this.horizon);
+      terrainUniforms.uFadeColor.value.copy(this.horizon);
+      this.sun.intensity *= 1 - 0.75 * overcast;
+      this.hemi.intensity *= 1 - 0.25 * overcast;
+    }
+    if (flash > 0) {
+      this.hemi.intensity += 2.5 * flash;
+      this.skyUniforms.uZenith.value.lerp(tmpB.setHex(0xe8ecff), flash * 0.6);
+    }
+
     // ---- clouds: drift, pick up the horizon tint
     this.cloudMat.color.copy(this.horizon).lerp(tmpA.setHex(0xffffff), 0.55);
     this.cloudMat.emissive.copy(this.horizon).multiplyScalar(0.35);
@@ -207,6 +227,7 @@ export class Environment {
     this.placeClouds();
 
     terrainUniforms.uTime.value = realTime;
+    return night;
   }
 
   private updateSeason(yearFraction: number): void {

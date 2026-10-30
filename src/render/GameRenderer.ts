@@ -6,6 +6,8 @@ import { OrbitCamera } from './camera/OrbitCamera';
 import { TerrainRenderer } from './chunks/TerrainRenderer';
 import { Environment } from './Environment';
 import { PostFX } from './post/PostFX';
+import { VillagerRenderer } from './villagers/VillagerRenderer';
+import { WeatherFx } from './vfx/WeatherFx';
 
 const MAX_PIXEL_RATIO = 1.5;
 const MIN_PIXEL_RATIO = 0.75;
@@ -28,6 +30,11 @@ export class GameRenderer {
   readonly post: PostFX;
   private readonly terrain: TerrainRenderer;
   private readonly env = new Environment();
+  readonly villagers: VillagerRenderer;
+  readonly fx: WeatherFx;
+  private readonly raycaster = new THREE.Raycaster();
+  /** Fired on a tap/click that wasn't a drag (screen coords). */
+  onTap: ((x: number, y: number) => void) | null = null;
   private elapsed = 0;
   private pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
   private frameSamples = 0;
@@ -46,6 +53,10 @@ export class GameRenderer {
     this.terrain = new TerrainRenderer(sim.world, sim.seed);
     this.terrain.buildAll();
     this.scene.add(this.terrain.group);
+    const half0 = TUNING.world.sizeX / 2;
+    this.villagers = new VillagerRenderer(-half0, -half0);
+    this.fx = new WeatherFx(-half0, -half0);
+    this.scene.add(this.villagers.group, this.fx.group);
 
     const half = TUNING.world.sizeX / 2;
     const ground = sim.island.ground;
@@ -56,6 +67,7 @@ export class GameRenderer {
       maxDistance: 340,
       minPitch: 25,
       maxPitch: 75,
+      onTap: (x, y) => this.onTap?.(x, y),
       groundHeightAt: (x, z) => {
         // Scene → voxel coords; average a small area so the target glides over bumps.
         let sum = 0;
@@ -81,6 +93,33 @@ export class GameRenderer {
     this.resize();
   }
 
+  /** Villager id under a screen point, or -1. */
+  pickVillager(sim: Sim, clientX: number, clientY: number): number {
+    const el = this.renderer.domElement;
+    const ndc = new THREE.Vector2((clientX / el.clientWidth) * 2 - 1, -(clientY / el.clientHeight) * 2 + 1);
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const hit = this.raycaster.intersectObjects(this.villagers.pickables, false)[0];
+    if (hit?.instanceId !== undefined) return this.villagers.villagerAt(hit.instanceId);
+    // Villagers are tiny: fall back to the nearest one on screen within a finger's width.
+    const half = TUNING.world.sizeX / 2;
+    const p = new THREE.Vector3();
+    let best = -1;
+    let bestD = 24;
+    for (const v of sim.villagers.alive) {
+      if (v.inside) continue;
+      p.set(v.x - half, v.y + 0.9, v.z - half).project(this.camera);
+      if (p.z > 1) continue;
+      const sx = ((p.x + 1) / 2) * el.clientWidth;
+      const sy = ((1 - p.y) / 2) * el.clientHeight;
+      const d = Math.hypot(sx - clientX, sy - clientY);
+      if (d < bestD) {
+        bestD = d;
+        best = v.id;
+      }
+    }
+    return best;
+  }
+
   private resize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -102,8 +141,15 @@ export class GameRenderer {
     const yearFrac = ((cal.day % DAYS_PER_YEAR) + dayFrac) / DAYS_PER_YEAR;
 
     this.terrain.update();
-    this.env.update(dayFrac, yearFrac, this.elapsed, dt);
+    const night = this.env.update(dayFrac, yearFrac, this.elapsed, dt, this.fx.overcast, this.fx.flash);
+    this.fx.update(sim, dt, this.elapsed, night);
+    this.villagers.update(sim, alpha, dt, this.elapsed);
     this.orbit.update(Math.min(dt, 0.1));
+    if (this.fx.shake > 0) {
+      const s = this.fx.shake * 0.35;
+      this.camera.position.x += Math.sin(this.elapsed * 61) * s;
+      this.camera.position.y += Math.sin(this.elapsed * 47) * s;
+    }
 
     this.renderer.info.autoReset = false;
     this.renderer.info.reset();

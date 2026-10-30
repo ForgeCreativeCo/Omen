@@ -3,6 +3,8 @@ import { NEIGHBORS8, type NavGrid } from '../world/nav';
 export interface PathOptions {
   /** Succeed on reaching any walkable cell within Chebyshev distance 1 of the goal. */
   adjacent?: boolean;
+  /** With `adjacent`, how far (Chebyshev) from the goal counts as arrived. Default 1. */
+  radius?: number;
   maxExpand: number;
 }
 
@@ -44,8 +46,9 @@ export class Pathfinder {
     if (!nav.walkable(sx, sz)) return null;
     const W = nav.sizeX;
     const start = sx + sz * W;
+    const r = opts.radius ?? 1;
     const isGoal = (x: number, z: number) =>
-      (x === tx && z === tz) || (opts.adjacent === true && Math.abs(x - tx) <= 1 && Math.abs(z - tz) <= 1);
+      (x === tx && z === tz) || (opts.adjacent === true && Math.abs(x - tx) <= r && Math.abs(z - tz) <= r);
     if (isGoal(sx, sz)) return [];
     if (!opts.adjacent && !nav.walkable(tx, tz)) return null;
 

@@ -486,9 +486,12 @@ export class Villagers {
         const c = this.sim.village.center;
         const tx = deliver ? c.x : a.tx;
         const tz = deliver ? c.z : a.tz;
-        const ok = this.sim.village.reachable(Math.floor(v.x), Math.floor(v.z), tx, tz, deliver || a.adjacent);
+        // The fire pit itself is closed off, so "at the fire" means within two cells of it.
+        const radius = tx === c.x && tz === c.z ? 2 : 1;
+        const ok = this.sim.village.reachable(Math.floor(v.x), Math.floor(v.z), tx, tz, deliver || a.adjacent, radius);
         const p = ok && this.pathfinder.find(Math.floor(v.x), Math.floor(v.z), tx, tz, {
           adjacent: deliver || a.adjacent,
+          radius,
           maxExpand: V.pathMaxExpand,
         });
         if (!p) {

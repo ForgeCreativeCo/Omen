@@ -10,6 +10,8 @@ export interface OrbitCameraOptions {
   maxPitch: number;
   /** Scene-space ground height under (x, z), used to keep the target on the terrain. */
   groundHeightAt: (x: number, z: number) => number;
+  /** Called for a click/tap that didn't turn into a drag. */
+  onTap?: (clientX: number, clientY: number) => void;
 }
 
 const DAMPING = 10;
@@ -37,6 +39,7 @@ export class OrbitCamera {
   private mouseMode: 'pan' | 'rotate' | null = null;
   private gesture: { dist: number; angle: number; midY: number } | null = null;
   private readonly keys = new Set<string>();
+  private tapStart: { x: number; y: number; t: number; id: number } | null = null;
 
   constructor(
     readonly camera: THREE.PerspectiveCamera,
@@ -73,16 +76,23 @@ export class OrbitCamera {
   }
 
   private onDown(e: PointerEvent): void {
+    this.tapStart = this.pointers.size === 0 && e.button === 0 ? { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId } : null;
     this.dom.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (e.pointerType === 'mouse') {
       this.mouseMode = e.button === 2 ? 'rotate' : 'pan';
     } else if (this.pointers.size === 2) {
+      this.tapStart = null;
       this.gesture = this.measureGesture();
     }
   }
 
   private onUp(e: PointerEvent): void {
+    const tap = this.tapStart;
+    if (tap && tap.id === e.pointerId && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 6 && performance.now() - tap.t < 450) {
+      this.opts.onTap?.(e.clientX, e.clientY);
+    }
+    this.tapStart = null;
     this.pointers.delete(e.pointerId);
     if (e.pointerType === 'mouse') this.mouseMode = null;
     this.gesture = this.pointers.size === 2 ? this.measureGesture() : null;

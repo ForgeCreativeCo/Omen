@@ -175,12 +175,13 @@ export class Village {
    * Cheap reachability pre-check from the (daily) region map, so agents don't run
    * doomed A* searches toward targets across water or cliffs.
    */
-  reachable(sx: number, sz: number, tx: number, tz: number, adjacent: boolean): boolean {
+  reachable(sx: number, sz: number, tx: number, tz: number, adjacent: boolean, radius = 1): boolean {
     const from = this.regionAt(sx, sz);
     if (!from) return true; // standing somewhere new; let A* decide
     if (this.regionAt(tx, tz) === from) return true;
     if (!adjacent) return false;
-    for (const [dx, dz] of NEIGHBORS8) if (this.regionAt(tx + dx, tz + dz) === from) return true;
+    for (let dz = -radius; dz <= radius; dz++)
+      for (let dx = -radius; dx <= radius; dx++) if (this.regionAt(tx + dx, tz + dz) === from) return true;
     return false;
   }
 
@@ -347,6 +348,8 @@ export class Village {
       s.door = plan.door ?? this.accessCells(s)[0] ?? { x: s.x0 - 1, z: s.z0 };
       this.structures.push(s);
       this.markOccupied(s, s.id);
+      if (kind === 'firePit' || kind === 'well')
+        for (let z = s.z0; z < s.z0 + s.d; z++) for (let x = s.x0; x < s.x0 + s.w; x++) this.nav.setBlocked(x, z, true);
       if (plan.door) this.occupancy[plan.door.x + plan.door.z * this.world.sizeX] = PLAZA;
       if (instant) this.finishInstantly(host, s);
       return s;
@@ -607,7 +610,7 @@ export class Village {
   private reserveGraveyard(): void {
     const site = this.findSite(this.center.x, this.center.z, 5, 5, this.maxRadius + 6, 2, (x0, z0) => {
       const d = Math.hypot(x0 + 2.5 - this.center.x, z0 + 2.5 - this.center.z);
-      return d >= 9;
+      return d >= 12;
     });
     if (!site) return;
     this.graveyard = { x0: site.x0, z0: site.z0, w: 5, d: 5, used: 0 };
