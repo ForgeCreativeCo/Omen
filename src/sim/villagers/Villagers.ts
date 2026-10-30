@@ -3,6 +3,7 @@ import type { Rng } from '../rng';
 import type { Sim } from '../Sim';
 import { DAYS_PER_YEAR, TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
+import { M } from '../world/materials';
 import type { Structure } from '../world/structures';
 import { makeName } from './names';
 import { Pathfinder } from './pathfinding';
@@ -89,6 +90,8 @@ export class Villagers {
       deathTick: -1,
       deathCause: null,
       starvingTicks: 0,
+      drowningTicks: 0,
+      wade: null,
       x: opts.x + 0.5,
       y: h + 1,
       z: opts.z + 0.5,
@@ -139,7 +142,9 @@ export class Villagers {
         ? Math.min(1, v.needs.energy + V.sleepRecoverPerDay / TICKS_PER_DAY)
         : Math.max(0, v.needs.energy - V.energyPerDay / TICKS_PER_DAY);
       v.needs.safety = Math.min(1, v.needs.safety + 0.002);
-      if (v.needs.hunger >= 1) {
+      // Nobody starves in the few days a disaster lasts; hunger waits.
+      const enduring = sim.warning && (sim.warning.disaster.phase === 'striking' || sim.warning.disaster.phase === 'settling');
+      if (v.needs.hunger >= 1 && !enduring) {
         if (++v.starvingTicks > V.starveDays * TICKS_PER_DAY) {
           this.kill(v, 'starvation');
           continue;
@@ -161,9 +166,22 @@ export class Villagers {
         }
       }
 
-      // Unstick: if the ground under us changed into a wall, step out.
+      // Water: over the head for long, they drown; at the feet, they wade for dry ground.
       const cx = Math.floor(v.x);
       const cz = Math.floor(v.z);
+      const feet = Math.floor(v.y + 0.05);
+      if (sim.world.get(cx, feet + 1, cz) === M.WATER) {
+        if (++v.drowningTicks > V.drownTicks) {
+          this.kill(v, 'flood');
+          continue;
+        }
+      } else v.drowningTicks = 0;
+      if (sim.world.get(cx, feet, cz) === M.WATER) {
+        this.wade(v);
+        continue;
+      }
+
+      // Unstick: if the ground under us changed into a wall, step out.
       if (!v.inside && !sim.nav.walkable(cx, cz)) {
         const out = sim.village.nearestWalkable(cx, cz);
         if (out) {
@@ -180,11 +198,51 @@ export class Villagers {
     if (this.alive.some((v) => !v.alive)) this.alive = this.alive.filter((v) => v.alive);
   }
 
+  /** Caught by water: head for the nearest dry ground in reach, or stay and hope. */
+  private wade(v: Villager): void {
+    const sim = this.sim;
+    if (v.action) this.setAction(v, null);
+    if (!v.wade || !sim.nav.walkable(v.wade.x, v.wade.z)) {
+      v.wade = null;
+      const R = V.panicRadius;
+      let best = Infinity;
+      for (let dz = -R; dz <= R; dz++)
+        for (let dx = -R; dx <= R; dx++) {
+          const x = Math.floor(v.x) + dx;
+          const z = Math.floor(v.z) + dz;
+          const d = Math.hypot(dx, dz);
+          if (d <= R && d < best && sim.nav.walkable(x, z)) (best = d), (v.wade = { x, z });
+        }
+      if (!v.wade) return;
+    }
+    const tx = v.wade.x + 0.5;
+    const tz = v.wade.z + 0.5;
+    const d = Math.hypot(tx - v.x, tz - v.z);
+    const step = V.wadeSpeed * (v.lifeStage === 'child' ? V.childSpeedFactor : 1);
+    if (d <= step) {
+      v.x = tx;
+      v.z = tz;
+      v.y = sim.nav.at(v.wade.x, v.wade.z) + 1;
+      v.wade = null;
+      v.nextThink = sim.tick;
+      return;
+    }
+    v.x += ((tx - v.x) / d) * step;
+    v.z += ((tz - v.z) / d) * step;
+  }
+
   // ------------------------------------------------------------------ decisions
 
   private think(v: Villager): void {
     const sim = this.sim;
     v.nextThink = sim.tick + V.thinkInterval + (v.id % 11);
+    // A disaster is unfolding: those who trust a holy place run to its highest ground.
+    const refuge = sim.warning?.disaster.refugeFor(v);
+    if (refuge) {
+      const a = v.action;
+      if (a?.kind !== 'flee' || a.tx !== refuge.x || a.tz !== refuge.z) this.setAction(v, this.make('flee', refuge.x, refuge.z, false, TICKS_PER_DAY));
+      return;
+    }
     const f = sim.calendar.dayFraction;
     const night = f >= V.gatheringEndsAt || f < T.dawnAt;
     const workTime = !night && f < V.workEndsAt;

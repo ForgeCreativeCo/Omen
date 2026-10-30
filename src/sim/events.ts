@@ -30,6 +30,8 @@ export type SimEventBody =
   | { type: 'beliefLevel'; beliefId: string; level: 'behavior' | 'doctrine' | 'died' }
   | { type: 'priest'; id: number; personality: string }
   | { type: 'tradition'; beliefId: string }
+  | { type: 'flood'; phase: 'strike' | 'rise' | 'peak'; level: number }
+  | { type: 'outcome'; won: boolean; reason: string }
   | { type: 'placeNamed'; key: string; name: string }
   | { type: 'godNamed'; name: string; old: string }
   | { type: 'verse'; verseId: number }

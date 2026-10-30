@@ -82,6 +82,10 @@ export const TUNING = {
     elderAge: 38,
     /** Walking speed in voxels per tick. */
     speed: 0.6,
+    /** In water: wading speed, how far they look for dry ground, ticks with water over the head before drowning. */
+    wadeSpeed: 0.15,
+    panicRadius: 5,
+    drownTicks: 40,
     childSpeedFactor: 0.8,
     /** Hunger 0 = full, 1 = starving. Rise per day. */
     hungerPerDay: 0.8,
@@ -381,6 +385,27 @@ export const TUNING = {
   warning: {
     floodInYears: 120,
     survivalToWin: 0.4,
+    /** Faith collapse (a loss): mean love + fear below this for this many days in a row… */
+    faithCollapseBelow: 0.03,
+    faithCollapseDays: 24,
+    /** …but not in the first years, while the village is still meeting its god. */
+    faithGraceYears: 3,
+  },
+
+  flood: {
+    /** Final sea level: this far over the east hill's top, at least this far over the valley… */
+    aboveHill: 1,
+    minAboveValley: 5,
+    /** …and always at least this far under the ridge's peak. */
+    belowRidgeTop: 6,
+    /** Days for the sea to climb to its final height. */
+    riseDays: 3,
+    /** Rows of a new water layer filled per tick (spreads the work and the remeshing). */
+    rowsPerTick: 16,
+    /** Days after the peak before survival is judged. */
+    settleDays: 1,
+    /** Personal strength in a sacred place needed to run there when the water comes. */
+    refugeTrust: 0.2,
   },
 } as const;
 

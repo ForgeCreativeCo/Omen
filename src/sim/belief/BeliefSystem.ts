@@ -249,14 +249,17 @@ export class BeliefSystem {
       const g = sim.village.graveyard;
       return { x: g.x0 + g.w / 2, z: g.z0 + g.d / 2, r: 5 };
     }
-    if (subject === 'place:ridge' && !omen) return { x: L.ridgePeak.x, z: L.ridgePeak.z, r: 10 };
+    // Sprawling places: the part where it happened, if it happened there (a dream of
+    // the mountain, dreamt in a valley hut, is still about the mountain).
+    const there = !!omen?.context.some((f) => f.key === subject && f.distance <= 3);
+    if (subject === 'place:ridge' && !there) return { x: L.ridgePeak.x, z: L.ridgePeak.z, r: 10 };
     const site = sim.myth?.places.site(subject);
     if (site) return { x: site.x, z: site.z, r: site.r };
-    if (!omen && subject === 'place:fields' && sim.village.fields[0]) {
+    if (!there && subject === 'place:fields' && sim.village.fields[0]) {
       const f = sim.village.fields[0];
       return { x: f.x0 + f.w / 2, z: f.z0 + f.d / 2, r: 6 };
     }
-    if (!omen && subject === 'place:river') {
+    if (!there && subject === 'place:river') {
       const c = sim.village.center;
       const p = [...L.riverPath].sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z))[0];
       if (p) return { x: p.x, z: p.z, r: 6 };

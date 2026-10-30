@@ -2,6 +2,7 @@ import { BeliefSystem } from './belief/BeliefSystem';
 import { BeliefEffects } from './belief/effects';
 import { EventLog, type DeathCause } from './events';
 import { MythSystem } from './myth/Myth';
+import { WarningScenario } from './disaster/Warning';
 import { OmenRecorder } from './omens/OmenRecorder';
 import { Miracles, type CastFailure, type Command } from './miracles/Miracles';
 import { Rng } from './rng';
@@ -24,6 +25,8 @@ export interface SimOptions {
   noVillage?: boolean;
   /** Game mode; sandbox keeps a Grace floor (SPEC §14). */
   mode?: GameMode;
+  /** The Warning: years until the disaster (default TUNING.warning.floodInYears). */
+  floodInYears?: number;
 }
 
 export type GameMode = 'sandbox' | 'warning';
@@ -62,6 +65,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly belief: BeliefSystem;
   readonly effects: BeliefEffects;
   readonly myth: MythSystem;
+  /** The Warning's countdown, disaster and verdict (null in sandbox). */
+  readonly warning: WarningScenario | null;
   private readonly recorder: OmenRecorder;
   readonly mode: GameMode;
   /** Every command applied, in order (SPEC §0 determinism). */
@@ -95,6 +100,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.village.forbidden = (x, z) => this.effects.isCursed(x, z);
     this.village.attraction = () => this.effects.sacredArea();
     this.mode = opts.mode ?? 'sandbox';
+    this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
     if (!opts.noVillage) this.found();
   }
 
@@ -184,6 +190,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.recorder.step();
     this.effects.step();
     this.myth.step();
+    this.warning?.step();
 
     // Late in the evening gathering, people talk: beliefs spread around the fire.
     const duskMark = TUNING.villagers.gatheringEndsAt - 0.04;
@@ -194,6 +201,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.belief.newDay();
       this.effects.dawn();
       this.myth.dawn();
+      this.warning?.dawn();
       this.village.population = this.villagers.alive.length;
       this.village.inspect(this);
       this.village.plan(this);

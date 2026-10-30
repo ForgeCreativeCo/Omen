@@ -82,6 +82,10 @@ export interface Villager {
   deathCause: DeathCause | null;
   /** Ticks spent fully starving. */
   starvingTicks: number;
+  /** Ticks with water over the head. */
+  drowningTicks: number;
+  /** Dry cell being waded toward, when caught in water. */
+  wade: { x: number; z: number } | null;
 
   // Position: feet at y. Previous tick kept for render interpolation.
   x: number;
