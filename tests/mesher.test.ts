@@ -1,9 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { meshColumn } from '../src/render/chunks/mesher';
+import { copyColumnLod, LOD, meshColumn, meshVoxels } from '../src/render/chunks/mesher';
 import { Rng } from '../src/sim/rng';
 import { M } from '../src/sim/world/materials';
 import { generateIsland } from '../src/sim/world/terrain';
 import { VoxelWorld } from '../src/sim/world/VoxelWorld';
+
+describe('distant terrain', () => {
+  it('a coarse column covers LOD×LOD real columns with far fewer faces, and keeps grass on top', () => {
+    const w = generateIsland(new Rng('lod')).world;
+    const lx = 3;
+    const lz = 3;
+    let detail = 0;
+    for (let dz = 0; dz < LOD; dz++) for (let dx = 0; dx < LOD; dx++) detail += meshColumn(w, lx * LOD + dx, lz * LOD + dz).opaque?.indices.length ?? 0;
+    const coarse = meshVoxels(copyColumnLod(w, lx, lz));
+    expect(coarse.opaque).not.toBeNull();
+    expect(coarse.opaque!.indices.length).toBeLessThan(detail / 2);
+    const col = copyColumnLod(w, lx, lz);
+    const s = col.size + 2;
+    // Some top surface in the coarse column is grass.
+    let grass = 0;
+    for (let y = 0; y < col.height; y++)
+      for (let z = 0; z < col.size; z++)
+        for (let x = 0; x < col.size; x++)
+          if (col.vox[(y + 1) * s * s + (z + 1) * s + (x + 1)] === M.GRASS && col.vox[(y + 2) * s * s + (z + 1) * s + (x + 1)] === M.AIR) grass++;
+    expect(grass).toBeGreaterThan(0);
+  });
+});
 
 describe('mesher', () => {
   it('a lone voxel produces 6 faces with full AO', () => {

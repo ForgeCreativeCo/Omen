@@ -169,6 +169,49 @@ export function copyColumn(world: VoxelWorld, cx: number, cz: number): ColumnVox
   return { vox, size: s, height: H, x0, z0 };
 }
 
+/** Halving factor for distant terrain. */
+export const LOD = 2;
+const DECOR_OR_AIR = Uint8Array.from(MATERIALS, (m) => (m.id === M.AIR || m.decor ? 1 : 0));
+
+/**
+ * A distant-terrain column: every LOD³ block of voxels becomes one, so a column
+ * of `chunkSize` LOD cells covers LOD×LOD real columns at an eighth of the
+ * voxels. A block is solid if enough of it is (its color is the topmost solid
+ * voxel's, so grass stays on top and canopies stay green); else water if any;
+ * else air. Coordinates come out in LOD units: scale the mesh by LOD.
+ */
+export function copyColumnLod(world: VoxelWorld, lcx: number, lcz: number): ColumnVoxels {
+  const s = world.chunkSize;
+  const H = Math.ceil(world.sizeY / LOD);
+  const x0 = lcx * s;
+  const z0 = lcz * s;
+  const strideZ = s + 2;
+  const strideY = strideZ * (s + 2);
+  const vox = new Uint8Array(strideY * (H + 2));
+  for (let z = -1; z <= s; z++)
+    for (let x = -1; x <= s; x++) {
+      const rx = (x0 + x) * LOD;
+      const rz = (z0 + z) * LOD;
+      for (let y = 0; y < H; y++) {
+        let solid = 0;
+        let water = 0;
+        let top: number = M.AIR;
+        for (let dy = LOD - 1; dy >= 0; dy--)
+          for (let dz = 0; dz < LOD; dz++)
+            for (let dx = 0; dx < LOD; dx++) {
+              const id = world.get(rx + dx, y * LOD + dy, rz + dz);
+              if (id === M.WATER) water++;
+              else if (!DECOR_OR_AIR[id] && SOLID[id]) {
+                solid++;
+                if (top === M.AIR) top = id;
+              }
+            }
+        vox[(y + 1) * strideY + (z + 1) * strideZ + (x + 1)] = solid >= 3 ? top : water ? M.WATER : solid ? top : M.AIR;
+      }
+    }
+  return { vox, size: s, height: H, x0, z0 };
+}
+
 export function meshColumn(world: VoxelWorld, cx: number, cz: number): ColumnMesh {
   return meshVoxels(copyColumn(world, cx, cz));
 }

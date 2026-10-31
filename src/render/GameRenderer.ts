@@ -13,12 +13,12 @@ import { MiracleFx } from './vfx/MiracleFx';
 import { HandFx } from './vfx/HandFx';
 import { WitnessLines } from './vfx/WitnessLines';
 
-/** Pixel-ratio ceiling and shadow detail per graphics quality (settings). */
+/** Pixel-ratio ceiling, shadow detail and how far the terrain stays detailed, per graphics quality (settings). */
 export type Quality = 'low' | 'medium' | 'high';
-const QUALITY: Record<Quality, { maxRatio: number; shadows: number }> = {
-  low: { maxRatio: 0.75, shadows: 0 },
-  medium: { maxRatio: 1, shadows: 1024 },
-  high: { maxRatio: 1.5, shadows: 2048 },
+const QUALITY: Record<Quality, { maxRatio: number; shadows: number; lod: number }> = {
+  low: { maxRatio: 0.75, shadows: 0, lod: 150 },
+  medium: { maxRatio: 1, shadows: 1024, lod: 210 },
+  high: { maxRatio: 1.5, shadows: 2048, lod: 280 },
 };
 const MAX_PIXEL_RATIO = QUALITY.high.maxRatio;
 const MIN_PIXEL_RATIO = 0.75;
@@ -67,6 +67,7 @@ export class GameRenderer {
     const Q = QUALITY[q];
     this.pixelRatio = Math.min(window.devicePixelRatio, Q.maxRatio);
     this.env.setShadows(Q.shadows);
+    this.terrain.lodDistance = Q.lod;
     this.resize();
   }
 
@@ -250,7 +251,7 @@ export class GameRenderer {
     const dayFrac = (cal.dayFraction + alpha / TICKS_PER_DAY) % 1;
     const yearFrac = ((cal.day % DAYS_PER_YEAR) + dayFrac) / DAYS_PER_YEAR;
 
-    this.terrain.update();
+    this.terrain.update(this.camera.position);
     const night = this.env.update(dayFrac, yearFrac, this.elapsed, dt, this.fx.overcast, Math.max(this.fx.flash, this.miracleFx.flash) * (this.reducedMotion ? 0.25 : 1));
     this.fx.update(sim, dt, this.elapsed, night);
     this.miracleFx.update(sim, dt, this.elapsed, alpha);
