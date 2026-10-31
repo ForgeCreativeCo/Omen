@@ -28,6 +28,20 @@ import { depictionDistance, depictionOf, statueBlueprint, type Depiction } from 
 
 const T = TUNING.myth;
 
+/** The new country, as the Book names it. */
+const REGION_WORDS: Record<number, string> = {
+  0: 'the valley',
+  1: 'the high country',
+  2: 'the green country',
+  3: 'the dry country',
+  4: 'the meadows',
+};
+const EXODUS_WHY: Record<string, string> = {
+  ruined: 'for their homes lay broken',
+  cursed: 'for the ground was cursed',
+  drowned: 'for the waters had taken it',
+};
+
 /** How a law reads: "whoever {deed} {sentence}". */
 const LAW_DEED: Record<Crime, string> = {
   theft: 'takes what is not theirs',
@@ -183,6 +197,13 @@ export class MythSystem {
       }
       case 'priest':
         if (e.id >= 0) this.succession(e.id);
+        break;
+      case 'exodus':
+        this.addVerse('exodus', '*', { to: REGION_WORDS[e.region] ?? 'new country', why: EXODUS_WHY[e.reason] ?? 'for they could not stay' }, {
+          truth: [`The village moved because ${e.reason === 'drowned' ? 'the water covered it' : e.reason === 'cursed' ? 'they believed the ground cursed' : 'it lay in ruins'}.`],
+          omenIds: [],
+          drift: [],
+        });
         break;
       case 'law':
         this.addVerse('law', '*', { deed: LAW_DEED[e.crime], sentence: LAW_SENTENCE[e.sentence] }, {

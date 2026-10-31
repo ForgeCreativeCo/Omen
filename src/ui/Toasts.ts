@@ -1,6 +1,6 @@
 import type { DissentEndReason, SimEvent } from '../sim/events';
 import { featureLabel } from '../sim/omens/context';
-import { CRIME_TEXT, LAW_TEXT, SENTENCE_TEXT, whenJudged } from './describe';
+import { CRIME_TEXT, EXODUS_TEXT, LAW_TEXT, REGION_TEXT, SENTENCE_TEXT, whenJudged } from './describe';
 import { TUNING } from '../sim/tuning';
 import { MILESTONES } from '../sim/milestones';
 import type { Sim } from '../sim/Sim';
@@ -73,6 +73,8 @@ export class Toasts {
           : `${who(e.victim)} has been found dead. <small>(You saw: it was ${who(e.killer)}.)</small>`;
       case 'affairExposed':
         return `${who(e.by)} found out about ${who(e.a)} and ${who(e.b)}.${e.breakup ? ' They have parted.' : ''}`;
+      case 'exodus':
+        return `<b>The village is abandoned.</b> ${EXODUS_TEXT[e.reason]} The survivors set out for ${REGION_TEXT[e.region] ?? 'new ground'}.`;
       case 'accused':
         return `${who(e.accused)} is accused of ${CRIME_TEXT[e.crime]}. The village will judge at ${whenJudged(sim, e)}, <i>unless the god speaks</i>.${e.actual !== e.accused ? ` <small>(You know it was ${who(e.actual)}.)</small>` : ''}`;
       case 'verdict':

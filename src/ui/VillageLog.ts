@@ -1,7 +1,7 @@
 import type { SimEvent } from '../sim/events';
 import { MILESTONES } from '../sim/milestones';
 import { featureLabel } from '../sim/omens/context';
-import { CRIME_TEXT, LAW_TEXT, SENTENCE_TEXT } from './describe';
+import { CRIME_TEXT, EXODUS_TEXT, LAW_TEXT, REGION_TEXT, SENTENCE_TEXT } from './describe';
 import type { Sim } from '../sim/Sim';
 import { calendarAt, TICKS_PER_DAY } from '../sim/time';
 
@@ -142,6 +142,8 @@ export class VillageLog {
         return this.push(e.tick, 'deeds', e.seen ? `<b>${w(e.killer)} killed ${w(e.victim)}</b> at the fire.` : `${w(e.victim)} was found dead. Nobody saw ${w(e.killer)} do it.`);
       case 'fight':
         return this.push(e.tick, 'deeds', `${w(e.a)} struck ${w(e.b)}${e.hurt >= 0 ? ', and hurt them' : ''}.`);
+      case 'exodus':
+        return this.push(e.tick, 'life', `<b>The village moved</b> to ${REGION_TEXT[e.region] ?? 'new ground'}. ${EXODUS_TEXT[e.reason]}`);
       case 'accused':
         return this.push(e.tick, 'deeds', `${w(e.accused)} was accused of ${CRIME_TEXT[e.crime]}.${e.actual !== e.accused ? ` <small>(It was ${w(e.actual)}.)</small>` : ''}`);
       case 'verdict':

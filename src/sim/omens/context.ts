@@ -144,6 +144,7 @@ export function placesNear(sim: Sim, x: number, z: number, radius: number): { ke
 
   let fields = Infinity;
   for (const s of v.structures) {
+    if (s.abandoned) continue;
     const dx = Math.max(s.x0 - x, 0, x - (s.x0 + s.w - 1));
     const dz = Math.max(s.z0 - z, 0, z - (s.z0 + s.d - 1));
     const d = Math.hypot(dx, dz);

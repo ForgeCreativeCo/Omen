@@ -109,16 +109,21 @@ export class Village {
   }
 
   get huts(): Structure[] {
-    return this.structures.filter((s) => s.kind === 'hut');
+    return this.structures.filter((s) => s.kind === 'hut' && !s.abandoned);
   }
 
   get fields(): Structure[] {
-    return this.structures.filter((s) => s.kind === 'field');
+    return this.structures.filter((s) => s.kind === 'field' && !s.abandoned);
+  }
+
+  /** The village's well, if it has one (not one left behind). */
+  get well(): Structure | undefined {
+    return this.structures.find((s) => s.kind === 'well' && !s.abandoned);
   }
 
   usableHut(s: Structure): boolean {
     // Huts on cursed ground are abandoned (SPEC §9).
-    return s.kind === 'hut' && s.complete && !s.destroyed && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2);
+    return s.kind === 'hut' && s.complete && !s.destroyed && !s.abandoned && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2);
   }
 
   /** Beds in usable huts, or in every hut including ones being built or repaired. */
@@ -465,7 +470,7 @@ export class Village {
   /** Structures with blocks left to place, oldest first. */
   constructionSites(): Structure[] {
     return this.structures.filter(
-      (s) => s.kind !== 'field' && s.kind !== 'grave' && !s.complete && !s.ruined && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2),
+      (s) => s.kind !== 'field' && s.kind !== 'grave' && !s.complete && !s.ruined && !s.abandoned && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2),
     );
   }
 
@@ -715,10 +720,15 @@ export class Village {
     const sites = this.constructionSites();
     const hutsBuilding = sites.filter((s) => s.kind === 'hut').length;
     // Failed searches are expensive (the whole radius), so back off for a few days after one.
-    if (this.bedCapacity(true) < pop + B.spareBeds && hutsBuilding < (pop > 40 ? 2 : 1) && host.tick >= this.retryHutAt) {
+    // After a move, everyone pitches in: several homes go up at once.
+    const parallel = this.rebuilding ? 3 : pop > 40 ? 2 : 1;
+    if (this.bedCapacity(true) >= pop) this.rebuilding = false;
+    if (this.bedCapacity(true) < pop + B.spareBeds && hutsBuilding < parallel && host.tick >= this.retryHutAt) {
       // New homes lean toward a sacred place, as far as belief pulls (SPEC §9).
+      // (Only a holy place close by: one left behind in a move is too far to lean toward.)
       const pull = this.attraction();
-      const k = pull ? Math.min(0.7, pull.strength) : 0;
+      const near = pull && Math.hypot(pull.x - this.center.x, pull.z - this.center.z) <= B.maxRadius * 1.5;
+      const k = pull && near ? Math.min(0.7, pull.strength) : 0;
       const hx = Math.round(this.center.x + ((pull?.x ?? 0) - this.center.x) * k);
       const hz = Math.round(this.center.z + ((pull?.z ?? 0) - this.center.z) * k);
       if (!this.placePrefab(host, 'hut', hx, hz, false)) this.retryHutAt = host.tick + SITE_RETRY_DAYS * TICKS_PER_DAY;
@@ -729,9 +739,53 @@ export class Village {
     if (fields.length < fieldTarget && fieldsInProgress < 2 && host.tick >= this.retryFieldAt) {
       if (!this.placeField(host, false)) this.retryFieldAt = host.tick + SITE_RETRY_DAYS * TICKS_PER_DAY;
     }
-    if (pop >= B.wellAtPopulation && !this.structures.some((s) => s.kind === 'well')) {
+    if (pop >= B.wellAtPopulation && !this.well) {
       this.placePrefab(host, 'well', this.center.x, this.center.z, false);
     }
+  }
+
+  /** Building homes after a move (more at once than usual). */
+  rebuilding = false;
+
+  /**
+   * Leave this place: huts, fields, the well and the fire become ruins (shrines,
+   * statues and graves stay where they are), and a new fire is lit at `site`.
+   * The store goes with them, less what can't be carried.
+   */
+  relocate(host: VillageHost, site: Point3): void {
+    const W = this.world.sizeX;
+    for (const s of this.structures) {
+      if (s.abandoned || (s.kind !== 'hut' && s.kind !== 'field' && s.kind !== 'well' && s.kind !== 'firePit')) continue;
+      s.abandoned = true;
+      s.residents = [];
+      for (const t of s.tiles) t.reservedBy = -1;
+      for (let z = s.z0 - 1; z <= s.z0 + s.d; z++)
+        for (let x = s.x0 - 1; x <= s.x0 + s.w; x++) if (this.nav.inBounds(x, z) && this.occupancy[x + z * W] === s.id) this.occupancy[x + z * W] = 0;
+      if (s.kind === 'firePit' || s.kind === 'well') for (let z = s.z0; z < s.z0 + s.d; z++) for (let x = s.x0; x < s.x0 + s.w; x++) this.nav.setBlocked(x, z, false);
+    }
+    // The old plaza is just ground now.
+    for (let k = 0; k < this.occupancy.length; k++) if (this.occupancy[k] === PLAZA) this.occupancy[k] = 0;
+    this.center.x = site.x;
+    this.center.z = site.z;
+    this.center.y = site.y;
+    this.graveyard = null;
+    this.store.food *= 1 - WORK.relocateLoss;
+    this.stoneSpots.length = 0;
+    for (const [dx, dz] of this.ring) {
+      const x = site.x + dx;
+      const z = site.z + dz;
+      const h = this.nav.at(x, z);
+      if (h >= 0 && this.world.get(x, h, z) === M.STONE) this.stoneSpots.push({ x, z });
+      if (this.stoneSpots.length >= 40) break;
+    }
+    // Clear the land: trees around the new fire come down (their wood goes in the store).
+    for (const t of this.trees) {
+      if (this.treeAlive(t) && Math.hypot(t.x - site.x, t.z - site.z) <= WORK.clearRadius) this.store.wood += this.fell(t);
+    }
+    this.retryHutAt = this.retryFieldAt = 0;
+    this.rebuilding = true;
+    this.region = this.nav.regions();
+    this.found(host, 0, 0);
   }
 
   /** Give up on construction sites nobody has managed to work on for a while. */
@@ -752,7 +806,7 @@ export class Village {
   /** Daily: notice damage. Damaged buildings reopen for repair; badly damaged ones count as destroyed. */
   inspect(host: VillageHost): void {
     for (const s of this.structures) {
-      if (s.kind === 'field' || s.kind === 'grave' || s.ruined || !s.complete) continue;
+      if (s.kind === 'field' || s.kind === 'grave' || s.ruined || s.abandoned || !s.complete) continue;
       const bad = firstDamagedStep(this.world, s);
       if (bad < 0) continue;
       if (!s.destroyed && integrity(this.world, s) < B.destroyedBelow) {

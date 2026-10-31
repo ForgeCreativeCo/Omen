@@ -119,6 +119,9 @@ export class Reactions {
       } else if (e.type === 'affairExposed') {
         const p = sim.villagers.byId(e.by);
         if (p?.alive) this.say(p, pick(BETRAYED, e.by + sim.tick), 'deed');
+      } else if (e.type === 'exodus') {
+        const p = sim.villagers.byId(sim.belief.priestId) ?? sim.villagers.alive.find((x) => x.lifeStage !== 'child');
+        if (p?.alive && !p.inside) this.say(p, e.reason === 'cursed' ? 'This ground is cursed. We go.' : 'We cannot stay here. Take what you can carry.', 'rite');
       } else if (e.type === 'accused') {
         const v = sim.villagers.byId(e.accused);
         if (v?.alive && !v.inside) this.say(v, e.actual !== e.accused ? 'It wasn’t me!' : pick(GUILTY, e.accused + sim.tick), 'deed');

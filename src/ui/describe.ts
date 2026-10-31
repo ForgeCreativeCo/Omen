@@ -146,6 +146,20 @@ export function whenJudged(sim: Sim, c: Pick<Case, 'judgeAt'>): string {
   return d <= 0 ? 'tonight’s fire' : d === 1 ? 'tomorrow’s fire' : 'a coming fire';
 }
 
+/** Where they went, and why they left. */
+export const REGION_TEXT: Record<number, string> = {
+  0: 'the valley',
+  1: 'the highlands',
+  2: 'the forested lowlands',
+  3: 'the badlands',
+  4: 'the meadows',
+};
+export const EXODUS_TEXT: Record<string, string> = {
+  ruined: 'Their homes lie in ruins.',
+  cursed: 'They believe the ground is cursed.',
+  drowned: 'The water has taken it.',
+};
+
 /** Crimes and sentences, in plain words. */
 export const CRIME_TEXT: Record<string, string> = {
   theft: 'theft',

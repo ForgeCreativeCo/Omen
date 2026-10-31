@@ -102,7 +102,7 @@ export class BeliefEffects {
     let cx = sim.village.center.x;
     let cz = sim.village.center.z;
     if (place === 'place:well') {
-      const w = sim.village.structures.find((s) => s.kind === 'well');
+      const w = sim.village.well;
       if (w) (cx = w.x0 + 1), (cz = w.z0 + 1);
     } else if (place === 'place:eastHill') (cx = sim.island.landmarks.eastHill.x), (cz = sim.island.landmarks.eastHill.z);
     else if (place === 'place:ridge') (cx = sim.island.landmarks.ridgePeak.x), (cz = sim.island.landmarks.ridgePeak.z);

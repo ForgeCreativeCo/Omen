@@ -162,6 +162,10 @@ export const TUNING = {
     spoilagePerDay: 0.04,
     startWood: 40,
     startStone: 20,
+    /** Share of stored food lost when the village moves (what can't be carried). */
+    relocateLoss: 0.3,
+    /** Trees cleared around a new village site, to make room for homes. */
+    clearRadius: 12,
     /** New trees sprout per day (chance, may be >1 for multiple). */
     treeSproutPerDay: 1.4,
   },
@@ -521,6 +525,23 @@ export const TUNING = {
     ambushChancePerDay: 0.0015,
     /** The victim's family against a known killer. */
     bloodGrudge: 0.9,
+  },
+
+  /** Leaving a ruined home: when the village gives up its site, and where it goes. */
+  exodus: {
+    /** Huts destroyed (share) that, with the god's hand in it, means home is lost. */
+    ruinedShare: 0.6,
+    /** How recently the god must have struck the village for ruin to count as a sign. */
+    signDays: 3,
+    /** A new home: this far from the old one at least, and at most. */
+    minMove: 26,
+    maxMove: 110,
+    /** Flat within this radius (height spread at most flatSpread), fresh water within waterWithin. */
+    flatRadius: 6,
+    flatSpread: 2,
+    waterWithin: 14,
+    /** Years before they'll move again. */
+    restYears: 1,
   },
 
   /** Village justice: accusation, the god's window, judgment at the fire, custom and law. */

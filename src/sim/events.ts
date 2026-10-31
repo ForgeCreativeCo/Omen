@@ -9,6 +9,7 @@ export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood
 export type DissentKind = 'doubter' | 'prophet';
 export type { Crime, Judge, Sentence } from './justice';
 import type { HandWhat } from './miracles/hand';
+import type { ExodusReason } from './exodus';
 import type { Crime, Judge, Sentence } from './justice';
 export type DissentEndReason = 'converted' | 'recanted' | 'discredited' | 'died' | 'gone';
 
@@ -39,6 +40,8 @@ export type SimEventBody =
   | { type: 'meteorFall'; x: number; z: number; impactTick: number }
   | { type: 'meteor'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean }
   | { type: 'milestone'; id: string }
+  /** The village gave up its site and moved (`region`: REGION of the new home). */
+  | { type: 'exodus'; fromX: number; fromZ: number; toX: number; toZ: number; reason: ExodusReason; region: number }
   /** The god's hand took hold of something (`id`: the villager, else -1). */
   | { type: 'handGrab'; what: HandWhat; id: number; x: number; z: number }
   /** A villager set down gently. */

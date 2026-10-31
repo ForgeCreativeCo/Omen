@@ -47,6 +47,8 @@ export interface Structure {
   destroyed: boolean;
   /** Left to weather (old statues): never repaired. */
   ruined?: boolean;
+  /** Left behind when the village moved: ruins, no longer part of village life. */
+  abandoned?: boolean;
   bornTick: number;
   /** Last tick a block was placed (or the structure was planned); stalled sites get abandoned. */
   progressTick: number;

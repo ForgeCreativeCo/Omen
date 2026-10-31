@@ -258,7 +258,7 @@ export class BeliefSystem {
     if (subject === 'place:eastHill') return { x: L.eastHill.x, z: L.eastHill.z, r: r! };
     if (subject === 'place:fire') return { x: sim.village.center.x, z: sim.village.center.z, r: r! };
     if (subject === 'place:well' || /^place:(hut|cairn|shrine|temple|statue):/.test(subject)) {
-      const s = subject === 'place:well' ? sim.village.structures.find((x) => x.kind === 'well') : sim.village.byId(Number(subject.split(':')[2]));
+      const s = subject === 'place:well' ? sim.village.well : sim.village.byId(Number(subject.split(':')[2]));
       if (s) return { x: s.x0 + s.w / 2, z: s.z0 + s.d / 2, r: r ?? 4 };
     }
     if (subject === 'place:graveyard' && sim.village.graveyard) {
