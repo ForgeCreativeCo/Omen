@@ -1,0 +1,104 @@
+import { BeliefEffects } from './belief/effects';
+import { BeliefSystem } from './belief/BeliefSystem';
+import { Dissent } from './dissent';
+import { Exodus } from './exodus';
+import { Justice } from './justice';
+import { Milestones } from './milestones';
+import { MythSystem } from './myth/Myth';
+import type { Sim } from './Sim';
+import type { Villager } from './villagers/types';
+import { Village } from './villagers/village';
+import type { Point3 } from './world/terrain';
+
+/** Colors that tell the peoples apart (tunics, map marks, names in the log). */
+export const TRIBE_COLORS = [0xe2b26a, 0x7fb3e0, 0xd9776a, 0x9fd38a, 0xc8a0e8, 0xe8d36a] as const;
+
+/** The systems a people has of its own, by the name the sim gives them. */
+const OWN = ['village', 'belief', 'effects', 'myth', 'milestones', 'dissent', 'justice', 'exodus'] as const;
+
+/**
+ * One people: their village, their faith (beliefs, priest, Holy Book, name for
+ * the god), their doubters and prophets, their justice, and where they go when
+ * home is lost. Each of those systems sees the sim through `view`: the whole
+ * world as this people knows it, where `sim.village`, `sim.belief`,
+ * `sim.villagers.alive` and the rest mean *theirs*, and everything shared (the
+ * land, the weather, the god's miracles, the event log) is the one world.
+ */
+export class Tribe {
+  declare readonly view: Sim;
+  readonly village: Village;
+  readonly belief: BeliefSystem;
+  readonly effects: BeliefEffects;
+  readonly myth: MythSystem;
+  readonly milestones: Milestones;
+  readonly dissent: Dissent;
+  readonly justice: Justice;
+  readonly exodus: Exodus;
+
+  constructor(
+    readonly sim: Sim,
+    readonly id: number,
+    public name: string,
+    site: Point3,
+  ) {
+    // Tribe 0 keeps the original stream names, so a one-people game replays as before.
+    const label = (s: string) => (id === 0 ? s : `${s}:${id}`);
+    const view = this.makeView();
+    this.village = new Village(sim.world, sim.nav, sim.rng.fork(label('village')), site, sim.trees, sim.counters);
+    Object.defineProperty(view, 'village', { value: this.village, configurable: true });
+    this.belief = new BeliefSystem(view, sim.rng.fork(label('belief')));
+    Object.defineProperty(view, 'belief', { value: this.belief, configurable: true });
+    this.effects = new BeliefEffects(view, sim.rng.fork(label('effects')));
+    Object.defineProperty(view, 'effects', { value: this.effects, configurable: true });
+    this.myth = new MythSystem(view, sim.rng.fork(label('myth')));
+    Object.defineProperty(view, 'myth', { value: this.myth, configurable: true });
+    this.milestones = new Milestones(view);
+    this.dissent = new Dissent(view, sim.rng.fork(label('dissent')));
+    this.justice = new Justice(view, sim.rng.fork(label('justice')));
+    this.exodus = new Exodus(view, sim.rng.fork(label('exodus')));
+    this.bind();
+  }
+
+  /** Every system a people has, as the view names it. */
+  private systems(): [string, { sim?: Sim }][] {
+    return OWN.map((k) => [k, this[k] as unknown as { sim?: Sim }]);
+  }
+
+  private makeView(): Sim {
+    const sim = this.sim;
+    const id = this.id;
+    const view = Object.create(sim) as Sim;
+    // Everything about the villagers is shared, except who counts as "alive" (ours).
+    const people = new Proxy(sim.villagers, {
+      get(target, prop) {
+        if (prop === 'alive') return target.alive.filter((v) => v.tribeId === id);
+        const value = Reflect.get(target, prop, target) as unknown;
+        return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    Object.defineProperty(view, 'villagers', { value: people });
+    Object.defineProperty(view, 'tribe', { value: this });
+    // Not saved: rebuilt by bind().
+    Object.defineProperty(this, 'view', { value: view, configurable: true, writable: true, enumerable: false });
+    return view;
+  }
+
+  /** (Re)build the view and point every system at it: on founding, and after a save is loaded. */
+  bind(): void {
+    const view = this.view && Object.getPrototypeOf(this.view) === this.sim ? this.view : this.makeView();
+    for (const [k, sys] of this.systems()) {
+      Object.defineProperty(view, k, { value: sys, configurable: true });
+      if (k !== 'village') sys.sim = view;
+    }
+    this.village.forbidden = (x, z) => this.effects.isCursed(x, z);
+    this.village.attraction = () => this.effects.sacredArea();
+  }
+
+  get color(): number {
+    return TRIBE_COLORS[this.id % TRIBE_COLORS.length]!;
+  }
+
+  get members(): Villager[] {
+    return this.sim.villagers.alive.filter((v) => v.tribeId === this.id);
+  }
+}

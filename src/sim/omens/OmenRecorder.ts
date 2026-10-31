@@ -104,6 +104,7 @@ export class OmenRecorder {
           outcomes: drought ? [{ type: 'cropsSaved' }] : [],
           range: 80,
           everywhere: true,
+          weather: true,
         });
         break;
       }
@@ -118,6 +119,7 @@ export class OmenRecorder {
           outcomes: [],
           range: 80,
           everywhere: true,
+          weather: true,
         });
         break;
       }
@@ -224,7 +226,7 @@ export class OmenRecorder {
         const outcomes: Outcome[] = [
           ...e.killed.map((id): Outcome => ({ type: 'died', entity: `person:${id}`, people: [id] })),
           ...e.wrecked.flatMap((id): Outcome[] => {
-            const h = sim.village.byId(id);
+            const h = sim.structureById(id);
             return h && h.kind === 'hut' ? [{ type: 'hutDamaged', entity: `structure:${id}`, people: [...h.residents] }] : [];
           }),
         ];
@@ -250,7 +252,7 @@ export class OmenRecorder {
         const outcomes: Outcome[] = [
           ...e.killed.map((id): Outcome => ({ type: 'died', entity: `person:${id}`, people: [id] })),
           ...e.wrecked.flatMap((id): Outcome[] => {
-            const h = sim.village.byId(id);
+            const h = sim.structureById(id);
             return h && h.kind === 'hut' ? [{ type: 'hutDamaged', entity: `structure:${id}`, people: [...h.residents] }] : [];
           }),
           { type: 'landLowered', amount: 20 },
@@ -286,9 +288,11 @@ export class OmenRecorder {
           witnesses: [v.id],
           symbols: e.symbols,
         };
-        sim.belief.omens.push(omen);
+        // A dream is the dreamer's own people's to make sense of.
+        const t = sim.tribes[v.tribeId] ?? sim.tribe;
+        t.belief.omens.push(omen);
         sim.events.push(sim.tick, { type: 'omen', omenId: omen.id });
-        interpretDream(sim, this.rng, omen, v);
+        interpretDream(t.view, this.rng, omen, v);
         break;
       }
       default:
@@ -318,7 +322,7 @@ export class OmenRecorder {
   }
 
   private hutsHit(x: number, z: number, r: number): Outcome[] {
-    return this.sim.village.huts
+    return this.sim.huts
       .filter((h) => {
         const dx = Math.max(h.x0 - x, 0, x - (h.x0 + h.w - 1));
         const dz = Math.max(h.z0 - z, 0, z - (h.z0 + h.d - 1));
@@ -328,7 +332,7 @@ export class OmenRecorder {
   }
 
   private dryFieldsNear(x: number, z: number, r: number): boolean {
-    return this.sim.village.fields.some((f) => f.moisture < 0.2 && Math.hypot(f.x0 + 2 - x, f.z0 + 2 - z) <= r);
+    return this.sim.fields.some((f) => f.moisture < 0.2 && Math.hypot(f.x0 + 2 - x, f.z0 + 2 - z) <= r);
   }
 
   private record(o: {
@@ -347,30 +351,40 @@ export class OmenRecorder {
     aim?: { x: number; z: number };
     /** Witnesses regardless of sight (the one it happened to). */
     also?: VillagerId[];
+    /** Weather: it happens over each people's own home. */
+    weather?: boolean;
   }): void {
     const sim = this.sim;
-    const target = { x: o.position.x + 0.5, y: o.position.y + 1 + (o.sky ?? 0), z: o.position.z + 0.5 };
-    const witnesses = sim.villagers.alive
-      .filter((v) => o.also?.includes(v.id) || this.sees(v, target, o.range, o.everywhere === true))
-      .map((v) => v.id);
-    const omen: Omen = {
-      id: sim.belief.nextOmenId(),
-      tick: sim.tick,
-      kind: o.kind,
-      isDivine: o.isDivine,
-      position: o.position,
-      radius: o.radius,
-      magnitude: o.magnitude,
-      outcomes: o.outcomes,
-      // An omen isn't explained by itself ("the drought foretells drought").
-      context: snapshot(sim, o.position.x, o.position.z, o.affected ?? []).filter(
-        (f) => !(o.kind === 'drought' && f.key === 'condition:drought') && !(o.kind === 'storm' && f.key === 'condition:storm'),
-      ),
-      witnesses,
-      aim: o.aim,
-    };
-    sim.events.push(sim.tick, { type: 'omen', omenId: omen.id });
-    sim.belief.interpret(omen);
+    const id = sim.belief.nextOmenId();
+    let announced = false;
+    // Each people reads it for themselves: their own witnesses, their own places.
+    // (The first people always hears of it; others only if one of them saw.)
+    for (const t of sim.tribes) {
+      const c = t.village.center;
+      const position = o.weather ? { x: c.x, y: c.y, z: c.z } : o.position;
+      const target = { x: position.x + 0.5, y: position.y + 1 + (o.sky ?? 0), z: position.z + 0.5 };
+      const witnesses = t.members.filter((v) => o.also?.includes(v.id) || this.sees(v, target, o.range, o.everywhere === true)).map((v) => v.id);
+      if (t.id !== 0 && !witnesses.length) continue;
+      const omen: Omen = {
+        id,
+        tick: sim.tick,
+        kind: o.kind,
+        isDivine: o.isDivine,
+        position,
+        radius: o.radius,
+        magnitude: o.magnitude,
+        outcomes: o.outcomes,
+        // An omen isn't explained by itself ("the drought foretells drought").
+        context: snapshot(t.view, position.x, position.z, o.affected ?? []).filter(
+          (f) => !(o.kind === 'drought' && f.key === 'condition:drought') && !(o.kind === 'storm' && f.key === 'condition:storm'),
+        ),
+        witnesses,
+        aim: o.aim,
+      };
+      if (!announced) sim.events.push(sim.tick, { type: 'omen', omenId: id });
+      announced = true;
+      t.belief.interpret(omen);
+    }
   }
 
   /** Awake, outdoors, in range (curious villagers look further) and, unless it's weather, in sight. */

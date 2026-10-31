@@ -161,7 +161,7 @@ export class Miracles {
     // Rain clouds water the ground beneath them and douse fires.
     for (const c of this.clouds) {
       c.ticksLeft--;
-      for (const f of sim.village.fields) {
+      for (const f of sim.fields) {
         const fx = f.x0 + f.w / 2;
         const fz = f.z0 + f.d / 2;
         if (Math.hypot(fx - c.x, fz - c.z) <= c.radius + 1) f.moisture = Math.min(1, f.moisture + MT.rain.moisturePerTick);
@@ -311,7 +311,7 @@ export class Miracles {
         const z = Math.round(cz) + dz;
         if (x < 1 || z < 1 || x >= w.sizeX - 1 || z >= w.sizeZ - 1) continue;
 
-        const s = sim.village.structureAt(x, z);
+        const s = sim.structureAt(x, z);
         if (s && s.kind !== 'field') {
           // Don't lift buildings bodily; shake them instead.
           for (const st of s.steps) {
@@ -372,7 +372,7 @@ export class Miracles {
     const B = MT.bloom;
     let crops = 0;
     let flowers = 0;
-    for (const f of sim.village.fields) {
+    for (const f of sim.fields) {
       for (const t of f.tiles) {
         if (Math.hypot(t.x + 0.5 - cx, t.z + 0.5 - cz) > B.radius) continue;
         if (t.state === 1) sim.village.plant(t);
@@ -394,7 +394,7 @@ export class Miracles {
         const z = Math.round(cz) + dz;
         const g = this.groundY(x, z);
         if (g < 0 || w.get(x, g, z) !== M.GRASS || w.get(x, g + 1, z) !== M.AIR) continue;
-        if (sim.village.structureAt(x, z)) continue;
+        if (sim.structureAt(x, z)) continue;
         grassSpots.push([x, g, z]);
         if (this.rng.chance(B.flowerChance)) {
           w.set(x, g + 1, z, this.rng.chance(0.5) ? M.FLOWER_RED : M.FLOWER_GOLD);
@@ -428,7 +428,7 @@ export class Miracles {
     const w = sim.world;
     const B = MT.blight;
     let crops = 0;
-    for (const f of sim.village.fields) {
+    for (const f of sim.fields) {
       for (const t of f.tiles) {
         if (t.state !== 2 || Math.hypot(t.x + 0.5 - cx, t.z + 0.5 - cz) > B.radius) continue;
         // As if withered by drought, all at once.
@@ -447,7 +447,7 @@ export class Miracles {
         const g = this.groundY(x, z);
         if (g < 0) continue;
         if (material(w.get(x, g + 1, z)).decor) w.set(x, g + 1, z, M.AIR);
-        if (w.get(x, g, z) === M.GRASS && !sim.village.structureAt(x, z) && this.rng.chance(B.grassChance)) w.set(x, g, z, M.DIRT);
+        if (w.get(x, g, z) === M.GRASS && !sim.structureAt(x, z) && this.rng.chance(B.grassChance)) w.set(x, g, z, M.DIRT);
       }
     sim.events.push(sim.tick, { type: 'blight', x: cx, z: cz, radius: B.radius, crops });
   }
@@ -476,7 +476,7 @@ export class Miracles {
         if (d > S.craterRadius) continue;
         const x = ix + dx;
         const z = iz + dz;
-        const s = sim.village.structureAt(x, z);
+        const s = sim.structureAt(x, z);
         if (s && s.kind !== 'field') {
           for (const st of s.steps) {
             if (st.x !== x || st.z !== z || st.mat === M.AIR) continue;
@@ -508,7 +508,7 @@ export class Miracles {
         const x = ix + dx;
         const z = iz + dz;
         const k = S.blastWreckChance * (1 - (d - S.craterRadius) / (S.blastRadius - S.craterRadius));
-        const s = sim.village.structureAt(x, z);
+        const s = sim.structureAt(x, z);
         if (s && s.kind !== 'field') {
           for (const st of s.steps) {
             if (st.x !== x || st.z !== z || st.mat === M.AIR) continue;

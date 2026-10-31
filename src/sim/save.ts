@@ -218,4 +218,6 @@ export function restoreGame(sim: Sim, text: string): void {
   if (data.header.version !== SAVE_VERSION) throw new Error('save: incompatible version');
   const out = decodeGraph(data.sim, sim);
   if (out !== sim) throw new Error('save: the sim could not be restored in place');
+  // Each people's view of the world isn't saved: rebuild it.
+  for (const t of sim.tribes) t.bind();
 }

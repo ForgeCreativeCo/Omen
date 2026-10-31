@@ -70,7 +70,6 @@ export class Village {
   private walkDist: Int32Array;
   /** Per-cell build suitability (MASK_* bits), refreshed with the walk distances. */
   private readonly buildMask: Uint8Array;
-  private nextId = 1;
   private retryHutAt = 0;
   private retryFieldAt = 0;
   graveyard: { x0: number; z0: number; w: number; d: number; used: number } | null = null;
@@ -82,14 +81,17 @@ export class Village {
     private readonly nav: NavGrid,
     private readonly rng: Rng,
     site: Point3,
-    trees: Point3[],
+    /** The island's trees, shared by every village. */
+    trees: Tree[],
+    /** Id counters shared by every village, so structure ids are unique on the island. */
+    private readonly ids: { structure: number },
   ) {
     this.center = { x: site.x, z: site.z, y: site.y };
     this.occupancy = new Int32Array(world.sizeX * world.sizeZ);
     this.region = nav.regions();
     this.walkDist = new Int32Array(world.sizeX * world.sizeZ).fill(-1);
     this.buildMask = new Uint8Array(world.sizeX * world.sizeZ);
-    this.trees = trees.map((t) => ({ ...t, alive: true, reservedBy: -1 }));
+    this.trees = trees;
     const R = B.maxRadius;
     for (let dz = -R; dz <= R; dz++)
       for (let dx = -R; dx <= R; dx++) if (dx * dx + dz * dz <= R * R) this.ring.push([dx, dz]);
@@ -289,7 +291,7 @@ export class Village {
 
   private newStructure(kind: StructureKind, variant: string, tick: number): Structure {
     return {
-      id: this.nextId++,
+      id: this.ids.structure++,
       kind,
       variant,
       x0: 0,

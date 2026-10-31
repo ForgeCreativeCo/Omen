@@ -47,6 +47,11 @@ export class Villagers {
     this.pathfinder = new Pathfinder(sim.nav);
   }
 
+  /** The sim as this villager's people see it (their village, their beliefs). */
+  t(v: Villager): Sim {
+    return this.sim.tribes[v.tribeId]?.view ?? this.sim;
+  }
+
   byId(id: VillagerId): Villager | undefined {
     return this.byIdMap.get(id);
   }
@@ -63,12 +68,15 @@ export class Villagers {
     return traits;
   }
 
-  spawn(opts: { age: number; sex?: Sex; x: number; z: number; parents?: VillagerId[] }): Villager {
+  spawn(opts: { age: number; sex?: Sex; x: number; z: number; parents?: VillagerId[]; tribeId?: number }): Villager {
     const sex = opts.sex ?? (this.rng.chance(0.5) ? 'f' : 'm');
+    // A child is of their mother's people.
+    const tribeId = opts.tribeId ?? this.byId(opts.parents?.[0] ?? -1)?.tribeId ?? 0;
     const h = this.sim.nav.at(opts.x, opts.z);
     const v: Villager = {
       id: this.nextId++,
       name: makeName(this.rng),
+      tribeId,
       age: opts.age,
       lifespan: V.lifespanYears + this.rng.jitter(V.lifespanJitter),
       sex,
@@ -185,7 +193,7 @@ export class Villagers {
 
       // Unstick: if the ground under us changed into a wall, step out.
       if (!v.inside && !sim.nav.walkable(cx, cz)) {
-        const out = sim.village.nearestWalkable(cx, cz);
+        const out = this.t(v).village.nearestWalkable(cx, cz);
         if (out) {
           v.x = v.px = out.x + 0.5;
           v.z = v.pz = out.z + 0.5;
@@ -202,7 +210,7 @@ export class Villagers {
 
   /** Caught by water: head for the nearest dry ground in reach, or stay and hope. */
   private wade(v: Villager): void {
-    const sim = this.sim;
+    const sim = this.t(v);
     if (v.action) this.setAction(v, null);
     if (!v.wade || !sim.nav.walkable(v.wade.x, v.wade.z)) {
       v.wade = null;
@@ -236,7 +244,7 @@ export class Villagers {
   // ------------------------------------------------------------------ decisions
 
   private think(v: Villager): void {
-    const sim = this.sim;
+    const sim = this.t(v);
     v.nextThink = sim.tick + V.thinkInterval + (v.id % 11);
     // A disaster is unfolding: those who trust a holy place run to its highest ground.
     const refuge = sim.warning?.disaster.refugeFor(v);
@@ -346,75 +354,75 @@ export class Villagers {
   setDown(v: Villager, x: number, z: number, y?: number): void {
     v.x = x + 0.5;
     v.z = z + 0.5;
-    v.y = y ?? this.sim.nav.at(x, z) + 1;
+    v.y = y ?? this.t(v).nav.at(x, z) + 1;
     v.pathPos = -1;
-    v.nextThink = this.sim.tick;
+    v.nextThink = this.t(v).tick;
   }
 
   private release(v: Villager): void {
     const a = v.action;
     if (!a) return;
     if (a.tileIndex >= 0) {
-      const f = this.sim.village.byId(a.structureId);
+      const f = this.t(v).village.byId(a.structureId);
       const t = f?.tiles[a.tileIndex];
       if (t && t.reservedBy === v.id) t.reservedBy = -1;
     }
     if (a.treeIndex >= 0) {
-      const t = this.sim.village.trees[a.treeIndex];
+      const t = this.t(v).village.trees[a.treeIndex];
       if (t && t.reservedBy === v.id) t.reservedBy = -1;
     }
   }
 
   private home(v: Villager): Structure | undefined {
-    const h = v.homeId >= 0 ? this.sim.village.byId(v.homeId) : undefined;
-    return h && this.sim.village.usableHut(h) ? h : undefined;
+    const h = v.homeId >= 0 ? this.t(v).village.byId(v.homeId) : undefined;
+    return h && this.t(v).village.usableHut(h) ? h : undefined;
   }
 
   private sleepAction(v: Villager): Action {
     const h = this.home(v);
     if (h) return this.make('sleep', h.door.x, h.door.z, true, Infinity);
-    const c = this.sim.village.center;
+    const c = this.t(v).village.center;
     const a = this.ringCell(v, 3, 5);
     return this.make('sleep', a?.x ?? c.x, a?.z ?? c.z, a === null, Infinity);
   }
 
   private gatheringAction(v: Villager): Action {
-    const c = this.sim.village.center;
+    const c = this.t(v).village.center;
     if (v.role === 'priest') return this.make('gathering', c.x, c.z, true, Infinity);
     // Outcasts keep to the edge of the firelight.
-    const outcast = this.sim.effects.outcastIds().has(v.id);
+    const outcast = this.t(v).effects.outcastIds().has(v.id);
     const a = outcast ? this.ringCell(v, 6, 8) : this.ringCell(v, 2, 4);
     return this.make('gathering', a?.x ?? c.x, a?.z ?? c.z, a === null, Infinity);
   }
 
   /** A walkable cell on a ring around the fire, spread by villager id. */
   private ringCell(v: Villager, rMin: number, rMax: number): { x: number; z: number } | null {
-    const c = this.sim.village.center;
+    const c = this.t(v).village.center;
     for (let i = 0; i < 8; i++) {
       const ang = v.id * 2.399 + i * 0.7;
       const r = rMin + ((v.id * 7 + i) % (rMax - rMin + 1));
       const x = Math.round(c.x + Math.cos(ang) * r);
       const z = Math.round(c.z + Math.sin(ang) * r);
-      if (this.sim.nav.walkable(x, z)) return { x, z };
+      if (this.t(v).nav.walkable(x, z)) return { x, z };
     }
     return null;
   }
 
   private wanderAction(v: Villager): Action {
     // Idle time is when people visit holy ground.
-    const holy = v.lifeStage !== 'child' && !this.sim.dissent.isDoubter(v) ? this.sim.effects.pilgrimageFor(v) : null;
+    const holy = v.lifeStage !== 'child' && !this.t(v).dissent.isDoubter(v) ? this.t(v).effects.pilgrimageFor(v) : null;
     if (holy) {
       const a = this.make('pilgrimage', holy.x, holy.z, false, 30);
       a.ritual = 'pray';
       return a;
     }
     const h = this.home(v);
-    const ax = h ? h.door.x : this.sim.village.center.x;
-    const az = h ? h.door.z : this.sim.village.center.z;
+    const ax = h ? h.door.x : this.t(v).village.center.x;
+    const az = h ? h.door.z : this.t(v).village.center.z;
     for (let i = 0; i < 6; i++) {
       const x = ax + this.rng.int(-6, 6);
       const z = az + this.rng.int(-6, 6);
-      if (this.sim.nav.walkable(x, z)) return this.make('wander', x, z, false, this.rng.int(10, 40));
+      if (this.t(v).nav.walkable(x, z)) return this.make('wander', x, z, false, this.rng.int(10, 40));
     }
     return this.make('idle', Math.floor(v.x), Math.floor(v.z), false, 20);
   }
@@ -428,7 +436,7 @@ export class Villagers {
     for (const dist of [10, 7, 5]) {
       const x = Math.floor(v.x + dx * dist);
       const z = Math.floor(v.z + dz * dist);
-      const cell = this.sim.village.nearestWalkable(x, z);
+      const cell = this.t(v).village.nearestWalkable(x, z);
       if (cell) return this.make('flee', cell.x, cell.z, false, 30);
     }
     return this.make('flee', Math.floor(v.x), Math.floor(v.z), false, 30);
@@ -444,13 +452,13 @@ export class Villagers {
           : v.role === 'gatherer'
             ? ['gatherer', 'farmer', 'builder']
             : ['farmer', 'gatherer'];
-    const store = this.sim.village.store;
+    const store = this.t(v).village.store;
     const foodPerHead = store.food / Math.max(1, this.alive.length);
     // When food is short (or a portent says hard times are coming), everyone forages first,
     // except farmers with a harvest waiting.
-    const hoarding = this.sim.tick < this.sim.effects.prepareUntil && v.role === 'gatherer';
+    const hoarding = this.t(v).tick < this.t(v).effects.prepareUntil && v.role === 'gatherer';
     if (foodPerHead < WK.forageBelowFoodPerCapita * 0.5 || hoarding) {
-      const harvestWaiting = v.role === 'farmer' && this.sim.village.fields.some((f) => f.tiles.some((t) => t.reservedBy === -1 && t.state === 2 && t.progress >= 1));
+      const harvestWaiting = v.role === 'farmer' && this.t(v).village.fields.some((f) => f.tiles.some((t) => t.reservedBy === -1 && t.state === 2 && t.progress >= 1));
       if (!harvestWaiting || v.lifeStage === 'child') {
         const a = this.forageJob(v);
         if (a) return a;
@@ -459,7 +467,7 @@ export class Villagers {
     for (const r of order) {
       // A taboo on the work itself makes people shy away from it (never entirely: they must eat).
       const activity = r === 'farmer' ? 'activity:farming' : r === 'builder' ? 'activity:building' : 'activity:woodcutting';
-      const taboo = this.sim.effects.taboo(activity);
+      const taboo = this.t(v).effects.taboo(activity);
       if (taboo > 0 && this.rng.chance(Math.min(0.8, taboo))) continue;
       const a =
         r === 'farmer' ? this.farmJob(v) : r === 'builder' ? this.buildJob(v) : this.gatherJob(v, foodPerHead);
@@ -469,15 +477,15 @@ export class Villagers {
   }
 
   private farmJob(v: Villager): Action | null {
-    const village = this.sim.village;
-    const season = this.sim.seasonIndex;
+    const village = this.t(v).village;
+    const season = this.t(v).seasonIndex;
     let best: Action | null = null;
     let bestD = Infinity;
     for (const f of village.fields) {
       const d0 = Math.abs(f.x0 - v.x) + Math.abs(f.z0 - v.z);
       if (d0 > bestD + 8) continue;
       f.tiles.forEach((t, i) => {
-        if (t.reservedBy !== -1 || this.sim.effects.isCursed(t.x, t.z)) return;
+        if (t.reservedBy !== -1 || this.t(v).effects.isCursed(t.x, t.z)) return;
         const work = village.tileWork(t, season);
         if (!work) return;
         // Harvest first, then till, then plant.
@@ -499,12 +507,12 @@ export class Villagers {
   }
 
   private buildJob(v: Villager): Action | null {
-    const village = this.sim.village;
+    const village = this.t(v).village;
     for (const s of village.constructionSites()) {
       const next = s.steps[s.next];
       const cost = next ? village.stepCost(next.mat) : null;
       if (cost && village.store[cost] < 1) continue;
-      const cells = village.accessCells(s).filter((c) => !this.sim.effects.isCursed(c.x, c.z));
+      const cells = village.accessCells(s).filter((c) => !this.t(v).effects.isCursed(c.x, c.z));
       if (!cells.length) continue;
       let cell = cells[0]!;
       let bd = Infinity;
@@ -523,7 +531,7 @@ export class Villagers {
   }
 
   private gatherJob(v: Villager, foodPerHead: number): Action | null {
-    const village = this.sim.village;
+    const village = this.t(v).village;
     if (foodPerHead < WK.forageBelowFoodPerCapita) {
       const a = this.forageJob(v);
       if (a) return a;
@@ -539,17 +547,17 @@ export class Villagers {
   }
 
   private nearestTree(v: Villager, reserve: boolean): number {
-    const trees = this.sim.village.trees;
+    const trees = this.t(v).village.trees;
     let best = -1;
     let bd = Infinity;
-    const c = this.sim.village.center;
+    const c = this.t(v).village.center;
     for (let i = 0; i < trees.length; i++) {
       const t = trees[i]!;
-      if (!t.alive || (reserve && t.reservedBy !== -1) || this.sim.effects.isCursed(t.x, t.z)) continue;
-      if (!this.sim.village.reachable(Math.floor(v.x), Math.floor(v.z), t.x, t.z, true)) continue;
+      if (!t.alive || (reserve && t.reservedBy !== -1) || this.t(v).effects.isCursed(t.x, t.z)) continue;
+      if (!this.t(v).village.reachable(Math.floor(v.x), Math.floor(v.z), t.x, t.z, true)) continue;
       // Favor trees near both the worker and the village store.
       const d = Math.hypot(t.x - v.x, t.z - v.z) + 0.5 * Math.hypot(t.x - c.x, t.z - c.z);
-      if (d < bd && this.sim.village.treeAlive(t)) {
+      if (d < bd && this.t(v).village.treeAlive(t)) {
         bd = d;
         best = i;
       }
@@ -560,7 +568,7 @@ export class Villagers {
   private chopJob(v: Villager): Action | null {
     const i = this.nearestTree(v, true);
     if (i < 0) return null;
-    const t = this.sim.village.trees[i]!;
+    const t = this.t(v).village.trees[i]!;
     t.reservedBy = v.id;
     const a = this.make('chop', t.x, t.z, true, WK.chopTicks);
     a.treeIndex = i;
@@ -570,12 +578,12 @@ export class Villagers {
   private forageJob(v: Villager): Action | null {
     const i = this.nearestTree(v, false);
     if (i < 0) return null;
-    const t = this.sim.village.trees[i]!;
+    const t = this.t(v).village.trees[i]!;
     return this.make('forage', t.x, t.z, true, WK.forageTicks);
   }
 
-  private quarryJob(_v: Villager): Action | null {
-    const spots = this.sim.village.stoneSpots;
+  private quarryJob(v: Villager): Action | null {
+    const spots = this.t(v).village.stoneSpots;
     const s = spots[this.rng.int(0, Math.min(5, spots.length) - 1)];
     return s ? this.make('quarry', s.x, s.z, false, WK.quarryTicks) : null;
   }
@@ -590,12 +598,12 @@ export class Villagers {
         if (this.pathBudget <= 0) return;
         this.pathBudget--;
         const deliver = a.phase === 'deliver';
-        const c = this.sim.village.center;
+        const c = this.t(v).village.center;
         const tx = deliver ? c.x : a.tx;
         const tz = deliver ? c.z : a.tz;
         // The fire pit itself is closed off, so "at the fire" means within two cells of it.
         const radius = tx === c.x && tz === c.z ? 2 : 1;
-        const ok = this.sim.village.reachable(Math.floor(v.x), Math.floor(v.z), tx, tz, deliver || a.adjacent, radius);
+        const ok = this.t(v).village.reachable(Math.floor(v.x), Math.floor(v.z), tx, tz, deliver || a.adjacent, radius);
         const p = ok && this.pathfinder.find(Math.floor(v.x), Math.floor(v.z), tx, tz, {
           adjacent: deliver || a.adjacent,
           radius,
@@ -605,12 +613,12 @@ export class Villagers {
           // Unreachable: drop it (goods included) and re-think shortly.
           v.carrying = null;
           this.setAction(v, null);
-          v.nextThink = this.sim.tick + 10 + (v.id % 7);
+          v.nextThink = this.t(v).tick + 10 + (v.id % 7);
           return;
         }
         v.path = p;
         v.pathPos = 0;
-        v.navVersionAtPath = this.sim.nav.version;
+        v.navVersionAtPath = this.t(v).nav.version;
       }
       if (this.walk(v)) {
         if (a.phase === 'deliver') this.deliver(v);
@@ -623,7 +631,7 @@ export class Villagers {
 
   /** Advance along the path. Returns true on arrival. */
   private walk(v: Villager): boolean {
-    const nav = this.sim.nav;
+    const nav = this.t(v).nav;
     const speed = V.speed * (v.lifeStage === 'child' ? V.childSpeedFactor : 1) * (v.lifeStage === 'elder' ? 0.85 : 1);
     let budget = speed;
     while (budget > 0 && v.pathPos < v.path.length) {
@@ -660,7 +668,7 @@ export class Villagers {
   }
 
   private work(v: Villager, a: Action): void {
-    const sim = this.sim;
+    const sim = this.t(v);
     const village = sim.village;
     switch (a.kind) {
       case 'sleep':
@@ -792,13 +800,13 @@ export class Villagers {
     const a = this.make('ritual', x, z, false, TUNING.belief.ritualTicks);
     a.ritual = activity;
     this.setAction(v, a);
-    v.nextThink = this.sim.tick + TUNING.belief.ritualTicks * 3;
+    v.nextThink = this.t(v).tick + TUNING.belief.ritualTicks * 3;
   }
 
   /** Send someone away for good: they walk to the shore and are gone (SPEC §9 OUTCAST). */
   exile(v: Villager): void {
-    const L = this.sim.island.landmarks;
-    const shore = this.sim.village.nearestWalkable(Math.round(L.riverMouth.x), Math.round(L.riverMouth.z)) ?? { x: Math.floor(v.x), z: Math.floor(v.z) };
+    const L = this.t(v).island.landmarks;
+    const shore = this.t(v).village.nearestWalkable(Math.round(L.riverMouth.x), Math.round(L.riverMouth.z)) ?? { x: Math.floor(v.x), z: Math.floor(v.z) };
     this.setAction(v, this.make('exile', shore.x, shore.z, true, 1));
   }
 
@@ -806,25 +814,25 @@ export class Villagers {
   private remove(v: Villager): void {
     this.release(v);
     v.alive = false;
-    v.deathTick = this.sim.tick;
+    v.deathTick = this.t(v).tick;
     v.deathCause = 'exiled';
     v.action = null;
     const partner = this.byId(v.partnerId);
     if (partner) partner.partnerId = -1;
-    const home = v.homeId >= 0 ? this.sim.village.byId(v.homeId) : undefined;
+    const home = v.homeId >= 0 ? this.t(v).village.byId(v.homeId) : undefined;
     if (home) home.residents = home.residents.filter((id) => id !== v.id);
-    const left = this.sim.dissent.departing.delete(v.id);
-    this.sim.events.push(this.sim.tick, { type: 'exiled', id: v.id, left });
+    const left = this.t(v).dissent.departing.delete(v.id);
+    this.t(v).events.push(this.t(v).tick, { type: 'exiled', id: v.id, left });
   }
 
   private startDelivery(v: Villager, a: Action, kind: 'wood' | 'stone' | 'food', amount: number): void {
-    v.carrying = { kind, amount: amount * this.sim.dissent.yieldFor(v) };
+    v.carrying = { kind, amount: amount * this.t(v).dissent.yieldFor(v) };
     a.phase = 'deliver';
     v.pathPos = -1;
   }
 
   private deliver(v: Villager): void {
-    const village = this.sim.village;
+    const village = this.t(v).village;
     if (v.carrying) {
       village.store[v.carrying.kind] += v.carrying.amount;
       const key = v.carrying.kind === 'food' ? 'foraged' : v.carrying.kind === 'wood' ? 'chopped' : 'quarried';
@@ -832,7 +840,7 @@ export class Villagers {
     }
     v.carrying = null;
     this.setAction(v, null);
-    v.nextThink = this.sim.tick;
+    v.nextThink = this.t(v).tick;
   }
 
   // ------------------------------------------------------------------ death
@@ -841,15 +849,15 @@ export class Villagers {
     if (!v.alive) return;
     this.release(v);
     v.alive = false;
-    v.deathTick = this.sim.tick;
+    v.deathTick = this.t(v).tick;
     v.deathCause = cause;
     v.action = null;
     v.carrying = null;
     const partner = this.byId(v.partnerId);
     if (partner) partner.partnerId = -1;
-    const home = v.homeId >= 0 ? this.sim.village.byId(v.homeId) : undefined;
+    const home = v.homeId >= 0 ? this.t(v).village.byId(v.homeId) : undefined;
     if (home) home.residents = home.residents.filter((id) => id !== v.id);
-    this.sim.onDeath(v, cause);
+    this.t(v).onDeath(v, cause);
   }
 
   // ------------------------------------------------------------------ daily
@@ -862,26 +870,32 @@ export class Villagers {
       if (v.age >= v.lifespan) this.kill(v, 'oldAge');
     }
     this.alive = this.alive.filter((v) => v.alive);
-    this.assignRoles();
-    this.formCouples();
-    this.births();
-    this.assignHomes();
+    for (const t of this.sim.tribes) {
+      const people = this.alive.filter((v) => v.tribeId === t.id);
+      this.assignRoles(t.view, people);
+      this.formCouples(t.view, people);
+      this.births(t.view, people);
+      this.assignHomes(t.view, people);
+    }
   }
 
   /** Initial roles and beds for a freshly founded village. */
   newDayRolesAndHomes(): void {
-    this.assignRoles();
-    this.assignHomes();
+    for (const t of this.sim.tribes) {
+      const people = this.alive.filter((v) => v.tribeId === t.id);
+      this.assignRoles(t.view, people);
+      this.assignHomes(t.view, people);
+    }
   }
 
-  private assignRoles(): void {
-    const village = this.sim.village;
-    let priest = this.alive.find((v) => v.role === 'priest');
+  private assignRoles(sim: Sim, people: Villager[]): void {
+    const village = sim.village;
+    let priest = people.find((v) => v.role === 'priest');
     if (!priest) {
       // Succession: someone the god is believed to favor, else the most devout, else the eldest.
-      const chosen = this.sim.belief.chosenIds();
-      const outcast = this.sim.effects.outcastIds();
-      const candidates = this.alive
+      const chosen = sim.belief.chosenIds();
+      const outcast = sim.effects.outcastIds();
+      const candidates = people
         .filter((v) => v.lifeStage !== 'child' && !outcast.has(v.id))
         .sort(
           (a, b) =>
@@ -893,8 +907,8 @@ export class Villagers {
       priest = candidates[0];
       if (priest) priest.role = 'priest';
     }
-    if (priest?.id !== this.sim.belief.priestId) this.sim.belief.setPriest(priest);
-    const adults = this.alive.filter((v) => v.lifeStage === 'adult' && v.role !== 'priest').sort((a, b) => a.id - b.id);
+    if (priest?.id !== sim.belief.priestId) sim.belief.setPriest(priest);
+    const adults = people.filter((v) => v.lifeStage === 'adult' && v.role !== 'priest').sort((a, b) => a.id - b.id);
     const sites = village.constructionSites().length;
     const tiles = village.fields.reduce((n, f) => n + f.tiles.length, 0);
     const builders = sites > 0 ? Math.min(adults.length, Math.max(1, Math.min(sites + 1, Math.ceil(adults.length * 0.25)))) : 0;
@@ -913,7 +927,8 @@ export class Villagers {
   separate(strayed: Villager, other: Villager): void {
     strayed.partnerId = -1;
     other.partnerId = -1;
-    const empty = this.sim.village.huts.find((h) => this.sim.village.usableHut(h) && h.residents.length === 0);
+    const village = this.t(strayed).village;
+    const empty = village.huts.find((h) => village.usableHut(h) && h.residents.length === 0);
     if (empty) this.moveHome(strayed, empty);
   }
 
@@ -924,8 +939,8 @@ export class Villagers {
     this.sim.events.push(this.sim.tick, { type: 'couple', a: a.id, b: b.id });
   }
 
-  private formCouples(): void {
-    const singles = this.alive.filter((v) => v.lifeStage !== 'child' && v.age >= 16 && v.partnerId === -1);
+  private formCouples(sim: Sim, people: Villager[]): void {
+    const singles = people.filter((v) => v.lifeStage !== 'child' && v.age >= 16 && v.partnerId === -1);
     for (const a of singles) {
       if (a.sex !== 'f' || a.partnerId !== -1 || !this.rng.chance(V.pairChancePerDay)) continue;
       const b = singles.find(
@@ -936,7 +951,7 @@ export class Villagers {
       b.partnerId = a.id;
       this.sim.events.push(this.sim.tick, { type: 'couple', a: a.id, b: b.id });
       // Newlyweds take an empty hut if there is one.
-      const empty = this.sim.village.huts.find((h) => this.sim.village.usableHut(h) && h.residents.length === 0);
+      const empty = sim.village.huts.find((h) => sim.village.usableHut(h) && h.residents.length === 0);
       if (empty) {
         this.moveHome(a, empty);
         this.moveHome(b, empty);
@@ -944,18 +959,18 @@ export class Villagers {
     }
   }
 
-  private births(): void {
-    const village = this.sim.village;
-    const pop = this.alive.length;
+  private births(sim: Sim, people: Villager[]): void {
+    const village = sim.village;
+    const pop = people.length;
     if (pop >= V.softCap) return;
     if (village.store.food / Math.max(1, pop) < V.birthFoodPerCapita) return;
     let freeBeds = village.bedCapacity() - pop;
     // SPEC §10: a village that loves its god grows faster; one that fears it, slower.
     let love = 0;
     let fear = 0;
-    for (const v of this.alive) (love += v.faith.love), (fear += v.faith.fear);
+    for (const v of people) (love += v.faith.love), (fear += v.faith.fear);
     const mood = Math.max(V.moodBirthMin, Math.min(V.moodBirthMax, 1 + V.moodBirthEffect * ((love - fear) / Math.max(1, pop))));
-    for (const mother of this.alive.filter((v) => v.sex === 'f' && v.partnerId !== -1)) {
+    for (const mother of people.filter((v) => v.sex === 'f' && v.partnerId !== -1)) {
       if (freeBeds <= 0) break;
       if (mother.age < V.fertileMinAge || mother.age > V.fertileMaxAge) continue;
       const father = this.byId(mother.partnerId);
@@ -968,24 +983,24 @@ export class Villagers {
       const child = this.spawn({ age: 0, x: cell.x, z: cell.z, parents: [mother.id, father.id] });
       if (home) this.moveHome(child, home);
       freeBeds--;
-      this.sim.belief.inherit(child);
+      sim.belief.inherit(child);
       this.sim.events.push(this.sim.tick, { type: 'birth', id: child.id, parents: [mother.id, father.id] });
     }
   }
 
   private moveHome(v: Villager, h: Structure): void {
-    const old = v.homeId >= 0 ? this.sim.village.byId(v.homeId) : undefined;
+    const old = v.homeId >= 0 ? this.t(v).village.byId(v.homeId) : undefined;
     if (old) old.residents = old.residents.filter((id) => id !== v.id);
     v.homeId = h.id;
     if (!h.residents.includes(v.id)) h.residents.push(v.id);
   }
 
   /** Give everyone without a usable home a bed: partner's or parent's home first, then any space. */
-  private assignHomes(): void {
-    const village = this.sim.village;
+  private assignHomes(sim: Sim, people: Villager[]): void {
+    const village = sim.village;
     const cap = TUNING.building.hutCapacity;
     for (const h of village.huts) h.residents = h.residents.filter((id) => this.byId(id)?.alive && this.byId(id)?.homeId === h.id);
-    for (const v of this.alive) {
+    for (const v of people) {
       if (this.home(v)) continue;
       const prefer = [this.byId(v.partnerId), ...v.parentIds.map((p) => this.byId(p))]
         .map((o) => (o ? this.home(o) : undefined))

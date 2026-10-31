@@ -206,7 +206,7 @@ export class Hand {
     for (let dz = -ri; dz <= ri; dz++)
       for (let dx = -ri; dx <= ri; dx++) {
         if (Math.hypot(dx, dz) > r) continue;
-        const s = sim.village.structureAt(cx + dx, cz + dz);
+        const s = sim.structureAt(cx + dx, cz + dz);
         if (!s || s.kind === 'field') continue;
         for (const st of s.steps) {
           if (st.x !== cx + dx || st.z !== cz + dz || st.mat === M.AIR) continue;
@@ -228,7 +228,7 @@ export class Hand {
         if (Math.hypot(dx, dz) > H.earthRadius + 0.3) continue;
         const x = cx + dx;
         const z = cz + dz;
-        if (this.sim.village.structureAt(x, z)) continue;
+        if (this.sim.structureAt(x, z)) continue;
         if (this.sim.village.trees.some((t) => t.x === x && t.z === z && this.sim.village.treeAlive(t))) continue;
         for (let k = 0; k < H.earthDepth; k++) {
           const y = w.topY(x, z, (id) => id !== M.AIR && id !== M.LEAVES && id !== M.PINE_LEAVES);
@@ -253,7 +253,7 @@ export class Hand {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
           const x = cx + dx;
           const z = cz + dz;
-          if (x < 1 || z < 1 || x >= w.sizeX - 1 || z >= w.sizeZ - 1 || this.sim.village.structureAt(x, z)) continue;
+          if (x < 1 || z < 1 || x >= w.sizeX - 1 || z >= w.sizeZ - 1 || this.sim.structureAt(x, z)) continue;
           const y = w.topY(x, z) + 1;
           if (w.get(x, y, z) !== M.AIR) continue;
           w.set(x, y, z, voxels[i++]!);
@@ -267,7 +267,7 @@ export class Hand {
     for (let k = 0; k < 3; k++) {
       const x = Math.round(cx + (vx / d) * k);
       const z = Math.round(cz + (vz / d) * k);
-      if (x < 1 || z < 1 || x >= w.sizeX - 1 || z >= w.sizeZ - 1 || this.sim.village.structureAt(x, z)) continue;
+      if (x < 1 || z < 1 || x >= w.sizeX - 1 || z >= w.sizeZ - 1 || this.sim.structureAt(x, z)) continue;
       const y = w.topY(x, z) + 1;
       if (w.get(x, y, z) === M.AIR) w.set(x, y, z, M.WOOD);
     }

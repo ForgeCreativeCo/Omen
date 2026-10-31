@@ -1,12 +1,13 @@
-import { BeliefSystem } from './belief/BeliefSystem';
-import { BeliefEffects } from './belief/effects';
+import type { BeliefSystem } from './belief/BeliefSystem';
+import type { BeliefEffects } from './belief/effects';
 import { EventLog, type DeathCause } from './events';
-import { MythSystem } from './myth/Myth';
-import { Milestones } from './milestones';
-import { Dissent } from './dissent';
+import type { MythSystem } from './myth/Myth';
+import type { Milestones } from './milestones';
+import type { Dissent } from './dissent';
 import { Society } from './society';
-import { Justice } from './justice';
-import { Exodus } from './exodus';
+import type { Justice } from './justice';
+import type { Exodus } from './exodus';
+import { Tribe } from './tribe';
 import { WarningScenario } from './disaster/Warning';
 import { OmenRecorder } from './omens/OmenRecorder';
 import { Miracles, type CastFailure, type Command } from './miracles/Miracles';
@@ -14,7 +15,7 @@ import { Rng } from './rng';
 import { calendarAt, SEASONS, TICKS_PER_DAY, type Calendar } from './time';
 import { TUNING } from './tuning';
 import type { Villager } from './villagers/types';
-import { Village, type VillageHost } from './villagers/village';
+import type { Tree, Village, VillageHost } from './villagers/village';
 import { Villagers } from './villagers/Villagers';
 import { Fire, type FireHost } from './world/fire';
 import { material, M } from './world/materials';
@@ -64,17 +65,15 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly events = new EventLog();
   readonly weather: Weather;
   readonly fire: Fire;
-  readonly village: Village;
   readonly villagers: Villagers;
   readonly miracles: Miracles;
-  readonly belief: BeliefSystem;
-  readonly effects: BeliefEffects;
-  readonly myth: MythSystem;
-  readonly milestones: Milestones;
-  readonly dissent: Dissent;
   readonly society: Society;
-  readonly justice: Justice;
-  readonly exodus: Exodus;
+  /** The island's trees, shared by every village. */
+  readonly trees: Tree[];
+  /** Shared counters (mutated through any people's view, so kept in one object). */
+  readonly counters = { omen: 1, structure: 1 };
+  /** The peoples of the island; the first is the one that was here first. */
+  readonly tribes: Tribe[] = [];
   /** The Warning's countdown, disaster and verdict (null in sandbox). */
   readonly warning: WarningScenario | null;
   private readonly recorder: OmenRecorder;
@@ -94,29 +93,72 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.weather = new Weather(this.rng.fork('weather'));
     this.fire = new Fire(this.island.world, this.rng.fork('fire'));
     this.lightningRng = this.rng.fork('lightning');
-    this.village = new Village(
-      this.island.world,
-      this.nav,
-      this.rng.fork('village'),
-      this.island.landmarks.villageSite,
-      this.island.trees,
-    );
+    this.trees = this.island.trees.map((t) => ({ ...t, alive: true, reservedBy: -1 }));
     this.villagers = new Villagers(this, this.rng.fork('villagers'));
     this.miracles = new Miracles(this, this.rng.fork('miracles'));
-    this.belief = new BeliefSystem(this, this.rng.fork('belief'));
-    this.effects = new BeliefEffects(this, this.rng.fork('effects'));
     this.recorder = new OmenRecorder(this, this.rng.fork('omens'));
-    this.myth = new MythSystem(this, this.rng.fork('myth'));
-    this.milestones = new Milestones(this);
-    this.dissent = new Dissent(this, this.rng.fork('dissent'));
     this.society = new Society(this, this.rng.fork('society'));
-    this.justice = new Justice(this, this.rng.fork('justice'));
-    this.exodus = new Exodus(this, this.rng.fork('exodus'));
-    this.village.forbidden = (x, z) => this.effects.isCursed(x, z);
-    this.village.attraction = () => this.effects.sacredArea();
+    this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
     if (!opts.noVillage) this.found();
+  }
+
+  // The first people's systems (single-people code and the UI read these).
+  get village(): Village {
+    return this.tribes[0]!.village;
+  }
+  get belief(): BeliefSystem {
+    return this.tribes[0]!.belief;
+  }
+  get effects(): BeliefEffects {
+    return this.tribes[0]!.effects;
+  }
+  get myth(): MythSystem {
+    return this.tribes[0]!.myth;
+  }
+  get milestones(): Milestones {
+    return this.tribes[0]!.milestones;
+  }
+  get dissent(): Dissent {
+    return this.tribes[0]!.dissent;
+  }
+  get justice(): Justice {
+    return this.tribes[0]!.justice;
+  }
+  get exodus(): Exodus {
+    return this.tribes[0]!.exodus;
+  }
+  /** Every people's village. */
+  get villages(): Village[] {
+    return this.tribes.map((t) => t.village);
+  }
+  /** Any village's structure at a cell (buildings belong to whoever built them). */
+  structureAt(x: number, z: number): Structure | undefined {
+    for (const t of this.tribes) {
+      const s = t.village.structureAt(x, z);
+      if (s) return s;
+    }
+    return undefined;
+  }
+  structureById(id: number): Structure | undefined {
+    for (const t of this.tribes) {
+      const s = t.village.byId(id);
+      if (s) return s;
+    }
+    return undefined;
+  }
+  /** Every field and every hut on the island, whoever's. */
+  get fields(): Structure[] {
+    return this.tribes.flatMap((t) => t.village.fields);
+  }
+  get huts(): Structure[] {
+    return this.tribes.flatMap((t) => t.village.huts);
+  }
+
+  /** The people a view belongs to (the first, for the sim itself). */
+  get tribe(): Tribe {
+    return this.tribes[0]!;
   }
 
   get world(): VoxelWorld {
@@ -203,33 +245,44 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.village.growCrops(this);
     this.villagers.step();
     this.recorder.step();
-    this.effects.step();
-    this.myth.step();
+    for (const t of this.tribes) {
+      t.effects.step();
+      t.myth.step();
+    }
     this.warning?.step();
-    this.milestones.step();
-    this.dissent.step();
+    for (const t of this.tribes) {
+      t.milestones.step();
+      t.dissent.step();
+    }
     this.society.step();
-    this.justice.step();
-    this.exodus.step();
+    for (const t of this.tribes) {
+      t.justice.step();
+      t.exodus.step();
+    }
 
     // Late in the evening gathering, people talk: beliefs spread around the fire.
     const duskMark = TUNING.villagers.gatheringEndsAt - 0.04;
-    if (prevFrac < duskMark && this.cal.dayFraction >= duskMark) this.effects.dusk();
+    if (prevFrac < duskMark && this.cal.dayFraction >= duskMark) for (const t of this.tribes) t.effects.dusk();
 
     if (newDay) {
       this.villagers.newDay();
-      this.belief.newDay();
-      this.effects.dawn();
-      this.dissent.dawn();
+      for (const t of this.tribes) {
+        t.belief.newDay();
+        t.effects.dawn();
+        t.dissent.dawn();
+      }
       this.society.dawn();
-      this.myth.dawn();
+      for (const t of this.tribes) t.myth.dawn();
       this.warning?.dawn();
-      this.village.population = this.villagers.alive.length;
-      this.village.inspect(this);
-      this.exodus.dawn();
-      this.village.plan(this);
-      this.village.sproutTrees();
-      this.village.spoil();
+      for (const t of this.tribes) {
+        t.village.population = t.members.length;
+        t.village.inspect(t.view);
+        t.exodus.dawn();
+        t.village.plan(t.view);
+      }
+      // The trees are everyone's: they sprout once.
+      this.tribes[0]!.village.sproutTrees();
+      for (const t of this.tribes) t.village.spoil();
     }
   }
 

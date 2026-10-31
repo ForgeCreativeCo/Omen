@@ -138,7 +138,6 @@ export class BeliefSystem {
   lastAnalysis: Analysis | null = null;
   private readonly seen = new Map<string, number>();
   private expectations: Expectation[] = [];
-  private nextOmen = 1;
 
   constructor(
     private readonly sim: Sim,
@@ -173,8 +172,9 @@ export class BeliefSystem {
     return this.omens.find((o) => o.id === id);
   }
 
+  /** Omen ids are unique across every people (one shared counter). */
   nextOmenId(): string {
-    return `o${this.nextOmen++}`;
+    return `o${this.sim.counters.omen++}`;
   }
 
   /** Human sentence for a belief, in the villagers' voice. */

@@ -56,6 +56,8 @@ export interface DreamRecord {
 export interface Villager {
   id: VillagerId;
   name: string;
+  /** Which people they belong to (index into sim.tribes). */
+  tribeId: number;
   /** Years. */
   age: number;
   /** Personal lifespan in years. */
