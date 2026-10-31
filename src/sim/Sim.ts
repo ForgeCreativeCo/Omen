@@ -5,6 +5,7 @@ import type { MythSystem } from './myth/Myth';
 import type { Milestones } from './milestones';
 import type { Dissent } from './dissent';
 import { Society } from './society';
+import { War } from './war';
 import type { Justice } from './justice';
 import type { Exodus } from './exodus';
 import { Tribe, tribeName } from './tribe';
@@ -71,6 +72,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly villagers: Villagers;
   readonly miracles: Miracles;
   readonly society: Society;
+  readonly war: War;
   /** The island's trees, shared by every village. */
   readonly trees: Tree[];
   /** Shared counters (mutated through any people's view, so kept in one object). */
@@ -101,6 +103,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.miracles = new Miracles(this, this.rng.fork('miracles'));
     this.recorder = new OmenRecorder(this, this.rng.fork('omens'));
     this.society = new Society(this, this.rng.fork('society'));
+    this.war = new War(this, this.rng.fork('war'));
     this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
@@ -203,7 +206,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       const first = this.village.center;
       const site = findSettlement(this, [], first, TUNING.exodus.startMin, TUNING.exodus.startMax, rng);
       if (!site) break;
-      const t = new Tribe(this, i, tribeName(rng, this.island.region[site.x + site.z * this.world.sizeX] ?? 0), site);
+      const t = new Tribe(this, i, tribeName(rng, this.island.region[site.x + site.z * this.world.sizeX] ?? 0, undefined, this.tribes.map((x) => x.name)), site);
       this.tribes.push(t);
       this.settle(t, rng, Math.round(TUNING.villagers.startCount * 0.65), 3, 3);
     }
@@ -248,7 +251,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     const from = root.tribes[people[0]?.tribeId ?? 0] ?? root.tribes[0]!;
     const id = root.tribes.length;
     const leader = opts.leaderId !== undefined ? root.villagers.byId(opts.leaderId) : undefined;
-    const t = new Tribe(root, id, tribeName(root.rng.fork(`tribe:${id}`), root.island.region[site.x + site.z * root.world.sizeX] ?? 0, leader?.name), site);
+    const t = new Tribe(root, id, tribeName(root.rng.fork(`tribe:${id}`), root.island.region[site.x + site.z * root.world.sizeX] ?? 0, leader?.name, root.tribes.map((x) => x.name)), site);
     root.tribes.push(t);
     // Their share of the stores.
     const share = people.length / Math.max(1, from.members.length);
@@ -274,7 +277,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     }
     t.village.population = people.length;
     t.village.clearLand();
-    t.village.found(t.view, 0, 0);
+    // They set out with enough to start: a first home and two planted fields.
+    t.village.found(t.view, 1, 2);
     t.village.rebuilding = true;
     root.villagers.newDayRolesAndHomes();
     root.events.push(root.tick, { type: 'tribeFounded', id, name: t.name, from: from.id, reason: opts.reason, leaderId: opts.leaderId ?? -1, x: site.x, z: site.z });
@@ -323,6 +327,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       t.dissent.step();
     }
     this.society.step();
+    this.war.step();
     for (const t of this.tribes) {
       t.justice.step();
       t.exodus.step();
@@ -340,6 +345,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
         t.dissent.dawn();
       }
       this.society.dawn();
+      this.war.dawn();
       for (const t of this.tribes) t.myth.dawn();
       this.warning?.dawn();
       for (const t of this.tribes) {

@@ -122,6 +122,15 @@ export class Reactions {
       } else if (e.type === 'affairExposed') {
         const p = sim.villagers.byId(e.by);
         if (p?.alive) this.say(p, pick(BETRAYED, e.by + sim.tick), 'deed');
+      } else if (e.type === 'raid') {
+        const lead = sim.villagers.byId(e.ids[0] ?? -1);
+        const god = sim.tribes[e.from]?.myth.god ?? 'the god';
+        if (lead?.alive && !lead.inside) this.say(lead, `For ${god}! Take what they have!`, 'deed');
+      } else if (e.type === 'battle') {
+        const t = sim.tribes[e.to];
+        const c = t?.village.center;
+        const d = c && t.members.filter((x) => x.lifeStage === 'adult' && !x.inside).sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z))[0];
+        if (d) this.say(d, 'Raiders! To the fire!', 'deed');
       } else if (e.type === 'exodus') {
         const t = sim.tribes[e.tribe ?? 0] ?? sim.tribe;
         const p = sim.villagers.byId(t.belief.priestId) ?? t.members.find((x) => x.lifeStage !== 'child');

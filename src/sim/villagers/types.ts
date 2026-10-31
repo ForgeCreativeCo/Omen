@@ -28,7 +28,11 @@ export type ActionKind =
   | 'pilgrimage'
   | 'offering'
   /** Leaving the island for good (OUTCAST at full strength). */
-  | 'exile';
+  | 'exile'
+  /** In a war party: marching, fighting, coming home. */
+  | 'raid'
+  /** Standing at their own fire against raiders. */
+  | 'defend';
 
 export interface Action {
   kind: ActionKind;

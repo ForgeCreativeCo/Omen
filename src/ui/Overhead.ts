@@ -127,6 +127,7 @@ export class Overhead {
     const t = sim.tribes[v.tribeId] ?? sim.tribe;
     if (t.dissent.leader?.id === v.id) return 'dissent';
     if (t.justice.pending(v)) return 'judge';
+    if (sim.war.engaged(v)) return 'quarrel';
     if (sim.society.isHurt(v)) return 'hurt';
     if (a?.kind === 'ritual' && a.phase === 'work') return a.ritual === 'dance' ? 'dance' : 'pray';
     if (a?.kind === 'pilgrimage') return 'pilgrim';

@@ -3,7 +3,7 @@
  * and toasts; M4's omen recorder will turn many of them into omens.
  */
 
-export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed' | 'thrown' | 'crushed';
+export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed' | 'thrown' | 'crushed' | 'battle';
 
 /** Who speaks in the god's place when it falls silent: one who denies it, or one who claims its voice. */
 export type DissentKind = 'doubter' | 'prophet';
@@ -40,6 +40,16 @@ export type SimEventBody =
   | { type: 'meteorFall'; x: number; z: number; impactTick: number }
   | { type: 'meteor'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean }
   | { type: 'milestone'; id: string }
+  | { type: 'war'; a: number; b: number }
+  /** The last of a people were taken in by another. */
+  | { type: 'absorbed'; from: number; into: number; ids: number[] }
+  | { type: 'peace'; a: number; b: number }
+  /** A war party sets out. */
+  | { type: 'raid'; raid: number; from: number; to: number; ids: number[] }
+  /** It reaches the enemy fire. */
+  | { type: 'battle'; raid: number; from: number; to: number; x: number; z: number }
+  | { type: 'slain'; killer: number; victim: number; raid: number; x: number; z: number }
+  | { type: 'raidEnd'; raid: number; from: number; to: number; loot: number; burned: boolean; raidersLost: number; defendersLost: number }
   /** A new people: `from` is the tribe they broke away from. */
   | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles'; leaderId: number; x: number; z: number }
   /** The village gave up its site and moved (`region`: REGION of the new home). */

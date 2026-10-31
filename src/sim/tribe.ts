@@ -122,8 +122,12 @@ const FOLK_ADJ: Record<number, readonly string[]> = {
 };
 const FOLK_NOUN = ['Folk', 'Kin', 'Clan', 'People'] as const;
 
-/** "the Fern Kin", or after a leader, "Orrin's people". */
-export function tribeName(rng: { pick<T>(a: readonly T[]): T; chance(p: number): boolean }, region: number, leader?: string): string {
-  if (leader && rng.chance(0.5)) return `${leader}'s people`;
-  return `the ${rng.pick(FOLK_ADJ[region] ?? FOLK_ADJ[0]!)} ${rng.pick(FOLK_NOUN)}`;
+/** "the Fern Kin", or after a leader, "Orrin's people"; never one already taken. */
+export function tribeName(rng: { pick<T>(a: readonly T[]): T; chance(p: number): boolean }, region: number, leader?: string, taken: readonly string[] = []): string {
+  if (leader && rng.chance(0.5) && !taken.includes(`${leader}'s people`)) return `${leader}'s people`;
+  for (let i = 0; i < 12; i++) {
+    const name = `the ${rng.pick(FOLK_ADJ[region] ?? FOLK_ADJ[0]!)} ${rng.pick(FOLK_NOUN)}`;
+    if (!taken.includes(name)) return name;
+  }
+  return `the ${rng.pick(Object.values(FOLK_ADJ).flat())} ${rng.pick(FOLK_NOUN)} of the ${['East', 'West', 'North', 'South'][taken.length % 4]}`;
 }

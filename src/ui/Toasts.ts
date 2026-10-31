@@ -5,6 +5,8 @@ import { TUNING } from '../sim/tuning';
 import { MILESTONES } from '../sim/milestones';
 import type { Sim } from '../sim/Sim';
 
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 /** How a Doubter's or False Prophet's movement ends. */
 const END_TEXT: Record<DissentEndReason, string> = {
   converted: 'saw a wonder with their own eyes, and believes again.',
@@ -23,6 +25,7 @@ const CAUSE: Record<string, string> = {
   meteor: 'was killed by the falling star',
   thrown: 'was hurled down by the god',
   crushed: 'was crushed by what the god threw',
+  battle: 'fell in battle',
   executed: 'was put to death',
 };
 
@@ -74,6 +77,22 @@ export class Toasts {
           : `${who(e.victim)} has been found dead. <small>(You saw: it was ${who(e.killer)}.)</small>`;
       case 'affairExposed':
         return `${who(e.by)} found out about ${who(e.a)} and ${who(e.b)}.${e.breakup ? ' They have parted.' : ''}`;
+      case 'war':
+        return `<b>War.</b> ${cap(sim.tribes[e.a]?.name ?? 'a people')} and ${sim.tribes[e.b]?.name ?? 'a people'} have taken up arms against each other.`;
+      case 'peace':
+        return `<b>Peace</b> between ${sim.tribes[e.a]?.name ?? 'a people'} and ${sim.tribes[e.b]?.name ?? 'a people'}.`;
+      case 'raid':
+        return `${cap(sim.tribes[e.from]?.name ?? 'a people')} march on ${sim.tribes[e.to]?.name ?? 'a people'}: ${e.ids.length} fighters.`;
+      case 'battle':
+        return `<b>Raiders at the fire of ${sim.tribes[e.to]?.name ?? 'a people'}!</b>`;
+      case 'raidEnd': {
+        const parts = [`${e.raidersLost + e.defendersLost} dead`];
+        if (e.loot) parts.push(`${e.loot} food carried off`);
+        if (e.burned) parts.push('a hut set burning');
+        return `The raid of ${sim.tribes[e.from]?.name ?? 'a people'} on ${sim.tribes[e.to]?.name ?? 'a people'} is over: ${parts.join(', ')}.`;
+      }
+      case 'absorbed':
+        return `The last of ${sim.tribes[e.from]?.name ?? 'a people'} have gone to live with ${sim.tribes[e.into]?.name ?? 'a people'}.`;
       case 'tribeFounded': {
         const from = sim.tribes[e.from];
         return `<b>A new people:</b> ${e.name}${e.leaderId >= 0 ? `, led by ${who(e.leaderId)},` : ''} broke away from ${from?.name ?? 'their people'} and settled in ${REGION_TEXT[sim.island.region[e.x + e.z * sim.world.sizeX] ?? 0] ?? 'new country'}.`;

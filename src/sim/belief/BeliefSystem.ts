@@ -105,7 +105,7 @@ const RESPONSE_WORD: Record<string, string> = {
 const SWAP_FALLBACK: Record<string, string[]> = {
   activity: ['activity:dance', 'activity:farming', 'activity:gathering', 'activity:praying', 'activity:woodcutting', 'activity:building'],
   place: ['place:eastHill', 'place:ridge', 'place:river', 'place:well', 'place:fields', 'place:fire', 'place:coast'],
-  deed: ['deed:theft', 'deed:fight', 'deed:adultery', 'deed:murder'],
+  deed: ['deed:theft', 'deed:fight', 'deed:adultery', 'deed:murder', 'deed:raid'],
   time: ['time:dawn', 'time:dusk', 'time:night', 'time:fullMoon'],
   event: ['event:birth', 'event:death'],
   condition: ['condition:drought', 'condition:storm'],
@@ -362,7 +362,7 @@ export class BeliefSystem {
     const bias = this.bias;
     // Harm to a wrongdoer looks like justice to those they wronged.
     const wrongs: WrongDoing[] = this.deeds.deeds
-      .filter((d) => d.key === 'deed:theft' || d.key === 'deed:adultery' || d.key === 'deed:murder')
+      .filter((d) => d.key === 'deed:theft' || d.key === 'deed:adultery' || d.key === 'deed:murder' || d.key === 'deed:raid')
       .map((d) => ({ actorId: d.actorId, victimIds: d.victimIds }));
     const witnesses = omen.witnesses.map((id) => sim.villagers.byId(id)!).filter((v) => v?.alive);
     const valences = witnesses.map((w) => valenceFor(omen, w, bias, wrongs));

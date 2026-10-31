@@ -32,6 +32,7 @@ const DEATH: Record<string, string> = {
   meteor: 'was killed by the falling star',
   thrown: 'was hurled down by the god',
   crushed: 'was crushed by what the god threw',
+  battle: 'fell in battle',
   executed: 'was put to death',
 };
 
@@ -153,6 +154,18 @@ export class VillageLog {
         return this.push(e.tick, 'deeds', e.seen ? `<b>${w(e.killer)} killed ${w(e.victim)}</b> at the fire.` : `${w(e.victim)} was found dead. Nobody saw ${w(e.killer)} do it.`);
       case 'fight':
         return this.push(e.tick, 'deeds', `${w(e.a)} struck ${w(e.b)}${e.hurt >= 0 ? ', and hurt them' : ''}.`);
+      case 'war':
+        return this.push(e.tick, 'deeds', `<b>War</b> between ${sim.tribes[e.a]?.name ?? 'a people'} and ${sim.tribes[e.b]?.name ?? 'a people'}.`);
+      case 'peace':
+        return this.push(e.tick, 'deeds', `<b>Peace</b> between ${sim.tribes[e.a]?.name ?? 'a people'} and ${sim.tribes[e.b]?.name ?? 'a people'}.`);
+      case 'raid':
+        return this.push(e.tick, 'deeds', `A war party of ${sim.tribes[e.from]?.name ?? 'a people'} set out against ${sim.tribes[e.to]?.name ?? 'a people'}: ${e.ids.map(w).join(', ')}.`);
+      case 'slain':
+        return this.push(e.tick, 'deeds', `${w(e.killer)} struck down ${w(e.victim)}.`);
+      case 'raidEnd':
+        return this.push(e.tick, 'deeds', `The raid on ${sim.tribes[e.to]?.name ?? 'a people'} ended: ${e.raidersLost} raiders and ${e.defendersLost} defenders dead${e.loot ? `, ${e.loot} food taken` : ''}${e.burned ? ', a hut burned' : ''}.`);
+      case 'absorbed':
+        return this.push(e.tick, 'life', `The last of ${sim.tribes[e.from]?.name ?? 'a people'} (${e.ids.map(w).join(', ')}) went to live with ${sim.tribes[e.into]?.name ?? 'a people'}.`);
       case 'tribeFounded':
         return this.push(e.tick, 'life', `<b>${e.name}</b> broke away${e.leaderId >= 0 ? `, led by ${w(e.leaderId)},` : ''} and settled in ${REGION_TEXT[sim.island.region[e.x + e.z * sim.world.sizeX] ?? 0] ?? 'new country'}.`);
       case 'exodus':

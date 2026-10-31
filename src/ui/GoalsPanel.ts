@@ -129,6 +129,13 @@ export class GoalsPanel {
     const ready = (id: Parameters<typeof m.check>[0]) => m.check(id) === null;
     if (sim.warning?.disaster.phase === 'striking') return 'The sea is rising. Watch where they run.';
     if (sim.fire.burning.size > 0 && ready('rain')) return 'Something is burning. <b>Rain</b> (R) puts it out.';
+    const raid = sim.war.raids[0];
+    if (raid) {
+      const from = sim.tribes[raid.from]?.name ?? 'a people';
+      const to = sim.tribes[raid.to]?.name ?? 'another';
+      const what = raid.phase === 'march' ? 'are marching on' : raid.phase === 'fight' ? 'are fighting' : 'are coming home from raiding';
+      return `<b>${from.charAt(0).toUpperCase() + from.slice(1)}</b> ${what} <b>${to}</b>. Strike the raiders with <b>Lightning</b> or the <b>Hand</b>, and the defenders will believe you chose their side. Or let them fight.`;
+    }
     const trial = this.trial();
     if (trial) return trial;
     const turning = this.turning();

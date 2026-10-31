@@ -530,6 +530,55 @@ export const TUNING = {
   /** Peoples on a new sandbox island. */
   sandboxTribes: 3,
 
+  /** War between peoples: how feelings drift, when they fight, how a raid goes. */
+  war: {
+    /** Villages closer than this chafe over land (more the closer). */
+    nearDistance: 90,
+    landFriction: 0.012,
+    /** A people this short of food per head resents a neighbor with twice as much. */
+    hungryBelow: 3,
+    hungerFriction: 0.02,
+    /** A different name for the god divides; the same one eases (half as much). */
+    faithFriction: 0.006,
+    /** Feelings ease back toward nothing, this share a day. */
+    easePerDay: 0.01,
+    /** A people born of a schism starts this bitter toward the one it left. */
+    schismStart: -0.45,
+    warAt: -0.6,
+    peaceAt: -0.25,
+    /** Feeling right after a peace. */
+    afterPeace: -0.3,
+    /** Each death in battle hardens it this much, and wearies both sides this much. */
+    deathGrudge: 0.04,
+    wearinessPerDeath: 0.1,
+    peaceWeariness: 0.6,
+    /** Fighting adults a people needs before it goes to war. */
+    minFighters: 4,
+    raidChancePerDay: 0.15,
+    raidRestDays: 10,
+    /** Share of a people's fighters that go, and the fewest. */
+    partyShare: 0.25,
+    partyMin: 3,
+    /** Close enough to the enemy fire to begin; defenders come from this far. */
+    arriveRadius: 8,
+    defendRadius: 16,
+    /** How long a fight lasts at most (ticks), and how close to strike. */
+    fightTicks: 90,
+    reach: 2.2,
+    /** Chance per tick a raider in reach trades a blow; share of blows that kill (else wound). */
+    blowChance: 0.035,
+    killShare: 0.2,
+    /** Defenders count this many times over (home ground). */
+    homeAdvantage: 1.3,
+    /** A party breaks off when this share of it is left. */
+    breakAt: 0.65,
+    /** Food each surviving raider carries off. */
+    lootPerRaider: 6,
+    burnChance: 0.4,
+    /** A people down to this many is taken in by the neighbor it gets on with best. */
+    absorbAtOrBelow: 2,
+  },
+
   /** Leaving a ruined home: when the village gives up its site, and where it goes. */
   exodus: {
     /** Huts destroyed (share) that, with the god's hand in it, means home is lost. */
@@ -547,6 +596,8 @@ export const TUNING = {
     restYears: 1,
     /** No two villages closer than this. */
     apart: 30,
+    /** Fewer than this can't found a people of their own (they leave the island instead). */
+    minFounders: 6,
     /** A breakaway people settles this far from the village it left. */
     splitMin: 40,
     splitMax: 130,

@@ -281,6 +281,8 @@ export class Villagers {
     // The injured rest instead of working.
     if (workTime && !sim.society.isHurt(v) && (v.lifeStage !== 'child' || (shortOfFood && v.age >= WK.childForageAge))) consider('farm', 0.8);
 
+    // At war (marching, fighting, defending): the war decides where they go.
+    if (sim.war.engaged(v)) return;
     // Keep doing the same kind of thing rather than re-planning; finish deliveries, escapes and rites.
     const cur = v.action?.kind;
     if (cur === 'flee' || cur === 'exile' || cur === 'ritual' || cur === 'pilgrimage' || v.action?.phase === 'deliver') return;
@@ -341,6 +343,17 @@ export class Villagers {
   }
 
   /** Drop reservations held by the current action. */
+  /** Sent somewhere by the war (march, fight, defend, stand down). */
+  order(v: Villager, kind: ActionKind, x: number, z: number, work: number): void {
+    this.setAction(v, this.make(kind, x, z, kind === 'raid', work));
+    v.lying = false;
+  }
+
+  /** Run from danger at (x, z). */
+  scare(v: Villager, x: number, z: number): void {
+    if (v.action?.kind !== 'flee') this.setAction(v, this.fleeAction(v, Math.floor(x), Math.floor(z)));
+  }
+
   /** Taken up by the god's hand: whatever they were doing stops. */
   lift(v: Villager): void {
     this.setAction(v, null);
@@ -695,6 +708,11 @@ export class Villagers {
       }
       case 'exile':
         this.remove(v);
+        return;
+      case 'raid':
+      case 'defend':
+        // Holding the ground the war sent them to.
+        if (--a.workLeft <= 0) this.setAction(v, null);
         return;
       case 'wander':
         if (--a.workLeft <= 0) this.setAction(v, null);

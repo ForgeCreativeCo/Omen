@@ -325,7 +325,7 @@ export class Dissent {
     const people = ids.map((id) => sim.villagers.byId(id)!).filter((v) => v.alive);
     const X = TUNING.exodus;
     // The Warning is one people's story: there, those who split away leave the island.
-    const site = sim.mode === 'warning' ? null : findSettlement(sim, people, sim.village.center, X.splitMin, X.splitMax, this.rng);
+    const site = sim.mode === 'warning' || people.length < TUNING.exodus.minFounders ? null : findSettlement(sim, people, sim.village.center, X.splitMin, X.splitMax, this.rng);
     for (const id of ids) this.pull.delete(id);
     for (const [id, p] of this.pull) this.pull.set(id, p * 0.3);
     this.restUntil = sim.tick + T.restAfterSplitYears * TICKS_PER_YEAR;
