@@ -93,7 +93,12 @@ export type SimEventBody =
   | { type: 'slain'; killer: number; victim: number; raid: number; x: number; z: number }
   | { type: 'raidEnd'; raid: number; from: number; to: number; loot: number; burned: boolean; raidersLost: number; defendersLost: number; captives?: number }
   /** A new people: `from` is the tribe they broke away from. */
-  | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles'; leaderId: number; x: number; z: number }
+  | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles' | 'settlers'; leaderId: number; x: number; z: number }
+  /** Settlers set out for an islet (gathering on the shore at x, z), put to sea, come ashore, or give up. */
+  | { type: 'voyage'; tribe: number; ids: number[]; islet: number; x: number; z: number }
+  | { type: 'setSail'; tribe: number; ids: number[]; x: number; z: number }
+  | { type: 'landfall'; tribe: number; from: number; ids: number[]; x: number; z: number }
+  | { type: 'voyageEnd'; tribe: number; ids: number[] }
   /** The village gave up its site and moved (`region`: REGION of the new home). */
   | { type: 'exodus'; fromX: number; fromZ: number; toX: number; toZ: number; reason: ExodusReason; region: number }
   /** The god's hand took hold of something (`id`: the villager, else -1). */

@@ -19,6 +19,8 @@ const CHECKS_PER_DAY = TICKS_PER_DAY / EVERY;
 export class Plague {
   /** Sick villager → tick they get better (if they live). */
   readonly sick = new Map<VillagerId, number>();
+  /** Sick villager → tick they fell ill (it can't kill in the first day). */
+  readonly onset = new Map<VillagerId, number>();
   readonly immune = new Set<VillagerId>();
 
   constructor(
@@ -49,6 +51,7 @@ export class Plague {
     const [lo, hi] = P.sickDays;
     const until = sim.tick + Math.round(this.rng.range(lo!, hi!) * TICKS_PER_DAY);
     this.sick.set(v.id, until);
+    this.onset.set(v.id, sim.tick);
     // Too ill to work while it lasts.
     sim.society.hurt.set(v.id, Math.max(sim.society.hurt.get(v.id) ?? 0, until));
     sim.events.push(sim.tick, { type: 'sickened', id: v.id, by });
@@ -64,10 +67,12 @@ export class Plague {
       const v = sim.villagers.byId(id);
       if (!v?.alive) {
         this.sick.delete(id);
+        this.onset.delete(id);
         continue;
       }
       if (sim.tick >= until) {
         this.sick.delete(id);
+        this.onset.delete(id);
         this.immune.add(id);
         sim.events.push(sim.tick, { type: 'recovered', id });
         continue;
@@ -90,8 +95,10 @@ export class Plague {
       const v = sim.villagers.byId(id);
       if (!v?.alive) continue;
       const frail = v.lifeStage !== 'adult' || v.age < 5;
-      if (this.rng.chance(frail ? P.frailDeathPerDay : P.deathPerDay)) {
+      const grown = sim.tick - (this.onset.get(id) ?? 0) >= TICKS_PER_DAY;
+      if (grown && this.rng.chance(frail ? P.frailDeathPerDay : P.deathPerDay)) {
         this.sick.delete(id);
+        this.onset.delete(id);
         sim.villagers.kill(v, 'plague');
         continue;
       }

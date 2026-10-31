@@ -184,7 +184,10 @@ export class VillageLog {
         return this.push(e.tick, 'faith', e.answered ? `They believe the god answered: it struck ${sim.tribes[e.against]?.name ?? 'the enemy'}.` : 'They prayed for victory, and the god struck them instead.');
       case 'absorbed':
         return this.push(e.tick, 'life', `The last of ${sim.tribes[e.from]?.name ?? 'a people'} (${e.ids.map(w).join(', ')}) went to live with ${sim.tribes[e.into]?.name ?? 'a people'}.`);
+      case 'voyage':
+        return this.push(e.tick, 'life', `${e.ids.map(w).join(', ')} set out to settle an island.`);
       case 'tribeFounded':
+        if (e.reason === 'settlers') return this.push(e.tick, 'life', `<b>${e.name}</b> came ashore on an island off the coast${e.leaderId >= 0 ? `, led by ${w(e.leaderId)}` : ''}.`);
         return this.push(e.tick, 'life', `<b>${e.name}</b> broke away${e.leaderId >= 0 ? `, led by ${w(e.leaderId)},` : ''} and settled in ${REGION_TEXT[sim.island.region[e.x + e.z * sim.world.sizeX] ?? 0] ?? 'new country'}.`);
       case 'exodus':
         return this.push(e.tick, 'life', `<b>The village moved</b> to ${REGION_TEXT[e.region] ?? 'new ground'}. ${EXODUS_TEXT[e.reason]}`);

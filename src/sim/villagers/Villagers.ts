@@ -143,7 +143,7 @@ export class Villagers {
       v.py = v.y;
       v.pz = v.z;
       // In the god's hand or in the air: the hand moves them.
-      if (sim.miracles.hand.holds(v)) continue;
+      if (sim.miracles.hand.holds(v) || sim.boats.carries(v)) continue;
 
       // Needs
       v.needs.hunger = Math.min(1, v.needs.hunger + hungerTick * (v.lifeStage === 'child' ? V.childHungerFactor : 1));

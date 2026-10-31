@@ -41,7 +41,7 @@ export const TUNING = {
     landRadius: 96,
     landRadiusNoise: 20,
     coastWidth: 12,
-    platformRadius: 110,
+    platformRadius: 124,
     platformRadiusNoise: 4,
     /** The home valley (village, east hill, ridge, river) keeps its old scale inside this radius. */
     homeRadius: 44,
@@ -78,6 +78,11 @@ export const TUNING = {
     meadowTreeChance: 0.012,
     treeSpacing: 3,
     treeClearOfVillage: 11,
+    /** Small islands in the sea around the main one: how many, how big, how high, and the water kept between. */
+    isletCount: [2, 4] as readonly number[],
+    isletRadius: [8, 12] as readonly number[],
+    isletHeight: [3, 6] as readonly number[],
+    isletGap: 6,
   },
 
   villagers: {
@@ -350,12 +355,12 @@ export const TUNING = {
       cost: 40,
       cooldownDays: 3,
       /** The first to fall sick: everyone this close to where the god points. */
-      radius: 4,
+      radius: 5,
       /** How close two people must stand, and the chance per day together that it passes. */
-      contactRadius: 2.5,
-      spreadChance: 0.3,
+      contactRadius: 3,
+      spreadChance: 0.5,
       /** At the evening fire it passes most easily. */
-      gatheringSpread: 0.45,
+      gatheringSpread: 0.8,
       sickDays: [2, 4] as readonly number[],
       /** Chance per day of sickness that it kills: adults, and the very young and old. */
       deathPerDay: 0.12,
@@ -656,6 +661,8 @@ export const TUNING = {
     /** A winning raid carries off this many of the enemy (children and the young first). */
     captivesMax: 2,
     captiveChance: 0.6,
+    /** A beaten party's odds of snatching someone anyway, relative to a winning one's. */
+    snatchShare: 0.4,
     /** Captives become one of their captors after this long; at peace, newer ones go home. */
     captiveYears: 2,
     /** Conquest: a people with this few fighters left, against an enemy this many times stronger, is beaten. */
@@ -704,6 +711,20 @@ export const TUNING = {
   },
 
   /** Village justice: accusation, the god's window, judgment at the fire, custom and law. */
+  /** Boats: crowded peoples send settlers to the islets. */
+  boats: {
+    /** A people this big (and short of beds) may send settlers, at this chance a day, then rest this long. */
+    crowdedAt: 22,
+    chancePerDay: 0.04,
+    restYears: 6,
+    /** How many go. */
+    settlers: 8,
+    /** Voxels a tick afloat. */
+    speed: 0.35,
+    /** How the new people feel toward the one they left. */
+    startFondness: 0.3,
+  },
+
   /** How a people answers a cruel god (dread, great offerings, sacrifice, defiance, rivalry). */
   appease: {
     /** Dread added by one harmful omen: per death, per damaged home, per sick, per 10 rows of crops lost, plus a base. */

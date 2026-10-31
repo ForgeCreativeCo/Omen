@@ -7,6 +7,7 @@ import type { Dissent } from './dissent';
 import { Society } from './society';
 import { War } from './war';
 import { Plague } from './plague';
+import { Boats } from './boats';
 import type { Justice } from './justice';
 import type { Exodus } from './exodus';
 import type { Appeasement } from './appease';
@@ -77,6 +78,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly war: War;
   /** The god's sickness, wherever it has spread. */
   readonly plague: Plague;
+  /** Settlers sailing for the islets. */
+  readonly boats: Boats;
   /** The island's trees, shared by every village. */
   readonly trees: Tree[];
   /** Shared counters (mutated through any people's view, so kept in one object). */
@@ -109,6 +112,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.society = new Society(this, this.rng.fork('society'));
     this.war = new War(this, this.rng.fork('war'));
     this.plague = new Plague(this, this.rng.fork('plague'));
+    this.boats = new Boats(this, this.rng.fork('boats'));
     this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
@@ -253,7 +257,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
    * a share of the stores and the beliefs they hold. They camp around a new fire
    * and raise homes. Returns the new tribe.
    */
-  foundTribe(people: Villager[], site: { x: number; y: number; z: number }, opts: { reason: 'schism' | 'exiles'; leaderId?: number; priestId?: number }): Tribe {
+  foundTribe(people: Villager[], site: { x: number; y: number; z: number }, opts: { reason: 'schism' | 'exiles' | 'settlers'; leaderId?: number; priestId?: number }): Tribe {
     // Through a people's view this runs on that view; the tribes and the world are the real sim's.
     const root = this.tribes[0]!.sim;
     const from = root.tribes[people[0]?.tribeId ?? 0] ?? root.tribes[0]!;
@@ -338,6 +342,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.society.step();
     this.war.step();
     this.plague.step();
+    this.boats.step();
     for (const t of this.tribes) {
       t.justice.step();
       t.exodus.step();
@@ -358,6 +363,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.society.dawn();
       this.war.dawn();
       this.plague.dawn();
+      this.boats.dawn();
       for (const t of this.tribes) t.myth.dawn();
       this.warning?.dawn();
       for (const t of this.tribes) {

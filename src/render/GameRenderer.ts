@@ -11,6 +11,7 @@ import { VillagerRenderer } from './villagers/VillagerRenderer';
 import { WeatherFx } from './vfx/WeatherFx';
 import { MiracleFx } from './vfx/MiracleFx';
 import { HandFx } from './vfx/HandFx';
+import { BoatFx } from './vfx/BoatFx';
 import { WitnessLines } from './vfx/WitnessLines';
 
 /** Pixel-ratio ceiling, shadow detail and how far the terrain stays detailed, per graphics quality (settings). */
@@ -45,6 +46,7 @@ export class GameRenderer {
   readonly fx: WeatherFx;
   readonly miracleFx: MiracleFx;
   readonly handFx: HandFx;
+  readonly boatFx: BoatFx;
   readonly witnessLines: WitnessLines;
   private readonly raycaster = new THREE.Raycaster();
   /** Fired on a tap/click that wasn't a drag (screen coords). */
@@ -134,9 +136,10 @@ export class GameRenderer {
     this.fx = new WeatherFx(-half0, -half0);
     this.miracleFx = new MiracleFx(-half0, -half0);
     this.handFx = new HandFx(-half0, -half0);
+    this.boatFx = new BoatFx(-half0, -half0);
     this.witnessLines = new WitnessLines(-half0, -half0);
     this.scene.add(this.witnessLines.group);
-    this.scene.add(this.villagers.group, this.fx.group, this.miracleFx.group, this.handFx.group);
+    this.scene.add(this.villagers.group, this.fx.group, this.miracleFx.group, this.handFx.group, this.boatFx.group);
 
     const half = TUNING.world.sizeX / 2;
     const ground = sim.island.ground;
@@ -256,6 +259,7 @@ export class GameRenderer {
     this.fx.update(sim, dt, this.elapsed, night);
     this.miracleFx.update(sim, dt, this.elapsed, alpha);
     this.handFx.update(sim, dt);
+    this.boatFx.update(sim, this.elapsed);
     this.witnessLines.update(sim, this.elapsed);
     this.villagers.update(sim, alpha, dt, this.elapsed);
     this.orbit.update(Math.min(dt, 0.1));

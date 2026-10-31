@@ -134,9 +134,18 @@ describe('Plague', () => {
     expect(s.plague.isSick(v)).toBe(true);
     // The sick don't work.
     expect(s.society.isHurt(v)).toBe(true);
-    for (let i = 0; i < TICKS_PER_DAY * 10; i++) s.step();
-    const caught = s.events.all().filter((e) => e.type === 'sickened' && e.by >= 0).length;
-    const died = s.events.all().filter((e) => e.type === 'death' && e.cause === 'plague').length;
+    // Count as we go: the event log only keeps the most recent.
+    let caught = 0;
+    let died = 0;
+    let seq = s.events.lastSeq;
+    for (let i = 0; i < TICKS_PER_DAY * 10; i++) {
+      s.step();
+      for (const e of s.events.since(seq)) {
+        if (e.type === 'sickened' && e.by >= 0) caught++;
+        if (e.type === 'death' && e.cause === 'plague') died++;
+      }
+      seq = s.events.lastSeq;
+    }
     expect(caught).toBeGreaterThan(0);
     expect(died + s.plague.immune.size).toBeGreaterThan(1);
     expect(s.villagers.alive.length).toBeLessThanOrEqual(alive + 5);

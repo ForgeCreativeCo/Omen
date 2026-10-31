@@ -115,8 +115,13 @@ export class Toasts {
       }
       case 'absorbed':
         return `The last of ${sim.tribes[e.from]?.name ?? 'a people'} have gone to live with ${sim.tribes[e.into]?.name ?? 'a people'}.`;
+      case 'voyage':
+        return `${e.ids.length} of ${sim.tribes[e.tribe]?.name ?? 'a people'} are going down to the shore, to sail for an island.`;
+      case 'setSail':
+        return `A boat puts to sea from the land of ${sim.tribes[e.tribe]?.name ?? 'a people'}.`;
       case 'tribeFounded': {
         const from = sim.tribes[e.from];
+        if (e.reason === 'settlers') return `<b>A new people:</b> ${e.name}, sailed from ${from?.name ?? 'the main island'}, have settled an island off the coast.`;
         return `<b>A new people:</b> ${e.name}${e.leaderId >= 0 ? `, led by ${who(e.leaderId)},` : ''} broke away from ${from?.name ?? 'their people'} and settled in ${REGION_TEXT[sim.island.region[e.x + e.z * sim.world.sizeX] ?? 0] ?? 'new country'}.`;
       }
       case 'exodus':

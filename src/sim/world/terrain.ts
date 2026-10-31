@@ -27,6 +27,12 @@ export interface Landmarks {
   riverSource: Point3;
   riverMouth: Point2;
   riverPath: Point2[];
+  /** Small islands off the coast: center, top height and radius. */
+  islets: Islet[];
+}
+
+export interface Islet extends Point3 {
+  r: number;
 }
 
 /** Broad regions of the island, past the home valley. */
@@ -147,6 +153,40 @@ export function generateIsland(rng: Rng): Island {
       const seabed = seabedAt(r, R);
       height[idx(x, z)] = seabed + (land - seabed) * m;
     }
+  }
+
+  // ---- 1b. Islets: small islands in the sea ring, clear of the coast and of each other.
+  // Their own stream, so the main island comes out the same whatever they do.
+  const isletRng = rng.fork('islets');
+  const islets: Islet[] = [];
+  const wantIslets = isletRng.int(T.isletCount[0]!, T.isletCount[1]!);
+  for (let tries = 0; tries < 120 && islets.length < wantIslets; tries++) {
+    const ang = isletRng.range(0, Math.PI * 2);
+    const r0 = isletRng.range(T.isletRadius[0]!, T.isletRadius[1]!);
+    const lo = landRadius(ang) + T.coastWidth * 0.35 + r0 + T.isletGap;
+    const hi = platformRadius(ang) - r0 - 3;
+    if (lo > hi) continue;
+    const d = isletRng.range(lo, hi);
+    const ix = cx + Math.cos(ang) * d;
+    const iz = cz + Math.sin(ang) * d;
+    if (islets.some((o) => Math.hypot(o.x - ix, o.z - iz) < o.r + r0 + T.isletGap)) continue;
+    const top = T.seaLevel + isletRng.range(T.isletHeight[0]!, T.isletHeight[1]!);
+    for (let z = Math.floor(iz - r0 - 2); z <= Math.ceil(iz + r0 + 2); z++)
+      for (let x = Math.floor(ix - r0 - 2); x <= Math.ceil(ix + r0 + 2); x++) {
+        if (x < 0 || z < 0 || x >= sizeX || z >= sizeZ) continue;
+        const k = idx(x, z);
+        if ((height[k] as number) < 0) continue;
+        // A rounded hump with a wobbling shore and a sandy rim.
+        const wob = 1 + 0.18 * nCoast(x * 0.15 + 50, z * 0.15 - 50);
+        const rr = Math.hypot(x + 0.5 - ix, z + 0.5 - iz) / (r0 * wob);
+        if (rr > 1.15) continue;
+        const h = rr < 1 ? T.seaLevel + 0.6 + (top - T.seaLevel) * (1 - rr * rr) : T.seaLevel - 1 - (rr - 1) * 10;
+        if (h > (height[k] as number)) {
+          height[k] = h;
+          region[k] = REGION.meadows;
+        }
+      }
+    islets.push({ x: Math.round(ix), y: Math.round(top), z: Math.round(iz), r: Math.round(r0) });
   }
 
   const ground = new Int16Array(sizeX * sizeZ).fill(-1);
@@ -416,6 +456,7 @@ export function generateIsland(rng: Rng): Island {
       riverSource: { x: sx, y: g(sx, sz), z: sz },
       riverMouth,
       riverPath,
+      islets,
     },
   };
 }

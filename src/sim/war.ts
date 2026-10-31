@@ -232,8 +232,9 @@ export class War {
       r.loot = Math.min(victims.village.store.food, T.lootPerRaider * alive);
       victims.village.store.food -= r.loot;
       if (this.rng.chance(T.burnChance)) r.burned = this.burnAHut(victims);
-      this.takeCaptives(r, target);
     }
+    // Winners carry people off; even a beaten party may snatch someone as it breaks away.
+    if (alive) this.takeCaptives(r, target, standing <= alive ? 1 : T.snatchShare);
     r.phase = 'return';
     r.left = TICKS_PER_DAY * 3;
     const home = sim.tribes[r.from]!.village.center;
@@ -242,7 +243,7 @@ export class War {
   }
 
   /** Winners carry off a few of the enemy who couldn't run: the young first. */
-  private takeCaptives(r: Raid, target: { x: number; z: number }): void {
+  private takeCaptives(r: Raid, target: { x: number; z: number }, odds: number): void {
     const sim = this.sim;
     const victims = sim.tribes[r.to]!;
     const near = victims.members
@@ -251,7 +252,7 @@ export class War {
     const taken: Villager[] = [];
     for (const v of near) {
       if (taken.length >= T.captivesMax) break;
-      if (v.age < 4 || !this.rng.chance(T.captiveChance)) continue;
+      if (v.age < 4 || !this.rng.chance(T.captiveChance * odds)) continue;
       taken.push(v);
     }
     if (!taken.length) return;
@@ -371,6 +372,18 @@ export class War {
     }
   }
 
+  /** Can one people walk to the other's fire? */
+  private reachable(a: Tribe, b: Tribe): boolean {
+    const regions = this.sim.nav.regions();
+    const W = this.sim.world.sizeX;
+    const at = (t: Tribe) => {
+      const p = t.village.nearestWalkable(t.village.center.x, t.village.center.z);
+      return p ? (regions[p.x + p.z * W] ?? 0) : 0;
+    };
+    const ra = at(a);
+    return ra === 0 || ra === at(b);
+  }
+
   /** Adults who can fight (not the priest). */
   private fighters(t: Tribe): Villager[] {
     return t.members.filter((v) => v.lifeStage === 'adult' && v.id !== t.belief.priestId && !this.raidOf(v));
@@ -399,6 +412,8 @@ export class War {
   private maybeRaid(from: Tribe, to: Tribe): void {
     const sim = this.sim;
     if (this.raids.some((r) => r.from === from.id)) return;
+    // Across the water, nobody can march.
+    if (!this.reachable(from, to)) return;
     const heart = (this.heartened.get(from.id) ?? -1) > sim.tick ? T.answeredRaidBoost : 1;
     if (sim.tick - (this.lastRaid.get(from.id) ?? -Infinity) < (T.raidRestDays / heart) * TICKS_PER_DAY) return;
     if (!this.rng.chance(T.raidChancePerDay * heart)) return;
