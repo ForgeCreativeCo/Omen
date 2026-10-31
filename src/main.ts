@@ -68,15 +68,26 @@ const life = chosen
       if (!v) return;
       const half = TUNING.world.sizeX / 2;
       if (v.alive) renderer.orbit.focus(v.x - half, v.z - half, 45);
-      inspector.open(id);
+      openVillager(id);
     })
   : null;
 /** Beliefs and Village life share the right side: one at a time. */
+/** On a phone there's room for one side panel at a time. */
+const narrow = () => matchMedia('(max-width: 600px)').matches;
+function openVillager(id: number): void {
+  inspector.open(id);
+  if (narrow()) {
+    life?.toggle(false);
+    beliefs.toggle(false);
+  }
+}
 function showBeliefs(show = beliefs.el.hidden): void {
+  if (show && narrow()) inspector.close();
   beliefs.toggle(show);
   if (show) life?.toggle(false);
 }
 function showLife(show = !life?.open): void {
+  if (show && narrow()) inspector.close();
   life?.toggle(show);
   if (show) beliefs.toggle(false);
 }
@@ -166,7 +177,7 @@ renderer.onTap = (x, y) => {
   // An armed miracle takes the tap; otherwise taps select villagers.
   if (miracles.tap(x, y)) return;
   const id = renderer.pickVillager(sim, x, y);
-  if (id >= 0) inspector.open(id);
+  if (id >= 0) openVillager(id);
   else if (inspector.villagerId >= 0) inspector.close();
 };
 window.addEventListener('keydown', (e) => {

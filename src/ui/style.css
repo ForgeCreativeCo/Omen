@@ -2495,3 +2495,107 @@ body.reduce-motion *::after {
 .unlimited .m-cool {
   display: none;
 }
+
+/* ---- Top bar: one row that wraps instead of overlapping ----
+   The village stats, the clock and the menu share a row; when it's too narrow
+   they wrap to a second line. Everything that hangs under the bar reads its
+   height from --hud-top (set by the HUD), so nothing slides underneath it. */
+.hud-top {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: grid;
+  /* Stats | clock (always centered) | menu; the sides shrink and wrap their own contents. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hud-top > .hud-village {
+  justify-self: start;
+}
+
+.hud-top > .hud-time {
+  justify-self: center;
+}
+
+.hud-top > .hud-view {
+  justify-self: end;
+}
+
+@media (max-width: 760px) {
+  .hud-top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.hud-top > .hud-panel {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+}
+
+.hud-top > .hud-village {
+  flex-wrap: wrap;
+  row-gap: 2px;
+  max-width: 100%;
+}
+
+.hud-top > .hud-village > span {
+  white-space: nowrap;
+}
+
+.hud-top > .hud-view {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 100%;
+}
+
+.inspector,
+.beliefs-panel,
+.village-log,
+.settings-panel,
+.season-report,
+.debug {
+  top: calc(var(--hud-top, 64px) + 8px) !important;
+  max-height: calc(100vh - var(--hud-top, 64px) - 170px) !important;
+}
+
+@media (max-width: 760px) {
+  .goals {
+    top: calc(var(--hud-top, 64px) + 8px) !important;
+  }
+}
+
+/* The perf readout: bottom-right, clear of the miracle dock. */
+.hud-fps {
+  top: auto !important;
+  bottom: 12px;
+  right: 12px;
+}
+
+@media (max-width: 1100px) {
+  .hud-fps {
+    bottom: 150px;
+  }
+}
+
+/* On a phone: one side panel at a time, under the top bar and clear of the miracle bar. */
+@media (max-width: 600px) {
+  .inspector,
+  .village-log,
+  .beliefs-panel,
+  .settings-panel {
+    bottom: auto !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-height: calc(100vh - var(--hud-top, 64px) - 220px) !important;
+  }
+}

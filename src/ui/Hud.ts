@@ -20,6 +20,8 @@ export class Hud {
     seedLabel: string,
   ) {
     root.innerHTML = `
+      <div class="hud-top">
+      <div class="hud-panel hud-village"></div>
       <div class="hud-panel hud-time">
         <div class="hud-clock">
           <div class="hud-calendar"></div>
@@ -37,12 +39,18 @@ export class Hud {
         <button class="hud-settings" title="Settings, sound and saving" aria-label="Settings">⚙</button>
         <button class="hud-help" title="Tutorial">?</button>
       </div>
-      <div class="hud-panel hud-village"></div>
+      </div>
       <div class="hud-panel hud-fps"></div>`;
     this.calendarEl = root.querySelector('.hud-calendar')!;
     this.countdownEl = root.querySelector('.hud-countdown')!;
     this.statsEl = root.querySelector('.hud-fps')!;
     this.villageEl = root.querySelector('.hud-village')!;
+    // Panels under the top bar sit below it however tall it gets (it wraps on narrow screens).
+    const top = root.querySelector<HTMLElement>('.hud-top')!;
+    const publish = () => document.documentElement.style.setProperty('--hud-top', `${Math.ceil(top.getBoundingClientRect().bottom)}px`);
+    new ResizeObserver(publish).observe(top);
+    window.addEventListener('resize', publish);
+    publish();
     root.querySelector('.hud-seed')!.textContent = `seed: ${seedLabel}`;
 
     const speeds = root.querySelector('.hud-speeds')!;
