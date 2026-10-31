@@ -2,10 +2,10 @@ import { TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
 
 /** The miracles (SPEC §6, plus the later powers), as data: UI and casting both read from here. */
-export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'bless' | 'blight' | 'meteor' | 'hand';
+export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'bless' | 'blight' | 'meteor' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm' | 'hand';
 
 /** Miracles cast by tapping a point on the ground. */
-export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'blight' | 'meteor';
+export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'blight' | 'meteor' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm';
 
 export type Targeting =
   /** Tap a point on the ground. */
@@ -29,8 +29,15 @@ export interface MiracleDef {
   cooldownTicks: number;
   radius: number;
   nightOnly: boolean;
-  /** Keyboard shortcut (the letter; KeyboardEvent.code is `Key${key}`). */
+  /** Keyboard shortcut (a letter or digit; KeyboardEvent.code is `Key${key}` / `Digit${key}`). */
   key: string;
+  /** One of the destructive powers (grouped together on the bar). */
+  wrath?: boolean;
+}
+
+/** The KeyboardEvent.code for a miracle's shortcut. */
+export function keyCode(key: string): string {
+  return /^\d$/.test(key) ? `Digit${key}` : `Key${key}`;
 }
 
 const MT = TUNING.miracles;
@@ -123,6 +130,66 @@ export const MIRACLES: readonly MiracleDef[] = [
     radius: MT.meteor.craterRadius,
     nightOnly: false,
     key: 'O',
+  },
+  {
+    id: 'quake',
+    name: 'Earthquake',
+    blurb: 'The ground shakes around where you point: it cracks open, trees fall and huts topple on whoever is inside.',
+    targeting: 'point',
+    cost: MT.quake.cost,
+    cooldownTicks: MT.quake.cooldownDays * TICKS_PER_DAY,
+    radius: MT.quake.radius,
+    nightOnly: false,
+    key: 'Y',
+    wrath: true,
+  },
+  {
+    id: 'firestorm',
+    name: 'Firestorm',
+    blurb: 'Fire rains down over an area for a while. Whatever burns, burns.',
+    targeting: 'point',
+    cost: MT.firestorm.cost,
+    cooldownTicks: MT.firestorm.cooldownDays * TICKS_PER_DAY,
+    radius: MT.firestorm.radius,
+    nightOnly: false,
+    key: 'C',
+    wrath: true,
+  },
+  {
+    id: 'wave',
+    name: 'Tidal Wave',
+    blurb: 'The sea surges inland toward where you point, from the nearest shore, sweeping people and crops away, then draws back.',
+    targeting: 'point',
+    cost: MT.wave.cost,
+    cooldownTicks: MT.wave.cooldownDays * TICKS_PER_DAY,
+    radius: MT.wave.width / 2,
+    nightOnly: false,
+    key: 'Z',
+    wrath: true,
+  },
+  {
+    id: 'plague',
+    name: 'Plague',
+    blurb: 'Those near where you point fall sick, and it spreads from person to person, most at the evening fire. Some die of it.',
+    targeting: 'point',
+    cost: MT.plague.cost,
+    cooldownTicks: MT.plague.cooldownDays * TICKS_PER_DAY,
+    radius: MT.plague.radius,
+    nightOnly: false,
+    key: 'P',
+    wrath: true,
+  },
+  {
+    id: 'swarm',
+    name: 'Swarm',
+    blurb: 'A cloud of locusts falls on the fields of the people nearest where you point and eats them bare, field by field, and the stores too.',
+    targeting: 'point',
+    cost: MT.swarm.cost,
+    cooldownTicks: MT.swarm.cooldownDays * TICKS_PER_DAY,
+    radius: MT.swarm.radius,
+    nightOnly: false,
+    key: '5',
+    wrath: true,
   },
   {
     id: 'hand',

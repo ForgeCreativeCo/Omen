@@ -5,6 +5,7 @@ import { TUNING } from '../tuning';
 import { CROP_STAGES, M, material, type MaterialId } from '../world/materials';
 import { plantTree } from '../world/terrain';
 import { Hand, type GrabTarget } from './hand';
+import { Wrath } from './wrath';
 import { DREAM_SYMBOLS, miracleDef, type DreamSymbol, type MiracleId, type PointMiracle } from './defs';
 
 const G = TUNING.grace;
@@ -25,7 +26,7 @@ export type Command =
   | { type: 'carry'; x: number; z: number }
   | { type: 'release'; vx: number; vz: number };
 
-export type CastFailure = 'grace' | 'cooldown' | 'night' | 'target' | 'interval';
+export type CastFailure = 'grace' | 'cooldown' | 'night' | 'target' | 'interval' | 'shore';
 
 export interface RainCloud {
   id: number;
@@ -85,10 +86,17 @@ export class Miracles {
     bless: 0,
     blight: 0,
     meteor: 0,
+    quake: 0,
+    firestorm: 0,
+    wave: 0,
+    plague: 0,
+    swarm: 0,
     hand: 0,
   };
   readonly clouds: RainCloud[] = [];
   readonly hand: Hand;
+  /** Earthquakes, firestorms, tidal waves and swarms in progress. */
+  readonly wrath: Wrath;
   readonly beams: LightBeam[] = [];
   readonly falling: FallingStar[] = [];
   private nextCloudId = 1;
@@ -101,6 +109,7 @@ export class Miracles {
     private readonly rng: Rng,
   ) {
     this.hand = new Hand(sim, rng.fork('hand'));
+    this.wrath = new Wrath(sim, rng.fork('wrath'));
   }
 
   get cap(): number {
@@ -151,6 +160,7 @@ export class Miracles {
   step(): void {
     const sim = this.sim;
     this.hand.step();
+    this.wrath.step();
     // Grace regenerates with faith, up to a cap that grows with the number of believers.
     const cap = this.cap;
     if (this.grace < cap) this.grace = Math.min(cap, this.grace + this.regenPerDay / TICKS_PER_DAY);
@@ -191,7 +201,7 @@ export class Miracles {
     let fail: CastFailure | null = null;
     switch (cmd.type) {
       case 'cast':
-        fail = this.check(cmd.miracle);
+        fail = this.check(cmd.miracle) ?? this.castCheck(cmd.miracle, cmd.x, cmd.z);
         if (!fail) {
           this.spend(cmd.miracle);
           if (cmd.miracle === 'rain') this.rain(cmd.x, cmd.z);
@@ -199,6 +209,11 @@ export class Miracles {
           else if (cmd.miracle === 'bloom') this.bloom(cmd.x, cmd.z);
           else if (cmd.miracle === 'light') this.light(cmd.x, cmd.z);
           else if (cmd.miracle === 'blight') this.blight(cmd.x, cmd.z);
+          else if (cmd.miracle === 'quake') this.wrath.quake(cmd.x, cmd.z);
+          else if (cmd.miracle === 'firestorm') this.wrath.firestorm(cmd.x, cmd.z);
+          else if (cmd.miracle === 'wave') this.wrath.wave(cmd.x, cmd.z);
+          else if (cmd.miracle === 'plague') this.sim.plague.outbreak(cmd.x, cmd.z);
+          else if (cmd.miracle === 'swarm') this.wrath.swarm(cmd.x, cmd.z);
           else this.meteor(cmd.x, cmd.z);
         }
         break;
@@ -245,6 +260,13 @@ export class Miracles {
     }
     this.lastFailure = fail;
     return fail;
+  }
+
+  /** Point miracles that need something there: a sea to send, someone to sicken. */
+  private castCheck(id: PointMiracle, x: number, z: number): CastFailure | null {
+    if (id === 'wave' && !this.wrath.shoreNear(x, z)) return 'shore';
+    if (id === 'plague' && !this.sim.villagers.alive.some((v) => Math.hypot(v.x - x, v.z - z) <= MT.plague.radius * 3)) return 'target';
+    return null;
   }
 
   // ------------------------------------------------------------------ the miracles

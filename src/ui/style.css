@@ -2665,3 +2665,21 @@ body.reduce-motion *::after {
 .season-report .pf-tabs {
   margin: 2px 0 6px;
 }
+
+/* ---- Fifteen powers: narrower buttons; the destructive ones tinted */
+.miracle {
+  width: 66px;
+}
+
+.miracle.wrath {
+  border-color: rgba(224, 120, 90, 0.35);
+  background: rgba(160, 50, 30, 0.12);
+}
+
+.miracle.wrath:hover {
+  background: rgba(190, 60, 35, 0.22);
+}
+
+.ins-sick {
+  color: #b8c87a;
+}

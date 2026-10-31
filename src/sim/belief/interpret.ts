@@ -35,6 +35,11 @@ export const BASE_VALENCE: Record<OmenKind, number> = {
   blessing: 0.5,
   blight: -0.5,
   meteor: -0.25,
+  quake: -0.4,
+  firestorm: -0.55,
+  wave: -0.45,
+  plague: -0.5,
+  swarm: -0.45,
   // Awe either way: what happened to whom decides the feeling.
   hand: 0,
 };
@@ -87,6 +92,9 @@ export function valenceFor(omen: Omen, w: Villager, bias: PriestBias, wrongs: Wr
         break;
       case 'cropsWithered':
         v -= 0.35;
+        break;
+      case 'sickened':
+        v += deserved ? 0.1 : who === w.id ? -0.7 : ours ? -0.5 : -0.2;
         break;
       case 'blessed':
         v += who === w.id ? 0.5 : ours ? 0.3 : 0.05;

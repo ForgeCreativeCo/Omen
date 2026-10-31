@@ -329,6 +329,82 @@ export const TUNING = {
       /** Fires started around the rim. */
       fires: 18,
     },
+    /** Earthquake: the ground shakes over an area, cracks open and topples huts. */
+    quake: {
+      cost: 45,
+      cooldownDays: 2,
+      radius: 18,
+      /** How long the shaking lasts, ticks. */
+      durationTicks: 40,
+      /** Fissures torn from the epicenter, and how deep they go. */
+      cracks: [3, 5] as readonly number[],
+      crackDepth: 3,
+      /** Chance per structure block (scaled down toward the edge) that it falls over the quake. */
+      topple: 0.55,
+      treeFall: 0.25,
+      /** Anyone in a home that loses this many blocks is crushed, with this chance. */
+      crushChance: 0.35,
+    },
+    /** Plague: sickness that goes from person to person. Times in days. */
+    plague: {
+      cost: 40,
+      cooldownDays: 3,
+      /** The first to fall sick: everyone this close to where the god points. */
+      radius: 4,
+      /** How close two people must stand, and the chance per day together that it passes. */
+      contactRadius: 2.5,
+      spreadChance: 0.3,
+      /** At the evening fire it passes most easily. */
+      gatheringSpread: 0.45,
+      sickDays: [2, 4] as readonly number[],
+      /** Chance per day of sickness that it kills: adults, and the very young and old. */
+      deathPerDay: 0.12,
+      frailDeathPerDay: 0.28,
+    },
+    /** Tidal wave: the sea surges inland toward where the god points, then draws back. */
+    wave: {
+      cost: 55,
+      cooldownDays: 3,
+      /** Width of the wave front, voxels. */
+      width: 20,
+      /** How far past the aim point it runs on, and how far from the sea it may start. */
+      overrun: 6,
+      searchRadius: 70,
+      /** Height above the sea the crest stands at the shore; it loses this much per voxel inland. */
+      height: 6,
+      fallPerVoxel: 0.08,
+      /** Voxels the front moves per tick, and ticks the water stays before draining. */
+      speed: 1.5,
+      holdTicks: 30,
+      /** Chance per structure block under the crest that it's torn away. */
+      wreck: 0.4,
+      /** People caught are carried along and may drown. */
+      carry: 0.6,
+    },
+    /** Firestorm: fire rains on an area for a while. */
+    firestorm: {
+      cost: 50,
+      cooldownDays: 3,
+      radius: 11,
+      durationTicks: 60,
+      /** Burning stones landing per tick. */
+      perTick: 2,
+      /** Anyone this close to where one lands is killed. */
+      killRadius: 1.2,
+      fearRadius: 20,
+    },
+    /** Swarm: a cloud of locusts eats one people's crops, field by field. */
+    swarm: {
+      cost: 35,
+      cooldownDays: 2,
+      radius: 3,
+      durationTicks: 300,
+      /** Voxels per tick it flies between fields. */
+      speed: 0.6,
+      /** Crop tiles eaten per tick while over a field, and food taken from the store as it passes the village. */
+      eatPerTick: 2,
+      storeShare: 0.15,
+    },
   },
 
   belief: {

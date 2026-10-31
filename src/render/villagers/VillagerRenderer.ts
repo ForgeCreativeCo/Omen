@@ -160,7 +160,10 @@ export class VillagerRenderer {
       // Several peoples: their tunics take on their people's color.
       if (tribe >= 0) tmpC.lerp(tmpT.setHex(TRIBE_COLORS[tribe % TRIBE_COLORS.length]!), 0.6);
       this.clothes.setColorAt(n, tmpC);
-      this.skin.setColorAt(n, tmpC.setHex(SKIN[(id * 7) % SKIN.length]!));
+      tmpC.setHex(SKIN[(id * 7) % SKIN.length]!);
+      // The god's sickness shows in their faces.
+      if (sim.plague.sick.has(id)) tmpC.lerp(tmpT.setHex(0x9db36a), 0.55);
+      this.skin.setColorAt(n, tmpC);
       this.hair.setColorAt(n, tmpC.setHex(HAIR[(id * 13) % HAIR.length]!));
       if (carrying) {
         this.carry.setMatrixAt(n, tmpM);

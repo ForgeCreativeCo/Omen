@@ -30,6 +30,11 @@ const DEED: Record<string, string[]> = {
   blessing: ['Lays-on-Hands', 'Chooses'],
   blight: ['Withers', 'Eats-the-Harvest'],
   meteor: ['Throws-Stars', 'Brings-Down-the-Sky'],
+  quake: ['Shakes-the-Earth', 'Breaks-the-Ground'],
+  firestorm: ['Rains-Fire', 'Burns-the-World'],
+  wave: ['Sends-the-Sea', 'Drowns'],
+  plague: ['Brings-Sickness', 'the Wasting'],
+  swarm: ['Sends-the-Swarm', 'Lord-of-Locusts'],
   hand: ['the Great Hand', 'Takes-Us-Up', 'Who-Holds-Us'],
 };
 const KIN = new Set(['Father', 'Mother']);
@@ -46,6 +51,11 @@ export const NAME_WHY: Record<string, string> = {
   blessing: 'it lays its hand on those it chooses',
   blight: 'it withers what it hates',
   meteor: 'it throws down the stars',
+  quake: 'it shakes the earth until it breaks',
+  firestorm: 'it rains fire on those it hates',
+  wave: 'it sends the sea against us',
+  plague: 'it sends the sickness',
+  swarm: 'it sends the swarm to eat our bread',
   hand: 'it reaches down and takes us in its hand',
 };
 

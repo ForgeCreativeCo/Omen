@@ -11,6 +11,9 @@ const SPARKS = 900;
 const CLOUD_PUFFS = 18;
 const MAX_CLOUDS = 4;
 const RAIN_PER_CLOUD = 160;
+/** Locusts drawn per swarm. */
+const LOCUSTS = 360;
+const MAX_SWARMS = 3;
 
 interface WetPatch {
   x: number;
@@ -39,7 +42,8 @@ interface Glyph {
  * Effects for the god's acts (SPEC §16): voxel rain clouds with local rain and wet
  * ground, Shape Earth dust, Bloom sparkles, dream glyphs over the sleeper (seen by
  * the player only), sleeper markers while Dream is armed, and the targeting reticle;
- * pillars of Holy Light, the blessing glow, blight's dead dust, and falling stars.
+ * pillars of Holy Light, the blessing glow, blight's dead dust, and falling stars;
+ * the shaking ground, rains of fire, the wave's spray, locust swarms and the sickness.
  */
 export class MiracleFx {
   readonly group = new THREE.Group();
@@ -83,6 +87,11 @@ export class MiracleFx {
   private readonly beamGeo = new THREE.CylinderGeometry(1, 1, 1, 28, 1, true);
   private readonly starHead: THREE.Mesh;
   private readonly starGlow: THREE.Sprite;
+
+  // Swarms: a cloud of dark specks per swarm.
+  private readonly locustPos = new Float32Array(LOCUSTS * MAX_SWARMS * 3);
+  private readonly locusts: THREE.Points;
+  private readonly swarmShown = new Map<number, { x: number; z: number }>();
 
   // Reticle
   private readonly reticle: THREE.Mesh;
@@ -139,6 +148,13 @@ export class MiracleFx {
     );
     this.rain.frustumCulled = false;
     this.group.add(this.rain);
+
+    const lg = new THREE.BufferGeometry();
+    lg.setAttribute('position', new THREE.BufferAttribute(this.locustPos, 3).setUsage(THREE.DynamicDrawUsage));
+    this.locusts = new THREE.Points(lg, new THREE.PointsMaterial({ color: 0x2b2416, size: 0.22, transparent: true, opacity: 0.9, depthWrite: false }));
+    this.locusts.frustumCulled = false;
+    this.locustPos.fill(-999);
+    this.group.add(this.locusts);
 
     this.markers = new THREE.InstancedMesh(
       new THREE.OctahedronGeometry(0.28),
@@ -352,6 +368,29 @@ export class MiracleFx {
         this.flash = 1;
         break;
       }
+      case 'quake':
+        for (let i = 0; i < 240; i++) {
+          const a = this.rng.range(0, Math.PI * 2);
+          const r = Math.sqrt(this.rng.next()) * e.radius;
+          const x = Math.round(e.x + Math.cos(a) * r);
+          const z = Math.round(e.z + Math.sin(a) * r);
+          this.dustAt(x + 0.5 + ox, sim.world.topY(x, z) + 1, z + 0.5 + oz);
+        }
+        this.shake = Math.max(this.shake, 1.6);
+        break;
+      case 'wave':
+        this.shake = Math.max(this.shake, 0.5);
+        break;
+      case 'sickened':
+      case 'plague': {
+        const ids = e.type === 'plague' ? e.ids : [e.id];
+        for (const id of ids) {
+          const v = sim.villagers.byId(id);
+          if (!v || v.inside) continue;
+          for (let i = 0; i < 18; i++) this.spark(v.x + ox + this.rng.jitter(0.5), v.y + 1 + this.rng.range(0, 1), v.z + oz + this.rng.jitter(0.5), this.rng.jitter(0.2), this.rng.range(0.3, 0.9), this.rng.jitter(0.2), this.rng.pick([0x9dbb5a, 0x6f8a3a, 0xb8c87a]), this.rng.range(1, 2.2), 0);
+        }
+        break;
+      }
       case 'dream': {
         const v = sim.villagers.byId(e.villagerId);
         if (!v) break;
@@ -418,6 +457,69 @@ export class MiracleFx {
         this.spark(bm.x + ox + Math.cos(a) * r, ground, bm.z + oz + Math.sin(a) * r, 0, this.rng.range(2, 5), 0, this.rng.pick([0xfff2c2, 0xffd98a]), this.rng.range(1.5, 3), 0);
       }
     }
+
+    // ---- the wrath: shaking ground, rains of fire, the wave's spray, swarms
+    const wr = sim.miracles.wrath;
+    for (const q of wr.quakes) {
+      this.shake = Math.max(this.shake, 0.9);
+      for (let i = 0; i < 4; i++) {
+        const a = this.rng.range(0, Math.PI * 2);
+        const r = Math.sqrt(this.rng.next()) * q.radius;
+        const x = Math.round(q.x + Math.cos(a) * r);
+        const z = Math.round(q.z + Math.sin(a) * r);
+        this.dustAt(x + 0.5 + ox, sim.world.topY(x, z) + 1, z + 0.5 + oz);
+      }
+    }
+    for (const f of wr.firestorms) {
+      // Burning stones streak down over the whole area; a burst where each one lands.
+      for (let i = 0; i < 5; i++) {
+        const a = this.rng.range(0, Math.PI * 2);
+        const r = Math.sqrt(this.rng.next()) * f.radius;
+        const x = f.x + Math.cos(a) * r;
+        const z = f.z + Math.sin(a) * r;
+        const gy = sim.world.topY(Math.floor(x), Math.floor(z)) + 1;
+        this.spark(x + ox + 6, gy + 34, z + oz - 3, -2.4, -16, 1.2, this.rng.pick([0xffb050, 0xff7a2a, 0xffe0a0]), 2, 0);
+      }
+      for (const h of f.hits) this.burst(h.x + 0.5 + ox, h.y + 1, h.z + 0.5 + oz, 26, 5, [0xffd28a, 0xff8a3a, 0xff5a1a], 1, -6);
+      this.flash = Math.max(this.flash, 0.08 + 0.05 * Math.sin(time * 9));
+    }
+    for (const w of wr.waves) {
+      if (w.drainAt >= 0) continue;
+      const fx = w.ox + w.dx * w.front;
+      const fz = w.oz + w.dz * w.front;
+      const W = TUNING.miracles.wave;
+      for (let i = 0; i < 24; i++) {
+        const k = this.rng.range(-W.width / 2, W.width / 2);
+        const x = fx - w.dz * k;
+        const z = fz + w.dx * k;
+        const y = Math.max(TUNING.terrain.seaLevel + 1, sim.world.topY(Math.floor(x), Math.floor(z)) + 1);
+        this.spark(x + ox, y, z + oz, w.dx * 3 + this.rng.jitter(1), this.rng.range(2, 6), w.dz * 3 + this.rng.jitter(1), this.rng.pick([0xffffff, 0xdff2ff, 0xa8d8f0]), this.rng.range(0.5, 1.2), -9);
+      }
+    }
+    // Swarms: each speck circles the swarm's center on its own little orbit.
+    const liveSwarms = new Set(wr.swarms.map((s) => s.id));
+    let si = 0;
+    for (const s of wr.swarms) {
+      if (si >= MAX_SWARMS) break;
+      const shown = this.swarmShown.get(s.id) ?? { x: s.x, z: s.z };
+      shown.x += (s.x - shown.x) * Math.min(1, dt * 4);
+      shown.z += (s.z - shown.z) * Math.min(1, dt * 4);
+      this.swarmShown.set(s.id, shown);
+      const gy = Math.max(TUNING.terrain.seaLevel, sim.world.topY(Math.floor(s.x), Math.floor(s.z))) + 2;
+      for (let i = 0; i < LOCUSTS; i++) {
+        const r = 1 + ((i * 7919) % 97) / 97 * (TUNING.miracles.swarm.radius + 1.5);
+        const sp = 1.5 + (i % 13) * 0.25;
+        const a = time * sp * (i % 2 ? 1 : -1) + i;
+        const o = (si * LOCUSTS + i) * 3;
+        this.locustPos[o] = shown.x + ox + Math.cos(a) * r;
+        this.locustPos[o + 1] = gy + 0.5 + ((i * 31) % 17) / 17 * 2.5 + Math.sin(time * 5 + i) * 0.4;
+        this.locustPos[o + 2] = shown.z + oz + Math.sin(a * 1.3) * r;
+      }
+      si++;
+    }
+    for (const id of [...this.swarmShown.keys()]) if (!liveSwarms.has(id)) this.swarmShown.delete(id);
+    this.locustPos.fill(-999, si * LOCUSTS * 3);
+    (this.locusts.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
 
     // ---- falling stars: a glowing head on a slant, trailing fire
     const star = sim.miracles.falling[0];

@@ -145,6 +145,8 @@ export class GoalsPanel {
       const what = raid.phase === 'march' ? 'are marching on' : raid.phase === 'fight' ? 'are fighting' : 'are coming home from raiding';
       return `<b>${from.charAt(0).toUpperCase() + from.slice(1)}</b> ${what} <b>${to}</b>. Strike the raiders with <b>Lightning</b> or the <b>Hand</b>, and the defenders will believe you chose their side. Or let them fight.`;
     }
+    const sick = alive.filter((v) => sim.plague.isSick(v)).length;
+    if (sick) return `<b>${sick}</b> ${sick === 1 ? 'is' : 'are'} sick. It passes between people who stand close, most of all at the evening fire. What they make of it is up to them.`;
     const trial = this.trial();
     if (trial) return trial;
     const turning = this.turning();

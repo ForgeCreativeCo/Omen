@@ -6,6 +6,7 @@ import type { Milestones } from './milestones';
 import type { Dissent } from './dissent';
 import { Society } from './society';
 import { War } from './war';
+import { Plague } from './plague';
 import type { Justice } from './justice';
 import type { Exodus } from './exodus';
 import { Tribe, tribeName } from './tribe';
@@ -73,6 +74,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly miracles: Miracles;
   readonly society: Society;
   readonly war: War;
+  /** The god's sickness, wherever it has spread. */
+  readonly plague: Plague;
   /** The island's trees, shared by every village. */
   readonly trees: Tree[];
   /** Shared counters (mutated through any people's view, so kept in one object). */
@@ -104,6 +107,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.recorder = new OmenRecorder(this, this.rng.fork('omens'));
     this.society = new Society(this, this.rng.fork('society'));
     this.war = new War(this, this.rng.fork('war'));
+    this.plague = new Plague(this, this.rng.fork('plague'));
     this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
@@ -328,6 +332,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     }
     this.society.step();
     this.war.step();
+    this.plague.step();
     for (const t of this.tribes) {
       t.justice.step();
       t.exodus.step();
@@ -346,6 +351,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       }
       this.society.dawn();
       this.war.dawn();
+      this.plague.dawn();
       for (const t of this.tribes) t.myth.dawn();
       this.warning?.dawn();
       for (const t of this.tribes) {

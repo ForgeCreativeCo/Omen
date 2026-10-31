@@ -180,6 +180,22 @@ export class Soundscape {
       case 'milestone':
         if (this.ok('milestone', 2)) this.chime(1, 0.6);
         break;
+      case 'quake':
+        this.rumble(4);
+        this.rumble(2.5);
+        break;
+      case 'firestorm':
+        if (this.ok('firestorm', 2)) this.roar();
+        break;
+      case 'wave':
+        if (this.ok('wave', 2)) this.surf();
+        break;
+      case 'swarm':
+        if (this.ok('swarm', 2)) this.buzz();
+        break;
+      case 'plague':
+        if (this.ok('plague', 2)) this.wither();
+        break;
     }
   }
 
@@ -260,6 +276,33 @@ export class Soundscape {
   private wither(): void {
     this.noiseShot('bandpass', 900, this.env(0.12, 0.2, 1.6), 2);
     this.tone('sawtooth', 140, 70, this.env(0.05, 0.1, 1.6), 1.8);
+  }
+
+  /** Firestorm: a long low roar under crackling. */
+  private roar(): void {
+    this.noiseShot('lowpass', 300, this.env(0.35, 0.8, 5), 6);
+    for (let i = 0; i < 14; i++) this.noiseShot('highpass', 3000, this.env(0.06, 0.005, 0.08, i * 0.35 + Math.random() * 0.2), 0.12, i * 0.35);
+  }
+
+  /** Tidal wave: a swell of surf that builds and breaks. */
+  private surf(): void {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    const t = ctx.currentTime;
+    f.frequency.setValueAtTime(200, t);
+    f.frequency.exponentialRampToValueAtTime(1600, t + 2.5);
+    f.frequency.exponentialRampToValueAtTime(300, t + 5);
+    src.connect(f).connect(this.env(0.5, 2.4, 2.8));
+    src.start(t);
+    src.stop(t + 5.5);
+  }
+
+  /** Swarm: many wings, a buzzing that wavers. */
+  private buzz(): void {
+    for (let i = 0; i < 4; i++) this.tone('sawtooth', 180 + i * 23, 160 + i * 31, this.env(0.025, 0.6, 3.5), 4.2);
   }
 
   /** A falling star: rising, brightening rush of air. */

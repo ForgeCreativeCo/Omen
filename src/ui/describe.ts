@@ -18,6 +18,11 @@ const KIND_TEXT: Record<OmenKind, string> = {
   blessing: 'Someone was touched by the god',
   blight: 'The land withered',
   meteor: 'A star fell from the sky',
+  quake: 'The earth shook',
+  firestorm: 'Fire rained from the sky',
+  wave: 'The sea came up over the land',
+  plague: 'A sickness came',
+  swarm: 'A swarm ate the fields',
   hand: 'A great hand came down from the sky',
 };
 
@@ -49,6 +54,11 @@ const MEMORY_TEXT: Record<OmenKind, string> = {
   blessing: 'someone touched by the god',
   blight: 'the land wither',
   meteor: 'a star fall from the sky',
+  quake: 'the earth shake',
+  firestorm: 'fire rain from the sky',
+  wave: 'the sea come up over the land',
+  plague: 'the sickness come',
+  swarm: 'a swarm eat the fields',
   hand: 'a great hand come down from the sky',
 };
 
@@ -80,6 +90,11 @@ const HEARSAY_TEXT: Record<OmenKind, string> = {
   blessing: 'a {size}blessing',
   blight: 'a {size}withering',
   meteor: 'a {size}falling star',
+  quake: 'a {size}shaking of the earth',
+  firestorm: 'a {size}rain of fire',
+  wave: 'a {size}wave from the sea',
+  plague: 'a {size}sickness',
+  swarm: 'a {size}swarm',
   hand: 'a {size}hand from the sky',
 };
 
@@ -94,6 +109,11 @@ const RESPONSE_WORD: Record<string, string> = {
   shapeEarth: 'the earth to move',
   meteor: 'a sign',
   hand: 'the hand',
+  quake: 'the ground to be still',
+  firestorm: 'the fire to stop',
+  wave: 'the sea to stay away',
+  plague: 'the sickness to pass',
+  swarm: 'the swarm to pass',
 };
 
 /** "Dancing for rain!" */

@@ -272,6 +272,85 @@ export class OmenRecorder {
         });
         break;
       }
+      case 'quakeEnd': {
+        const outcomes: Outcome[] = [...e.killed.map((id): Outcome => ({ type: 'died', entity: `person:${id}`, people: [id] })), ...this.wreckedHuts(e.wrecked), { type: 'landLowered', amount: 30 }];
+        // The shaking is felt by everyone near, whatever they could see.
+        this.record({
+          kind: 'quake',
+          isDivine: true,
+          position: { x: Math.round(e.x), y: surfaceY(sim, Math.round(e.x), Math.round(e.z)), z: Math.round(e.z) },
+          radius: e.radius,
+          magnitude: Math.min(1, 0.6 + e.killed.length * 0.1 + e.wrecked.length * 0.05),
+          outcomes,
+          range: e.radius * 2.5,
+          everywhere: true,
+          affected: [...e.killed, ...outcomes.flatMap((o) => (o.type === 'hutDamaged' ? (o.people ?? []) : []))],
+        });
+        break;
+      }
+      case 'firestormEnd': {
+        const outcomes: Outcome[] = [...e.killed.map((id): Outcome => ({ type: 'died', entity: `person:${id}`, people: [id] })), ...this.wreckedHuts(e.wrecked)];
+        if (e.fires) outcomes.push({ type: 'fireStarted' });
+        this.record({
+          kind: 'firestorm',
+          isDivine: true,
+          position: { x: Math.round(e.x), y: surfaceY(sim, Math.round(e.x), Math.round(e.z)), z: Math.round(e.z) },
+          radius: e.radius,
+          magnitude: Math.min(1, 0.75 + e.killed.length * 0.1),
+          outcomes,
+          range: 70,
+          sky: 14,
+          affected: [...e.killed, ...outcomes.flatMap((o) => (o.type === 'hutDamaged' ? (o.people ?? []) : []))],
+        });
+        break;
+      }
+      case 'waveEnd': {
+        const outcomes: Outcome[] = [
+          ...this.wreckedHuts(e.wrecked),
+          ...e.carried.map((id): Outcome => ({ type: 'injured', entity: `person:${id}`, people: [id] })),
+        ];
+        if (e.crops) outcomes.push({ type: 'cropsWithered', amount: e.crops });
+        this.record({
+          kind: 'wave',
+          isDivine: true,
+          position: { x: e.x, y: surfaceY(sim, e.x, e.z), z: e.z },
+          radius: TUNING.miracles.wave.width / 2,
+          magnitude: Math.min(1, 0.7 + e.carried.length * 0.05 + e.wrecked.length * 0.05),
+          outcomes,
+          range: 60,
+          sky: 5,
+          affected: [...e.carried, ...outcomes.flatMap((o) => (o.type === 'hutDamaged' ? (o.people ?? []) : []))],
+          also: e.carried,
+        });
+        break;
+      }
+      case 'plague':
+        // Nobody sees sickness arrive: those who fall ill know, and those beside them.
+        this.record({
+          kind: 'plague',
+          isDivine: true,
+          position: { x: Math.round(e.x), y: surfaceY(sim, Math.round(e.x), Math.round(e.z)), z: Math.round(e.z) },
+          radius: TUNING.miracles.plague.radius,
+          magnitude: Math.min(1, 0.4 + e.ids.length * 0.08),
+          outcomes: e.ids.map((id): Outcome => ({ type: 'sickened', entity: `person:${id}`, people: [id] })),
+          range: 10,
+          affected: e.ids,
+          also: e.ids,
+        });
+        break;
+      case 'swarmEnd':
+        if (!e.eaten && !e.food) break;
+        this.record({
+          kind: 'swarm',
+          isDivine: true,
+          position: { x: Math.round(e.x), y: surfaceY(sim, Math.round(e.x), Math.round(e.z)), z: Math.round(e.z) },
+          radius: TUNING.miracles.swarm.radius + 3,
+          magnitude: Math.min(1, 0.4 + e.eaten / 50),
+          outcomes: [{ type: 'cropsWithered', amount: e.eaten + e.food }],
+          range: 40,
+          sky: 3,
+        });
+        break;
       case 'dream': {
         const v = sim.villagers.byId(e.villagerId);
         if (!v) break;
@@ -318,6 +397,14 @@ export class OmenRecorder {
       outcomes,
       range: 32,
       sky: 2,
+    });
+  }
+
+  /** Huts among wrecked structures, as outcomes for their residents. */
+  private wreckedHuts(ids: number[]): Outcome[] {
+    return ids.flatMap((id): Outcome[] => {
+      const h = this.sim.structureById(id);
+      return h && h.kind === 'hut' ? [{ type: 'hutDamaged', entity: `structure:${id}`, people: [...h.residents] }] : [];
     });
   }
 

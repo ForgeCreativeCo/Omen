@@ -117,7 +117,7 @@ export class Inspector {
       <h2>${v.name}</h2>
       <div class="ins-sub">${Math.floor(v.age)} years · ${cap(v.role)}${sim.tribes.length > 1 ? ` · ${cap((sim.tribes[v.tribeId] ?? sim.tribe).name)}` : ''}${v.alive ? '' : ' · †'}</div>
       <div class="ins-traits">${v.traits.map((t) => `<span>${TRAIT_LABEL[t]}</span>`).join('')}${this.dissentTag(sim, v)}</div>
-      <div class="ins-now">${cap(status)}</div>
+      <div class="ins-now">${cap(status)}${sim.plague.isSick(v) ? ' <span class="ins-sick">· sick</span>' : sim.plague.immune.has(v.id) ? ' · lived through the sickness' : ''}</div>
       ${v.alive ? bar('Hunger', v.needs.hunger, true) + bar('Energy', v.needs.energy) + bar('Safety', v.needs.safety) : ''}
       <dl>
         ${v.partnerId >= 0 ? `<dt>Partner</dt><dd>${name(v.partnerId)}</dd>` : ''}

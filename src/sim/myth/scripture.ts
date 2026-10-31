@@ -60,6 +60,11 @@ export const RESPONSE_PAST: Record<string, string[]> = {
   blessing: ['laid a hand upon one of the people', 'blessed one among us'],
   blight: ['withered the land', 'struck the fields barren'],
   meteor: ['cast down a star', 'threw a star upon the earth'],
+  quake: ['shook the earth', 'broke the ground beneath the people'],
+  firestorm: ['rained fire upon the land', 'sent fire like rain'],
+  wave: ['sent the sea against the land', 'raised the waters over the people'],
+  plague: ['sent the sickness among the people', 'struck the people with fever'],
+  swarm: ['sent the swarm upon the fields', 'gave the harvest to the locusts'],
   hand: ['reached down and took one of them up', 'lifted the people in its hand'],
 };
 
@@ -78,6 +83,11 @@ export const RESPONSE_FUTURE: Record<string, string[]> = {
   blessing: ['lay a hand upon the chosen', 'bless the faithful'],
   blight: ['wither the fields', 'blight the land'],
   meteor: ['cast down a star'],
+  quake: ['shake the earth'],
+  firestorm: ['rain fire'],
+  wave: ['send the sea'],
+  plague: ['send the sickness'],
+  swarm: ['send the swarm'],
   hand: ['reach down and take us up'],
 };
 
@@ -116,6 +126,11 @@ export const FAMILY_TITLE: Record<string, string[]> = {
   blessing: ['the Laying of Hands', 'the Touch'],
   blight: ['the Withering', 'the Blight'],
   meteor: ['the Falling Star', 'the Night the Sky Fell'],
+  quake: ['the Great Shaking', 'the Day the Earth Broke'],
+  firestorm: ['the Rain of Fire', 'the Burning Sky'],
+  wave: ['the Coming of the Sea', 'the Great Wave'],
+  plague: ['the Sickness', 'the Wasting Days'],
+  swarm: ['the Swarm', 'the Year of Locusts'],
   hand: ['the Day of the Hand', 'the Reaching'],
 };
 

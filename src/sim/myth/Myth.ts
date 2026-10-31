@@ -72,6 +72,11 @@ const FAMILY: Partial<Record<OmenKind, string>> = {
   blessing: 'blessing',
   blight: 'blight',
   meteor: 'meteor',
+  quake: 'quake',
+  firestorm: 'firestorm',
+  wave: 'wave',
+  plague: 'plague',
+  swarm: 'swarm',
   hand: 'hand',
 };
 
@@ -85,6 +90,11 @@ const TRUE_NAME: Record<OmenKind, string> = {
   blessing: 'your Blessing',
   blight: 'your Blight',
   meteor: 'your Falling Star',
+  quake: 'your Earthquake',
+  firestorm: 'your Firestorm',
+  wave: 'your Tidal Wave',
+  plague: 'your Plague',
+  swarm: 'your Swarm',
   hand: 'your Hand',
   naturalRain: 'an ordinary shower',
   storm: 'a natural storm',
@@ -318,6 +328,10 @@ export class MythSystem {
     else if (o.kind === 'light') reason = 'sacred';
     else if (o.kind === 'blight') reason = 'blight';
     else if (o.kind === 'meteor') reason = 'star';
+    else if (o.kind === 'quake') reason = 'quake';
+    else if (o.kind === 'firestorm') reason = 'lightning';
+    else if (o.kind === 'wave') reason = 'wave';
+    else if (o.kind === 'swarm') reason = 'blight';
     else if (o.kind === 'shapeEarth') {
       const raised = o.outcomes.some((x) => x.type === 'landRaised');
       const top = this.sim.world.topY(o.position.x, o.position.z);
@@ -381,6 +395,8 @@ export class MythSystem {
       cursed: 'the god hates it',
       blight: 'the god withered it',
       star: 'a star fell there',
+      quake: 'the earth broke open there',
+      wave: 'the sea came up over it',
     };
     this.addVerse('place', old ? '*' : 'new', { name, old, why: WHY[reason] }, {
       truth: f ? [this.truthLine(f)] : ['Named for what they believe about it, not for anything that happened there.'],

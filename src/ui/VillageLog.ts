@@ -34,6 +34,9 @@ const DEATH: Record<string, string> = {
   crushed: 'was crushed by what the god threw',
   battle: 'fell in battle',
   executed: 'was put to death',
+  quake: 'was crushed when the earth shook',
+  firestorm: 'was burned by the fire from the sky',
+  plague: 'died of the sickness',
 };
 
 const RITE: Record<string, string> = {
@@ -186,6 +189,16 @@ export class VillageLog {
         return this.push(e.tick, 'faith', `A law was written: whoever is guilty of ${CRIME_TEXT[e.crime]} ${LAW_TEXT[e.sentence]}.`);
       case 'feud':
         return this.push(e.tick, 'deeds', `${w(e.a)} and ${w(e.b)} are now bitter enemies.`);
+      case 'sickened':
+        return this.push(e.tick, 'life', e.by >= 0 ? `${w(e.id)} caught the sickness from ${w(e.by)}.` : `${w(e.id)} fell sick.`);
+      case 'recovered':
+        return this.push(e.tick, 'life', `${w(e.id)} got up from the sickness.`);
+      case 'swarmEnd':
+        return e.eaten || e.food ? this.push(e.tick, 'life', `A swarm ate ${e.eaten} rows of crops${e.food ? ` and ${e.food} food` : ''} from ${sim.tribes[e.tribe]?.name ?? 'a people'}.`) : undefined;
+      case 'quakeEnd':
+        return this.push(e.tick, 'life', `The earth shook: ${e.wrecked.length} buildings damaged, ${e.trees} trees down${e.killed.length ? `, ${e.killed.length} crushed` : ''}.`);
+      case 'waveEnd':
+        return this.push(e.tick, 'life', `A wave came in from the sea${e.carried.length ? ` and swept away ${e.carried.map(w).join(', ')}` : ''}.`);
       case 'affair':
         return this.push(e.tick, 'love', `${w(e.a)} has been meeting ${w(e.b)} in secret.`);
       case 'affairExposed':

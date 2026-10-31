@@ -224,6 +224,11 @@ export const DEPICTION_FROM_OMEN: Record<string, [DepictionAxis, string][]> = {
   blessing: [['body', 'humanoid'], ['feature', 'raisedHand']],
   blight: [['element', 'fire'], ['body', 'serpent'], ['feature', 'horns']],
   meteor: [['element', 'stone'], ['body', 'sunDisc'], ['feature', 'eyes']],
+  quake: [['element', 'stone'], ['body', 'serpent'], ['feature', 'manyArms']],
+  firestorm: [['element', 'fire'], ['body', 'bird'], ['feature', 'wings']],
+  wave: [['element', 'water'], ['body', 'serpent'], ['feature', 'manyArms']],
+  plague: [['body', 'serpent'], ['feature', 'eyes']],
+  swarm: [['body', 'bird'], ['feature', 'wings'], ['feature', 'horns']],
   hand: [['body', 'humanoid'], ['feature', 'raisedHand']],
 };
 

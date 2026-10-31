@@ -11,6 +11,11 @@ export type OmenKind =
   | 'blessing'
   | 'blight'
   | 'meteor'
+  | 'quake'
+  | 'firestorm'
+  | 'wave'
+  | 'plague'
+  | 'swarm'
   | 'hand'
   | 'naturalRain'
   | 'storm'
@@ -59,6 +64,7 @@ export type OutcomeType =
   | 'landRaised'
   | 'landLowered'
   | 'cropsWithered'
+  | 'sickened'
   | 'blessed';
 
 export interface Outcome {

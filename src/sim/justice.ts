@@ -7,6 +7,11 @@ import type { Villager, VillagerId } from './villagers/types';
 
 const T = TUNING.justice;
 
+/** Deaths that, landing on the accused, read as the god's own sentence. */
+const GODS_DEATHS = new Set<string>(['lightning', 'meteor', 'firestorm', 'quake', 'plague']);
+/** Omens that count as the god striking at the accused when they land on or beside them. */
+const GODS_SENTENCE = new Set<string>(['lightning', 'blight', 'meteor', 'firestorm', 'quake', 'plague']);
+
 export type Crime = 'theft' | 'assault' | 'adultery' | 'murder';
 export type Sentence = 'forgiven' | 'shamed' | 'labor' | 'flogged' | 'exiled' | 'executed';
 /** How a case ended: by the village's judgment, or by what they took as the god's. */
@@ -118,7 +123,7 @@ export class Justice {
           // Struck dead while awaiting judgment: the god's own verdict.
           for (const c of [...this.cases]) {
             if (c.accused !== e.id) continue;
-            if (e.cause === 'lightning' || e.cause === 'meteor') this.close(c, 'forgiven', 'godPunished');
+            if (GODS_DEATHS.has(e.cause)) this.close(c, 'forgiven', 'godPunished');
             else this.drop(c);
           }
           break;
@@ -136,7 +141,7 @@ export class Justice {
 
   /** Harm that lands on (or right beside) the accused looks like the god's own sentence. */
   private onOmen(o: Omen): void {
-    if (o.kind !== 'lightning' && o.kind !== 'blight' && o.kind !== 'meteor') return;
+    if (!GODS_SENTENCE.has(o.kind)) return;
     for (const c of [...this.cases]) {
       const v = this.sim.villagers.byId(c.accused);
       const hit = o.outcomes.some((x) => x.entity === `person:${c.accused}` || x.people?.includes(c.accused));

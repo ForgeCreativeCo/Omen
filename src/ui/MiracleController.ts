@@ -1,6 +1,6 @@
 import type { FixedLoop } from '../loop';
 import type { GameRenderer } from '../render/GameRenderer';
-import { DREAM_SYMBOLS, MIRACLES, miracleDef, type DreamSymbol, type MiracleId, type PointMiracle } from '../sim/miracles/defs';
+import { DREAM_SYMBOLS, keyCode, MIRACLES, miracleDef, type DreamSymbol, type MiracleId, type PointMiracle } from '../sim/miracles/defs';
 import type { GrabTarget } from '../sim/miracles/hand';
 import type { CastFailure, Command } from '../sim/miracles/Miracles';
 import type { Sim } from '../sim/Sim';
@@ -14,9 +14,10 @@ const FAILURE_TEXT: Record<CastFailure, string> = {
   night: 'Dreams can only be sent at night.',
   target: 'Nobody there to receive it.',
   interval: '',
+  shore: 'There is no sea near enough to send.',
 };
 
-const HOTKEYS: Record<string, MiracleId> = Object.fromEntries(MIRACLES.map((m) => [`Key${m.key}`, m.id]));
+const HOTKEYS: Record<string, MiracleId> = Object.fromEntries(MIRACLES.map((m) => [keyCode(m.key), m.id]));
 /** Minimum real time between brush strokes / cloud drags sent to the sim. */
 const STROKE_MS = 90;
 /** The hand: how often to tell the sim where it is, and how far back a flick is measured. */
@@ -73,7 +74,7 @@ export class MiracleController {
     const list = this.bar.querySelector('.miracle-buttons')!;
     for (const m of MIRACLES) {
       const b = document.createElement('button');
-      b.className = 'miracle';
+      b.className = m.wrath ? 'miracle wrath' : 'miracle';
       b.dataset.id = m.id;
       b.title = TUNING.miracles.unlimited ? `${m.name} [${m.key}]: ${m.blurb}` : `${m.name} [${m.key}] (${m.cost} Grace${m.targeting === 'brush' ? ' per stroke' : ''}): ${m.blurb}`;
       b.innerHTML = `${svgIcon(MIRACLE_PATHS[m.id], 26)}<span class="m-name">${m.name}</span><span class="m-cost">${m.cost}</span><span class="m-key">${m.key}</span><i class="m-cool"></i>`;

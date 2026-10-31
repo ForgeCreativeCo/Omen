@@ -27,6 +27,9 @@ const CAUSE: Record<string, string> = {
   crushed: 'was crushed by what the god threw',
   battle: 'fell in battle',
   executed: 'was put to death',
+  quake: 'was crushed when the earth shook',
+  firestorm: 'was burned by the fire from the sky',
+  plague: 'died of the sickness',
 };
 
 /** Short-lived notices for notable moments. Rate-limited so 16× stays readable. */
@@ -158,6 +161,22 @@ export class Toasts {
         return `${who(e.villagerId)} glows.`;
       case 'meteorFall':
         return 'A star is falling.';
+      case 'quake':
+        return '<b>The earth shakes.</b>';
+      case 'quakeEnd':
+        return e.wrecked.length || e.killed.length ? `The shaking stops. ${e.wrecked.length} ${e.wrecked.length === 1 ? 'building' : 'buildings'} damaged${e.killed.length ? `, ${e.killed.length} dead` : ''}.` : null;
+      case 'firestorm':
+        return '<b>Fire is falling from the sky.</b>';
+      case 'wave':
+        return '<b>The sea is rising up.</b> A wave is coming in.';
+      case 'waveEnd':
+        return e.carried.length || e.crops || e.wrecked.length ? `The wave breaks${e.carried.length ? `, sweeping ${e.carried.length} away` : ''}${e.crops ? `, drowning ${e.crops} rows of crops` : ''}.` : null;
+      case 'swarm':
+        return `<b>A swarm</b> descends on the fields of ${sim.tribes[e.tribe]?.name ?? 'a people'}.`;
+      case 'swarmEnd':
+        return e.eaten || e.food ? `The swarm has gone, and ${e.eaten} rows of crops${e.food ? ` and ${e.food} food` : ''} with it.` : null;
+      case 'plague':
+        return e.ids.length ? `${e.ids.slice(0, 3).map(who).join(', ')}${e.ids.length > 3 ? ` and ${e.ids.length - 3} more` : ''} ${e.ids.length === 1 ? 'has' : 'have'} fallen sick.` : null;
       case 'milestone': {
         const m = MILESTONES.find((x) => x.id === e.id);
         return m ? `<span class="toast-purpose">Purpose fulfilled: <b>${m.title}</b></span>` : null;

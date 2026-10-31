@@ -117,7 +117,7 @@ export class Dissent {
           if (this.prophecy?.what === 'rain') this.resolveProphecy(true);
           break;
         case 'death':
-          if (this.leader?.id === e.id) this.end(e.cause === 'lightning' || e.cause === 'meteor' ? 'discredited' : 'died');
+          if (this.leader?.id === e.id) this.end(e.cause === 'lightning' || e.cause === 'meteor' || e.cause === 'firestorm' || e.cause === 'quake' ? 'discredited' : 'died');
           break;
         case 'exiled':
           if (this.leader?.id === e.id && !e.left) this.end('gone');
@@ -148,7 +148,7 @@ export class Dissent {
     }
     // A prophet struck at, in front of everyone, is shown up.
     const near = v && Math.hypot(v.x - o.position.x, v.z - o.position.z) <= T.discreditRadius;
-    if ((o.kind === 'lightning' || o.kind === 'meteor') && near) {
+    if ((o.kind === 'lightning' || o.kind === 'meteor' || o.kind === 'firestorm' || o.kind === 'quake') && near) {
       this.end('discredited');
       return;
     }

@@ -19,7 +19,9 @@ export type NamingReason =
   | 'sacred'
   | 'cursed'
   | 'blight'
-  | 'star';
+  | 'star'
+  | 'quake'
+  | 'wave';
 
 export const PLACE_ADJ: Record<NamingReason, string[]> = {
   lightning: ['Burned', 'Scorched', 'Struck', 'Blackened'],
@@ -34,6 +36,8 @@ export const PLACE_ADJ: Record<NamingReason, string[]> = {
   cursed: ['Forbidden', 'Silent', 'Black'],
   blight: ['Withered', 'Barren', 'Ashen'],
   star: ['Star-fallen', 'Sky-struck', 'Shining'],
+  quake: ['Broken', 'Shaken', 'Riven'],
+  wave: ['Drowned', 'Salt', 'Sea-taken'],
 };
 
 /** The noun for a landmark, by place key ('' = not nameable). */

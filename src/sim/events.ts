@@ -3,7 +3,7 @@
  * and toasts; M4's omen recorder will turn many of them into omens.
  */
 
-export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed' | 'thrown' | 'crushed' | 'battle';
+export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed' | 'thrown' | 'crushed' | 'battle' | 'quake' | 'firestorm' | 'plague';
 
 /** Who speaks in the god's place when it falls silent: one who denies it, or one who claims its voice. */
 export type DissentKind = 'doubter' | 'prophet';
@@ -39,6 +39,22 @@ export type SimEventBody =
   | { type: 'blight'; x: number; z: number; radius: number; crops: number }
   | { type: 'meteorFall'; x: number; z: number; impactTick: number }
   | { type: 'meteor'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean }
+  /** The ground shakes (start, for effects) and stops (with what it did). */
+  | { type: 'quake'; id: number; x: number; z: number; radius: number; durationTicks: number; cracks: number }
+  | { type: 'quakeEnd'; id: number; x: number; z: number; radius: number; wrecked: number[]; killed: number[]; trees: number }
+  | { type: 'firestorm'; id: number; x: number; z: number; radius: number; durationTicks: number }
+  | { type: 'firestormEnd'; id: number; x: number; z: number; radius: number; killed: number[]; wrecked: number[]; fires: number }
+  /** A locust swarm sets on a people's fields (`tribe`), and leaves. */
+  | { type: 'swarm'; id: number; x: number; z: number; tribe: number }
+  | { type: 'swarmEnd'; id: number; x: number; z: number; tribe: number; eaten: number; food: number }
+  /** The sea surges from (x, z) toward (tx, tz); `waveEnd` at its furthest reach. */
+  | { type: 'wave'; id: number; x: number; z: number; tx: number; tz: number; dx: number; dz: number; length: number; width: number }
+  | { type: 'waveEnd'; id: number; x: number; z: number; wrecked: number[]; crops: number; carried: number[] }
+  /** The god's sickness: the first to fall ill. */
+  | { type: 'plague'; x: number; z: number; ids: number[] }
+  /** `by`: who passed it on, or -1 for the god. */
+  | { type: 'sickened'; id: number; by: number }
+  | { type: 'recovered'; id: number }
   | { type: 'milestone'; id: string }
   | { type: 'war'; a: number; b: number }
   /** The last of a people were taken in by another. */
