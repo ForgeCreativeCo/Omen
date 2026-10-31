@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { GameRenderer } from '../render/GameRenderer';
+import type { SimEvent } from '../sim/events';
 import type { Omen } from '../sim/omens/types';
 import type { Sim } from '../sim/Sim';
 import { TUNING } from '../sim/tuning';
@@ -7,6 +8,26 @@ import type { Villager } from '../sim/villagers/types';
 import { reactionLine, ritualLine } from './describe';
 
 const LIFE = 5.5;
+
+/** What a Doubter or False Prophet says out loud at the moments that matter. */
+function dissentLine(e: SimEvent): { id: number; line: string; tone: string } | null {
+  switch (e.type) {
+    case 'dissent':
+      return { id: e.id, line: e.kind === 'doubter' ? 'There is no god. Only weather.' : 'The god speaks through me now!', tone: 'dissent' };
+    case 'dissentEnd':
+      if (e.reason === 'converted') return { id: e.id, line: 'I saw it with my own eyes...', tone: 'good' };
+      if (e.reason === 'recanted') return { id: e.id, line: 'I was wrong. Forgive me.', tone: 'good' };
+      return null;
+    case 'prophetClaims':
+      return { id: e.id, line: 'You see? I did that!', tone: 'dissent' };
+    case 'prophesied':
+      return { id: e.id, line: 'Rain will come. I have foreseen it.', tone: 'dissent' };
+    case 'schism':
+      return e.outcome === 'split' ? { id: e.leaderId, line: 'Come. We go where no god watches.', tone: 'dissent' } : null;
+    default:
+      return null;
+  }
+}
 const MAX_BUBBLES = 5;
 /** Everyday weather gets one voice; wonders get a few. */
 const NATURAL = new Set(['naturalRain', 'storm', 'naturalLightning', 'drought']);
@@ -59,6 +80,10 @@ export class Reactions {
         const rite = sim.belief.active('RITUAL', 0).filter((b) => b.subject === subject).sort((a, b) => b.strength - a.strength)[0];
         this.lastRitual = this.clock;
         this.say(v, ritualLine(sim, subject.slice(9), rite?.response), 'rite');
+      } else {
+        const said = dissentLine(e);
+        const v = said && sim.villagers.byId(said.id);
+        if (said && v?.alive && !v.inside) this.say(v, said.line, said.tone);
       }
     }
     this.lastSeq = sim.events.lastSeq;

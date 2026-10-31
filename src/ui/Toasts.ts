@@ -1,6 +1,17 @@
-import type { SimEvent } from '../sim/events';
+import type { DissentEndReason, SimEvent } from '../sim/events';
+import { featureLabel } from '../sim/omens/context';
+import { TUNING } from '../sim/tuning';
 import { MILESTONES } from '../sim/milestones';
 import type { Sim } from '../sim/Sim';
+
+/** How a Doubter's or False Prophet's movement ends. */
+const END_TEXT: Record<DissentEndReason, string> = {
+  converted: 'saw a wonder with their own eyes, and believes again.',
+  recanted: 'woke from a dream and recanted.',
+  discredited: 'has been shown up as a false prophet. The followers drift back.',
+  died: 'is dead. The followers drift back.',
+  gone: 'is gone. The followers drift back.',
+};
 
 const CAUSE: Record<string, string> = {
   oldAge: 'died of old age',
@@ -75,7 +86,25 @@ export class Toasts {
         return b ? `The priest foretells ${e.good ? 'good fortune' : 'hard times'}: <i>${sim.belief.statement(b)}</i>` : null;
       }
       case 'exiled':
-        return `${who(e.id)} has been sent away.`;
+        return e.left ? null : `${who(e.id)} has been sent away.`;
+      case 'silence':
+        return 'They have seen no wonder in a long while. <i>Where has the god gone?</i>';
+      case 'dissent':
+        return e.kind === 'doubter'
+          ? `${who(e.id)} says there is no god, only weather. <small>(a Doubter)</small>`
+          : `${who(e.id)} claims to speak for the god${e.rule ? `, and forbids ${featureLabel(sim, e.rule)}` : ''}. <small>(a False Prophet)</small>`;
+      case 'dissentEnd':
+        return `${who(e.id)} ${END_TEXT[e.reason]}`;
+      case 'prophetClaims':
+        return `${who(e.id)} claims the wonder as their own doing.`;
+      case 'prophesied':
+        return `${who(e.id)} foretells rain within ${TUNING.dissent.prophecyDays} days.`;
+      case 'prophecyResult':
+        return e.fulfilled ? `Rain came, as ${who(e.id)} foretold. More listen.` : `${who(e.id)}'s prophecy failed. Some stop listening.`;
+      case 'schism':
+        return e.outcome === 'split'
+          ? `<b>The village has split.</b> ${who(e.leaderId)} leads ${e.ids.length - 1} away to live without you.`
+          : `The faithful have driven ${who(e.leaderId)} out of the village.`;
       case 'dream':
         return `${who(e.villagerId)} stirs in their sleep.`;
       case 'blessing':

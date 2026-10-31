@@ -114,12 +114,12 @@ const STEPS: Step[] = [
 
 const LAST_SANDBOX: Step = {
   title: 'Now it’s yours',
-  body: 'That’s the loop: act, watch them read it, see what grows. <b>Purposes</b> (bottom left) shows what to aim for next and how, with a tip for the moment. Your other powers: <b>Holy Light</b> (I) makes a place holy, <b>Bless</b> (K) picks a favorite, <b>Blight</b> (X) curses ground, a <b>Falling Star</b> (O) leaves a crater they’ll name, and <b>Dream</b> (N) plants symbols at night. Press <b>F3</b> for God’s Eye: the real reasoning behind every belief.',
+  body: 'That’s the loop: act, watch them read it, see what grows. <b>Purposes</b> (bottom left) shows what to aim for next and how, with a tip for the moment. Your other powers: <b>Holy Light</b> (I) makes a place holy, <b>Bless</b> (K) picks a favorite, <b>Blight</b> (X) curses ground, a <b>Falling Star</b> (O) leaves a crater they’ll name, and <b>Dream</b> (N) plants symbols at night. Stay silent too long and someone will speak in your place. Press <b>F3</b> for God’s Eye: the real reasoning behind every belief.',
 };
 
 const LAST_WARNING: Step = {
   title: 'The sea is coming',
-  body: 'When the countdown under the calendar runs out, the sea drowns the valley. People run only to <b>holy places they trust</b>, so teach them the <b>high ridge</b> is holy. Shine <b>Holy Light</b> (I) on it while people watch, again and again; send <b>dreams of the mountain</b>; <b>Blight</b> (X) the low ground. <b>Purposes</b> (bottom left) shows how many would climb to safety if the sea came today. You have generations. Use them.',
+  body: 'When the countdown under the calendar runs out, the sea drowns the valley. People run only to <b>holy places they trust</b>, so teach them the <b>high ridge</b> is holy. Shine <b>Holy Light</b> (I) on it while people watch, again and again; send <b>dreams of the mountain</b>; <b>Blight</b> (X) the low ground. <b>Purposes</b> (bottom left) shows how many would climb to safety if the sea came today. Go quiet for too long and a Doubter or a False Prophet will rise. You have generations. Use them.',
 };
 
 /**

@@ -14,6 +14,9 @@ const ACTIVITY: Record<string, string> = {
   flee: 'fleeing the fire',
   wander: 'wandering',
   idle: 'resting',
+  exile: 'leaving the village',
+  ritual: 'performing a rite',
+  pilgrimage: 'on pilgrimage',
 };
 
 const TRAIT_LABEL: Record<string, string> = {
@@ -88,7 +91,7 @@ export class Inspector {
     const status = v.alive
       ? activity(v, v.action)
       : v.deathCause === 'exiled'
-        ? 'sent away from the village'
+        ? 'gone from the village'
         : `died ${v.deathCause === 'oldAge' ? 'of old age' : v.deathCause === 'starvation' ? 'of hunger' : `by ${v.deathCause}`}`;
     // Their view of the god, in the shape they imagine it (SPEC §15: "fears the Burning Hand").
     const depiction = sim.belief.beliefs.get(sim.belief.key('DEPICTION', 'god'));
@@ -110,7 +113,7 @@ export class Inspector {
       <button class="ins-close" data-close aria-label="Close">×</button>
       <h2>${v.name}</h2>
       <div class="ins-sub">${Math.floor(v.age)} years · ${cap(v.role)}${v.alive ? '' : ' · †'}</div>
-      <div class="ins-traits">${v.traits.map((t) => `<span>${TRAIT_LABEL[t]}</span>`).join('')}</div>
+      <div class="ins-traits">${v.traits.map((t) => `<span>${TRAIT_LABEL[t]}</span>`).join('')}${this.dissentTag(sim, v)}</div>
       <div class="ins-now">${cap(status)}</div>
       ${v.alive ? bar('Hunger', v.needs.hunger, true) + bar('Energy', v.needs.energy) + bar('Safety', v.needs.safety) : ''}
       <dl>
@@ -127,6 +130,17 @@ export class Inspector {
       <div class="ins-section">Believes</div>
       ${held.map(({ b, s }) => `<div class="ins-belief"><span>${sim.belief.statement(b)}</span><div><i style="width:${Math.round(s * 100)}%"></i></div></div>`).join('')}
       <div class="ins-empty">${held.length ? '' : 'Nothing yet.'}</div>`;
+  }
+
+  /** Doubter, False Prophet, or one who listens to them. */
+  private dissentTag(sim: Sim, v: Villager): string {
+    const d = sim.dissent;
+    const lead = d.leader;
+    if (!lead || !v.alive) return '';
+    if (lead.id === v.id) return `<span class="ins-dissent">${lead.kind === 'doubter' ? 'Doubter' : 'False Prophet'}</span>`;
+    if (!d.follows(v)) return '';
+    const leader = sim.villagers.byId(lead.id)?.name ?? 'them';
+    return `<span class="ins-dissent">${lead.kind === 'doubter' ? `Doubts, with ${leader}` : `Follows ${leader}`}</span>`;
   }
 }
 

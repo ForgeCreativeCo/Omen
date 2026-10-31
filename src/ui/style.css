@@ -2280,3 +2280,17 @@ body.reduce-motion *::after {
     top: 210px;
   }
 }
+
+/* ---- Turning away */
+.ins-traits .ins-dissent {
+  color: #e8a0c8;
+  border-color: rgba(232, 160, 200, 0.5);
+}
+
+.reaction.dissent {
+  border-color: rgba(232, 160, 200, 0.7);
+}
+
+.sr-sec.turning li {
+  color: #e8a0c8;
+}

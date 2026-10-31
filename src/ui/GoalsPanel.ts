@@ -91,6 +91,22 @@ export class GoalsPanel {
     return `<div class="g-safe-row"><small>If the sea came today</small><b class="${cls}">${safe} of ${alive.length}</b><small>would climb to safety</small></div><i class="g-bar"><b class="${cls}" style="width:${k * 100}%"></b></i>`;
   }
 
+  /** A Doubter or False Prophet, or a silence that will soon raise one. */
+  private turning(): string {
+    const d = this.sim.dissent;
+    const lead = d.leader;
+    if (lead) {
+      const name = `<b>${this.sim.villagers.byId(lead.id)?.name ?? 'Someone'}</b>`;
+      const n = d.followers().length - 1;
+      const with_ = n > 0 ? ` (${n} listen)` : '';
+      return lead.kind === 'doubter'
+        ? `${name} says you are not real${with_}. Work a wonder where ${name} can see it, or send a <b>Dream</b> (N).`
+        : `${name} claims to speak for you${with_}, and takes credit for your wonders. Send a <b>Dream</b> (N), or strike <b>Lightning</b> (L) close by.`;
+    }
+    if (d.silent) return `They have seen no wonder in ${d.silenceDays} days. If the silence goes on, someone will speak in your place.`;
+    return '';
+  }
+
   /** One suggestion that fits the moment. */
   private idea(): string {
     const sim = this.sim;
@@ -100,6 +116,8 @@ export class GoalsPanel {
     const ready = (id: Parameters<typeof m.check>[0]) => m.check(id) === null;
     if (sim.warning?.disaster.phase === 'striking') return 'The sea is rising. Watch where they run.';
     if (sim.fire.burning.size > 0 && ready('rain')) return 'Something is burning. <b>Rain</b> (R) puts it out.';
+    const turning = this.turning();
+    if (turning) return turning;
     if (m.isNight()) {
       return ready('dream')
         ? 'Night: almost everyone is asleep, so wonders go unseen. Send a <b>Dream</b> (N) to a sleeper, or speed up to morning (4).'

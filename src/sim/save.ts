@@ -11,7 +11,7 @@ import type { GameMode, Sim } from './Sim';
  * pointing at the live objects) and recreated from their prototype where they don't.
  */
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface SaveHeader {
   version: number;

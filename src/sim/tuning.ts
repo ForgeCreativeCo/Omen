@@ -435,6 +435,48 @@ export const TUNING = {
     /** Personal strength in a sacred place needed to run there when the water comes. */
     refugeTrust: 0.2,
   },
+
+  /** Turning away (neglect): silence, a Doubter or a False Prophet, and schism. */
+  dissent: {
+    /** Days without a witnessed wonder before they notice the silence. */
+    silenceDays: 12,
+    /** Days of silence before someone speaks in the god's place. */
+    leaderAfterDays: 24,
+    /** Pull gained per evening at the fire when the leader speaks (followers alone: half). */
+    spreadPerEvening: 0.12,
+    /** Pull at or above this makes a follower. */
+    followAt: 0.5,
+    pullFadePerDay: 0.03,
+    /** A witnessed wonder takes this much pull (× magnitude) from each witness. */
+    wonderCure: 0.35,
+    /** Doubters' beliefs fade this many times faster; their faith this much a day. */
+    doubterDecay: 2,
+    doubterFaithFade: 0.08,
+    /** Doubters skip rites and get more done. */
+    doubterYield: 1.25,
+    /** A prophet's followers give the god this share of their faith (as Grace). */
+    prophetGraceShare: 0.5,
+    /** Lightning or a star this close to the prophet discredits them. */
+    discreditRadius: 6,
+    prophecyChancePerDay: 0.08,
+    prophecyDays: 3,
+    prophecyPull: 0.12,
+    /** Followers (with the leader) as a share of adults that splits the village. */
+    schismShare: 0.35,
+    schismMinFollowers: 3,
+    schismMinDays: 4,
+    /** Loyal adults needed per follower to drive the leader out instead. */
+    loyalPerFollower: 1.5,
+    /** A split needs a faithful side: at least this many loyal adults, and this share. */
+    schismMinLoyal: 3,
+    schismMinLoyalShare: 0.2,
+    /** Most of the village that can leave in a split. */
+    maxLeaving: 0.4,
+    /** Years before anyone new rises after a split (about a generation). */
+    restAfterSplitYears: 25,
+    /** Smaller villages hold together: too few to break apart. */
+    schismMinPopulation: 24,
+  },
 } as const;
 
 export type Tuning = typeof TUNING;

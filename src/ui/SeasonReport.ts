@@ -18,6 +18,8 @@ interface Snapshot {
   deaths: number;
   reached: Set<string>;
   safe: number;
+  /** Leader, following and silence, to notice a change. */
+  turning: string;
 }
 
 /**
@@ -106,7 +108,25 @@ export class SeasonReport {
       deaths: this.deaths,
       reached: new Set(Object.keys(sim.milestones.reached)),
       safe: this.safeCount(),
+      turning: this.turningKey(),
     };
+  }
+
+  private turningKey(): string {
+    const d = this.sim.dissent;
+    return `${d.leader?.id ?? -1}:${d.followers().length}:${d.silent}`;
+  }
+
+  /** Who is pulling the village away from the god, and how many listen. */
+  private turning(): string {
+    const sim = this.sim;
+    const d = sim.dissent;
+    const lead = d.leader;
+    if (!lead) return d.silent ? `No wonder seen in ${d.silenceDays} days. They wonder where you went.` : '';
+    const name = sim.villagers.byId(lead.id)?.name ?? 'Someone';
+    const n = d.followers().length - 1;
+    const listen = n > 0 ? `, and ${n} ${n === 1 ? 'listens' : 'listen'}` : '';
+    return lead.kind === 'doubter' ? `${name} says there is no god${listen}.` : `${name} claims to speak for you${listen}.`;
   }
 
   private safeCount(): number {
@@ -131,7 +151,9 @@ export class SeasonReport {
       .filter((b): b is Belief => !!b)
       .slice(0, 3);
     const purposes = MILESTONES.filter((m) => sim.milestones.has(m.id) && !base.reached.has(m.id));
-    if (!preached.length && !believe.length && !wonder.length && !fading.length && !purposes.length) return '';
+    const turning = this.turning();
+    const turningChanged = this.turningKey() !== base.turning;
+    if (!preached.length && !believe.length && !wonder.length && !fading.length && !purposes.length && !turningChanged) return '';
 
     const section = (label: string, cls: string, items: string[]) =>
       items.length ? `<div class="sr-sec ${cls}"><small>${label}</small><ul>${items.map((s) => `<li>${s}</li>`).join('')}</ul></div>` : '';
@@ -152,6 +174,7 @@ export class SeasonReport {
       ${section('Starting to wonder', 'wonder', wonder.map(say))}
       ${section('Forgetting', 'fading', fading.map(say))}
       ${section('Purpose fulfilled', 'purpose', purposes.map((m) => m.title))}
+      ${turning ? section('Turning away', 'turning', [turning]) : ''}
       ${safeLine}
       <div class="sr-foot"><small>${peopleLine}</small><button data-sr="beliefs">All beliefs (V)</button></div>`;
   }

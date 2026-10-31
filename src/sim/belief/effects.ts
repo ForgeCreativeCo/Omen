@@ -277,7 +277,8 @@ export class BeliefEffects {
     for (const b of this.b.active('OFFERING')) {
       // Nobody gives away the last of the grain: offerings come out of the surplus.
       const surplus = sim.village.store.food - sim.villagers.alive.length * T.offeringReservePerCapita;
-      const amount = Math.min(b.strength * sim.villagers.alive.length * T.offeringPerCapita * b.escalation, Math.max(0, surplus) * T.offeringSurplusShare);
+      // Doubters give nothing.
+      const amount = Math.min(b.strength * sim.villagers.alive.length * T.offeringPerCapita * b.escalation, Math.max(0, surplus) * T.offeringSurplusShare) * (1 - sim.dissent.doubterShare());
       if (amount <= 0) continue;
       sim.village.store.food = Math.max(0, sim.village.store.food - amount);
       this.b.lastOfferingTick = sim.tick;
@@ -287,6 +288,7 @@ export class BeliefEffects {
     this.deeds(present);
     this.b.tellRumors(present);
     this.b.spreadAtGathering(present);
+    sim.dissent.dusk(present);
   }
 
   /** Thefts and quarrels happen; taboos make them rarer and costlier. */

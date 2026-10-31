@@ -667,7 +667,7 @@ export class BeliefSystem {
       for (const [id, s] of b.holders) {
         const v = this.sim.villagers.byId(id);
         if (!v) continue;
-        const k = v.traits.includes('skeptic') ? T.skepticDecay : v.traits.includes('devout') ? T.devoutDecay : 1;
+        const k = (v.traits.includes('skeptic') ? T.skepticDecay : v.traits.includes('devout') ? T.devoutDecay : 1) * this.sim.dissent.decayFactor(v);
         const ns = s * (1 - T.decayPerDay * k * failing * (b.isTradition ? T.traditionDecay : 1));
         if (ns < 0.02) b.holders.delete(id);
         else b.holders.set(id, ns);

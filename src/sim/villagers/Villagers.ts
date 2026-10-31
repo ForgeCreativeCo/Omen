@@ -275,7 +275,7 @@ export class Villagers {
     if (cur === 'flee' || cur === 'exile' || cur === 'ritual' || cur === 'pilgrimage' || v.action?.phase === 'deliver') return;
 
     // Beliefs (SPEC §9): perform a ritual when the village wants what it brings, or at a festival.
-    if ((workTime || gatherTime) && v.lifeStage !== 'child' && (this.ritualRest.get(v.id) ?? 0) <= sim.tick && best !== 'eat') {
+    if ((workTime || gatherTime) && v.lifeStage !== 'child' && (this.ritualRest.get(v.id) ?? 0) <= sim.tick && best !== 'eat' && !sim.dissent.isDoubter(v)) {
       const plan = sim.effects.ritualFor(v, gatherTime);
       if (plan) {
         this.startRitual(v, plan.activity === 'gather' ? 'pray' : plan.activity, plan.x, plan.z, plan.belief.id);
@@ -381,7 +381,7 @@ export class Villagers {
 
   private wanderAction(v: Villager): Action {
     // Idle time is when people visit holy ground.
-    const holy = v.lifeStage !== 'child' ? this.sim.effects.pilgrimageFor(v) : null;
+    const holy = v.lifeStage !== 'child' && !this.sim.dissent.isDoubter(v) ? this.sim.effects.pilgrimageFor(v) : null;
     if (holy) {
       const a = this.make('pilgrimage', holy.x, holy.z, false, 30);
       a.ritual = 'pray';
@@ -696,7 +696,7 @@ export class Villagers {
           if (job === 'till') village.till(t);
           else if (job === 'plant') village.plant(t);
           else if (job === 'harvest') {
-            const food = village.harvest(t);
+            const food = village.harvest(t) * sim.dissent.yieldFor(v);
             village.store.food += food;
             village.stats.harvested += food;
             // Re-sow in the same visit while the season allows.
@@ -792,11 +792,12 @@ export class Villagers {
     if (partner) partner.partnerId = -1;
     const home = v.homeId >= 0 ? this.sim.village.byId(v.homeId) : undefined;
     if (home) home.residents = home.residents.filter((id) => id !== v.id);
-    this.sim.events.push(this.sim.tick, { type: 'exiled', id: v.id });
+    const left = this.sim.dissent.departing.delete(v.id);
+    this.sim.events.push(this.sim.tick, { type: 'exiled', id: v.id, left });
   }
 
   private startDelivery(v: Villager, a: Action, kind: 'wood' | 'stone' | 'food', amount: number): void {
-    v.carrying = { kind, amount };
+    v.carrying = { kind, amount: amount * this.sim.dissent.yieldFor(v) };
     a.phase = 'deliver';
     v.pathPos = -1;
   }

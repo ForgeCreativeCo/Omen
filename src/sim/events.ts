@@ -5,6 +5,10 @@
 
 export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor';
 
+/** Who speaks in the god's place when it falls silent: one who denies it, or one who claims its voice. */
+export type DissentKind = 'doubter' | 'prophet';
+export type DissentEndReason = 'converted' | 'recanted' | 'discredited' | 'died' | 'gone';
+
 export type SimEventBody =
   | { type: 'rainStart'; storm: boolean; divine: boolean }
   | { type: 'rainEnd' }
@@ -32,6 +36,13 @@ export type SimEventBody =
   | { type: 'meteorFall'; x: number; z: number; impactTick: number }
   | { type: 'meteor'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean }
   | { type: 'milestone'; id: string }
+  | { type: 'silence'; days: number }
+  | { type: 'dissent'; id: number; kind: DissentKind; rule?: string }
+  | { type: 'dissentEnd'; id: number; kind: DissentKind; reason: DissentEndReason }
+  | { type: 'prophetClaims'; id: number }
+  | { type: 'prophesied'; id: number; what: string }
+  | { type: 'prophecyResult'; id: number; fulfilled: boolean }
+  | { type: 'schism'; leaderId: number; outcome: 'drivenOut' | 'split'; ids: number[] }
   | { type: 'omen'; omenId: string }
   | { type: 'beliefLevel'; beliefId: string; level: 'behavior' | 'doctrine' | 'died' }
   | { type: 'priest'; id: number; personality: string }
@@ -42,7 +53,8 @@ export type SimEventBody =
   | { type: 'godNamed'; name: string; old: string }
   | { type: 'verse'; verseId: number }
   | { type: 'ruined'; structureId: number; kind: string }
-  | { type: 'exiled'; id: number }
+  /** `left`: walked away in a schism rather than being sent. */
+  | { type: 'exiled'; id: number; left?: boolean }
   | { type: 'prophecy'; beliefId: string; good: boolean }
   | { type: 'ritual'; beliefId: string; activity: string; x: number; z: number; villagerId?: number }
   | { type: 'fireStarted'; x: number; y: number; z: number }
