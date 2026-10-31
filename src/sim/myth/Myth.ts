@@ -215,6 +215,35 @@ export class MythSystem {
           drift: [],
         });
         break;
+      case 'sacrifice': {
+        const who = this.sim.villagers.byId(e.id)?.name ?? 'one of the people';
+        this.addVerse('wrath', e.ritual ? 'rite' : 'sacrifice', { person: who }, {
+          truth: [e.ritual ? `${who} was killed at the fire as a rite they keep.` : `${who} was killed at the fire because the people dreaded what you would do next. You asked for nothing.`],
+          omenIds: [],
+          drift: [],
+        });
+        break;
+      }
+      case 'defianceEnd': {
+        if (e.reason !== 'struck' && e.reason !== 'humbled') break;
+        const who = this.sim.villagers.byId(e.id)?.name ?? 'one of the people';
+        this.addVerse('wrath', e.reason, { person: who }, {
+          truth: [e.reason === 'struck' ? `${who} defied you openly, and something you did killed or harmed them.` : `${who} defied you, until you touched them.`],
+          omenIds: [],
+          drift: [],
+        });
+        break;
+      }
+      case 'rivalry': {
+        if (e.kind !== 'scorn') break;
+        const other = this.sim.tribes[e.other]?.name ?? 'their neighbors';
+        this.addVerse('wrath', 'scorn', { other }, {
+          truth: [`What befell ${other} said nothing about them. The people read it as a warning.`],
+          omenIds: [],
+          drift: [],
+        });
+        break;
+      }
       case 'law':
         this.addVerse('law', '*', { deed: LAW_DEED[e.crime], sentence: LAW_SENTENCE[e.sentence] }, {
           truth: ['The village made this law itself, from its own judgments at the fire.'],

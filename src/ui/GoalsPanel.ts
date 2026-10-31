@@ -2,6 +2,7 @@ import { MILESTONES } from '../sim/milestones';
 import { CRIME_TEXT, whenJudged } from './describe';
 import type { Sim } from '../sim/Sim';
 import type { PeopleFocus } from './PeopleFocus';
+import { TUNING } from '../sim/tuning';
 
 const OPEN_KEY = 'omen.goals.open';
 
@@ -145,6 +146,12 @@ export class GoalsPanel {
       const what = raid.phase === 'march' ? 'are marching on' : raid.phase === 'fight' ? 'are fighting' : 'are coming home from raiding';
       return `<b>${from.charAt(0).toUpperCase() + from.slice(1)}</b> ${what} <b>${to}</b>. Strike the raiders with <b>Lightning</b> or the <b>Hand</b>, and the defenders will believe you chose their side. Or let them fight.`;
     }
+    const ap = sim.appease;
+    if (ap.defiers.length) {
+      const d = sim.villagers.byId(ap.defiers[0]!.id);
+      if (d) return `<b>${d.name}</b> defies you openly${ap.defiers.length > 1 ? ` (with ${ap.defiers.length - 1} more)` : ''}. Strike them and the rest will fear you; leave them be and others will join; <b>Bless</b> them and they may bow.`;
+    }
+    if (ap.dread >= TUNING.appease.sacrificeAt * 0.8) return 'They dread what you will do next. If it goes on, the priest will give one of them to you at the fire.';
     const sick = alive.filter((v) => sim.plague.isSick(v)).length;
     if (sick) return `<b>${sick}</b> ${sick === 1 ? 'is' : 'are'} sick. It passes between people who stand close, most of all at the evening fire. What they make of it is up to them.`;
     const trial = this.trial();

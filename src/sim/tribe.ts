@@ -1,3 +1,4 @@
+import { Appeasement } from './appease';
 import { BeliefEffects } from './belief/effects';
 import { BeliefSystem } from './belief/BeliefSystem';
 import { Dissent } from './dissent';
@@ -15,7 +16,7 @@ import type { Point3 } from './world/terrain';
 export const TRIBE_COLORS = [0xe2b26a, 0x7fb3e0, 0xd9776a, 0x9fd38a, 0xc8a0e8, 0xe8d36a] as const;
 
 /** The systems a people has of its own, by the name the sim gives them. */
-const OWN = ['village', 'belief', 'effects', 'myth', 'milestones', 'dissent', 'justice', 'exodus'] as const;
+const OWN = ['village', 'belief', 'effects', 'myth', 'milestones', 'dissent', 'justice', 'exodus', 'appease'] as const;
 
 /**
  * One people: their village, their faith (beliefs, priest, Holy Book, name for
@@ -35,6 +36,7 @@ export class Tribe {
   readonly dissent: Dissent;
   readonly justice: Justice;
   readonly exodus: Exodus;
+  readonly appease: Appeasement;
 
   constructor(
     readonly sim: Sim,
@@ -57,6 +59,7 @@ export class Tribe {
     this.dissent = new Dissent(view, sim.rng.fork(label('dissent')));
     this.justice = new Justice(view, sim.rng.fork(label('justice')));
     this.exodus = new Exodus(view, sim.rng.fork(label('exodus')));
+    this.appease = new Appeasement(view, sim.rng.fork(label('appease')));
     this.bind();
   }
 

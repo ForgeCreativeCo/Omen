@@ -37,6 +37,7 @@ const DEATH: Record<string, string> = {
   quake: 'was crushed when the earth shook',
   firestorm: 'was burned by the fire from the sky',
   plague: 'died of the sickness',
+  sacrificed: 'was given to the god at the fire',
 };
 
 const RITE: Record<string, string> = {
@@ -189,6 +190,16 @@ export class VillageLog {
         return this.push(e.tick, 'faith', `A law was written: whoever is guilty of ${CRIME_TEXT[e.crime]} ${LAW_TEXT[e.sentence]}.`);
       case 'feud':
         return this.push(e.tick, 'deeds', `${w(e.a)} and ${w(e.b)} are now bitter enemies.`);
+      case 'sacrifice':
+        return this.push(e.tick, 'faith', `${w(e.priest)} gave ${w(e.id)} to the god at the fire${e.ritual ? ', as is their custom' : ''}.`);
+      case 'greatOffering':
+        return this.push(e.tick, 'faith', `They burned ${e.amount} food at the fire ${e.why === 'rivalry' ? 'to outdo their neighbors' : 'to turn the god’s anger'}.`);
+      case 'defiance':
+        return this.push(e.tick, 'faith', `${w(e.id)} stood up at the fire and refused the god.`);
+      case 'defianceEnd':
+        return e.reason === 'struck' || e.reason === 'humbled' ? this.push(e.tick, 'faith', e.reason === 'struck' ? `${w(e.id)} defied the god and was struck down.` : `${w(e.id)} bowed to the god again.`) : undefined;
+      case 'rivalry':
+        return this.push(e.tick, 'faith', e.kind === 'scorn' ? `They said ${sim.tribes[e.other]?.name ?? 'their neighbors'} had angered the god.` : `They envied ${sim.tribes[e.other]?.name ?? 'their neighbors'} the god’s favor.`);
       case 'sickened':
         return this.push(e.tick, 'life', e.by >= 0 ? `${w(e.id)} caught the sickness from ${w(e.by)}.` : `${w(e.id)} fell sick.`);
       case 'recovered':

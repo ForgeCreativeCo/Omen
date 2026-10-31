@@ -381,6 +381,14 @@ export class MiracleFx {
       case 'wave':
         this.shake = Math.max(this.shake, 0.5);
         break;
+      case 'greatOffering':
+      case 'sacrifice': {
+        // The fire flares up as the offering burns.
+        const c = (sim.tribes[e.tribe ?? 0] ?? sim.tribe).village.center;
+        const y = sim.world.topY(Math.round(c.x), Math.round(c.z)) + 1;
+        this.burst(c.x + 0.5 + ox, y, c.z + 0.5 + oz, e.type === 'sacrifice' ? 160 : 90, 4, e.type === 'sacrifice' ? [0xff4a2a, 0xffa040, 0x7a1a10] : [0xffd27a, 0xff9a3a, 0xfff0c0], 1.8, 1.5);
+        break;
+      }
       case 'sickened':
       case 'plague': {
         const ids = e.type === 'plague' ? e.ids : [e.id];

@@ -142,6 +142,18 @@ export class Reactions {
         const v = sim.villagers.byId(e.accused);
         const line = VERDICT_LINE[e.sentence];
         if (v?.alive && !v.inside && line) this.say(v, line, 'deed');
+      } else if (e.type === 'defies' || e.type === 'defiance') {
+        const v = sim.villagers.byId(e.id);
+        const god = (sim.tribes[v?.tribeId ?? 0] ?? sim.tribe).myth.god;
+        if (v?.alive && !v.inside) this.say(v, pick([`I will not bow to ${god}!`, `What has ${god} ever given us but graves?`, `Strike me, then! I am not afraid of you!`, 'Burn your grain for it if you like. I won’t.'], e.id + sim.tick), 'deed');
+      } else if (e.type === 'sacrifice') {
+        const p = sim.villagers.byId(e.priest);
+        const god = (sim.tribes[p?.tribeId ?? 0] ?? sim.tribe).myth.god;
+        if (p?.alive && !p.inside) this.say(p, `Take this life, ${god}, and spare the rest of us.`, 'rite');
+      } else if (e.type === 'greatOffering') {
+        const t = sim.tribes[e.tribe ?? 0] ?? sim.tribe;
+        const p = sim.villagers.byId(t.belief.priestId);
+        if (p?.alive && !p.inside) this.say(p, e.why === 'rivalry' ? `More than they give, ${t.myth.god}. Remember us.` : `Eat, ${t.myth.god}, and be calm.`, 'rite');
       } else if (e.type === 'couple') {
         const a = sim.villagers.byId(e.a);
         const b = sim.villagers.byId(e.b);

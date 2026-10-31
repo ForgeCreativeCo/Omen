@@ -30,6 +30,7 @@ const CAUSE: Record<string, string> = {
   quake: 'was crushed when the earth shook',
   firestorm: 'was burned by the fire from the sky',
   plague: 'died of the sickness',
+  sacrificed: 'was given to the god at the fire',
 };
 
 /** Short-lived notices for notable moments. Rate-limited so 16× stays readable. */
@@ -175,6 +176,20 @@ export class Toasts {
         return `<b>A swarm</b> descends on the fields of ${sim.tribes[e.tribe]?.name ?? 'a people'}.`;
       case 'swarmEnd':
         return e.eaten || e.food ? `The swarm has gone, and ${e.eaten} rows of crops${e.food ? ` and ${e.food} food` : ''} with it.` : null;
+      case 'greatOffering':
+        return e.why === 'rivalry' ? `They burn ${e.amount} food at the fire, to win your favor.` : `<b>A great offering:</b> ${e.amount} food burned at the fire, to turn your anger.`;
+      case 'sacrifice':
+        return `<b>${who(e.priest)} has given ${who(e.id)} to you at the fire.</b>${e.ritual ? ' It is their custom now.' : ' They dread what you will do next.'}`;
+      case 'defiance':
+        return `${who(e.id)} will not bow to you${e.griefFor >= 0 ? `, not after what you did to ${who(e.griefFor)}` : ''}.`;
+      case 'vindicated':
+        return `You have done nothing to ${who(e.id)}. Others begin to listen.`;
+      case 'defianceEnd':
+        return e.reason === 'struck' ? `${who(e.id)} defied you, and fell. The people are afraid.` : e.reason === 'humbled' ? `${who(e.id)} defies you no longer.` : null;
+      case 'rivalry': {
+        const other = sim.tribes[e.other]?.name ?? 'their neighbors';
+        return e.kind === 'scorn' ? `They say ${other} must have angered you. They give more, lest they be next.` : `Why do you favor ${other}? They give more, to win you back.`;
+      }
       case 'plague':
         return e.ids.length ? `${e.ids.slice(0, 3).map(who).join(', ')}${e.ids.length > 3 ? ` and ${e.ids.length - 3} more` : ''} ${e.ids.length === 1 ? 'has' : 'have'} fallen sick.` : null;
       case 'milestone': {

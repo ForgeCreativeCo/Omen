@@ -683,6 +683,41 @@ export const TUNING = {
   },
 
   /** Village justice: accusation, the god's window, judgment at the fire, custom and law. */
+  /** How a people answers a cruel god (dread, great offerings, sacrifice, defiance, rivalry). */
+  appease: {
+    /** Dread added by one harmful omen: per death, per damaged home, per sick, per 10 rows of crops lost, plus a base. */
+    harmPerDeath: 0.18,
+    harmPerHome: 0.07,
+    harmPerSick: 0.05,
+    harmPerCrops: 0.05,
+    baseHarm: 0.05,
+    dreadDecayPerDay: 0.05,
+    /** One omen this harmful is a disaster: a great offering, and news for the other peoples. */
+    disasterAt: 0.25,
+    /** Share of the food store given in a great offering, and to outdo a neighbor. */
+    greatOfferingShare: 0.3,
+    rivalOfferingShare: 0.12,
+    offeringCalm: 0.15,
+    /** At this dread the priest gives a person to the god. */
+    sacrificeAt: 0.7,
+    sacrificeCalm: 0.45,
+    sacrificeRestDays: 6,
+    sacrificeMinPeople: 8,
+    /** Chance a grieving relative of someone the god killed stands up against it. */
+    defyChance: 0.3,
+    maxDefiers: 3,
+    /** Fear (and love) taken from each listener per defier at the fire. */
+    defierFearCure: 0.02,
+    /** Fear given to those who see a defier struck down. */
+    struckFear: 0.2,
+    /** Days of no harm before a defier is proven right and another joins. */
+    vindicatedDays: 4,
+    /** Feeling toward a people the god struck (scorn) or blessed (envy), and dread at the neighbor's fate. */
+    scorn: 0.08,
+    envy: 0.04,
+    neighborDread: 0.08,
+  },
+
   justice: {
     /** Days between a wrong coming to light and judgment at the fire (the god's window). */
     windowDays: 1,

@@ -41,6 +41,7 @@ export const FEATURE_INTENSITY: Record<string, number> = {
   'deed:murder': 1,
   'deed:raid': 0.9,
   'deed:offering': 0.6,
+  'deed:sacrifice': 1,
   'event:death': 0.8,
   'event:birth': 0.6,
   // time and conditions
@@ -308,6 +309,7 @@ const OTHER_LABEL: Record<string, string> = {
   'deed:murder': 'the killing',
   'deed:raid': 'the raiders',
   'deed:offering': 'offerings',
+  'deed:sacrifice': 'the sacrifice',
   'event:birth': 'a birth',
   'event:death': 'a death',
   'time:dawn': 'dawn',

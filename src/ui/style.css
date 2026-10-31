@@ -2683,3 +2683,8 @@ body.reduce-motion *::after {
 .ins-sick {
   color: #b8c87a;
 }
+
+.ins-defiant {
+  color: #f0a080;
+  border-color: rgba(240, 160, 128, 0.5) !important;
+}

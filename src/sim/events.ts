@@ -3,7 +3,7 @@
  * and toasts; M4's omen recorder will turn many of them into omens.
  */
 
-export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed' | 'thrown' | 'crushed' | 'battle' | 'quake' | 'firestorm' | 'plague';
+export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed' | 'thrown' | 'crushed' | 'battle' | 'quake' | 'firestorm' | 'plague' | 'sacrificed';
 
 /** Who speaks in the god's place when it falls silent: one who denies it, or one who claims its voice. */
 export type DissentKind = 'doubter' | 'prophet';
@@ -55,6 +55,20 @@ export type SimEventBody =
   /** `by`: who passed it on, or -1 for the god. */
   | { type: 'sickened'; id: number; by: number }
   | { type: 'recovered'; id: number }
+  /** A people counts what the god did to it as a disaster (the other peoples take note). */
+  | { type: 'disaster'; kind: string; harm: number; deaths: number }
+  /** The god did something wonderful for a people (the others envy it). */
+  | { type: 'favored'; kind: string }
+  /** A people reacts to another's disaster (scorn) or blessing (envy). */
+  | { type: 'rivalry'; other: number; kind: 'scorn' | 'envy' }
+  | { type: 'greatOffering'; amount: number; why: 'disaster' | 'rivalry'; x: number; z: number }
+  /** `ritual`: given as a rite, not out of dread. */
+  | { type: 'sacrifice'; id: number; priest: number; x: number; z: number; ritual: boolean }
+  /** Someone stands against the god (`griefFor`: whose death set them off, or -1). */
+  | { type: 'defiance'; id: number; griefFor: number }
+  | { type: 'defies'; id: number; x: number; z: number }
+  | { type: 'vindicated'; id: number }
+  | { type: 'defianceEnd'; id: number; reason: 'struck' | 'humbled' | 'died' | 'gone' }
   | { type: 'milestone'; id: string }
   | { type: 'war'; a: number; b: number }
   /** The last of a people were taken in by another. */

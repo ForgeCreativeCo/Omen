@@ -193,6 +193,10 @@ export class Soundscape {
       case 'swarm':
         if (this.ok('swarm', 2)) this.buzz();
         break;
+      case 'sacrifice':
+        this.drums();
+        this.rumble(1.5);
+        break;
       case 'plague':
         if (this.ok('plague', 2)) this.wither();
         break;

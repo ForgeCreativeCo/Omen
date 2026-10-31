@@ -9,6 +9,7 @@ import { War } from './war';
 import { Plague } from './plague';
 import type { Justice } from './justice';
 import type { Exodus } from './exodus';
+import type { Appeasement } from './appease';
 import { Tribe, tribeName } from './tribe';
 import { findSettlement } from './exodus';
 import { WarningScenario } from './disaster/Warning';
@@ -138,6 +139,9 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   }
   get exodus(): Exodus {
     return this.tribes[0]!.exodus;
+  }
+  get appease(): Appeasement {
+    return this.tribes[0]!.appease;
   }
   /** Every people's village. */
   get villages(): Village[] {
@@ -329,6 +333,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     for (const t of this.tribes) {
       t.milestones.step();
       t.dissent.step();
+      t.appease.step();
     }
     this.society.step();
     this.war.step();
@@ -348,6 +353,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
         t.belief.newDay();
         t.effects.dawn();
         t.dissent.dawn();
+        t.appease.dawn();
       }
       this.society.dawn();
       this.war.dawn();

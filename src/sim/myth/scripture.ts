@@ -22,7 +22,9 @@ export type VerseKind =
   /** A custom the village set for itself, written down. */
   | 'law'
   /** The people left their home for new ground. */
-  | 'exodus';
+  | 'exodus'
+  /** How they answered a cruel god: sacrifice, defiance, and what they said of their neighbors. */
+  | 'wrath';
 
 export interface VerseRequest {
   kind: VerseKind;
@@ -111,6 +113,7 @@ export const ACTS: Record<string, [string, string, string]> = {
   'deed:murder': ['one among them took a life', 'take a life', 'killing'],
   'deed:raid': ['raiders came against the people', 'fall upon our neighbors', 'raiding'],
   'deed:offering': ['the people made offering', 'make offering', 'offering'],
+  'deed:sacrifice': ['the people gave one of their own to the god', 'give one of our own to the god', 'sacrifice'],
   'event:birth': ['a child was born', 'rejoice at every birth', 'birth'],
   'event:death': ['one of the people died', 'keep watch over the dead', 'death'],
 };
@@ -268,6 +271,22 @@ const T: Record<VerseKind, Table> = {
       'In {season} the people left the place of their fathers, {why}, and went out into {to}, and there they built again.',
       'And {god} drove the people from their homes, {why}. They walked into {to} and lit a new fire.',
       'This is the going-out: {why}, the people took up what they could carry and went into {to}.',
+    ],
+  },
+  wrath: {
+    sacrifice: [
+      'In {season} {god} was angry, and the people gave {person} to {god} at the fire, that its anger might pass.',
+      'And {priest} chose {person}, and gave {person} to {god}. And the people waited.',
+    ],
+    rite: ['As it was done before, so it was done again: {person} was given to {god} at the feast.'],
+    struck: [
+      '{Person} stood before the fire and cursed {god}, and {god} struck {person} down, and the people were afraid.',
+      'And {person} said, I will not bow. And {god} answered.',
+    ],
+    humbled: ['{Person} cursed {god}, and {god} laid a hand upon {person}, and {person} cursed no more.'],
+    scorn: [
+      'And {god} struck {other}, for they had angered {god}. Therefore the people gave more, lest they be next.',
+      'The people saw what {god} did to {other}, and said: they have angered {god}; let it not be us.',
     ],
   },
   law: {
