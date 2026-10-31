@@ -8,6 +8,8 @@ export interface Settings {
   /** 0..1 */
   volume: number;
   muted: boolean;
+  /** Marks over villagers' heads showing what they're doing. */
+  icons: boolean;
 }
 
 const SETTINGS_KEY = 'omen.settings';
@@ -29,6 +31,7 @@ function defaults(): Settings {
     reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
     volume: 0.6,
     muted: false,
+    icons: true,
   };
 }
 
@@ -126,6 +129,7 @@ export class SettingsPanel {
       if (t.name === 'tilt') this.set({ tiltShift: t.checked });
       else if (t.name === 'motion') this.set({ reducedMotion: t.checked });
       else if (t.name === 'mute') this.set({ muted: t.checked });
+      else if (t.name === 'icons') this.set({ icons: t.checked });
     });
     this.el.addEventListener('input', (e) => {
       const t = e.target as HTMLInputElement;
@@ -135,6 +139,7 @@ export class SettingsPanel {
       if (e.target instanceof HTMLInputElement) return;
       if (e.code === 'KeyT') this.set({ tiltShift: !this.settings.tiltShift });
       if (e.code === 'KeyM') this.set({ muted: !this.settings.muted });
+      if (e.code === 'KeyU') this.set({ icons: !this.settings.icons });
     });
     apply(settings);
   }
@@ -163,6 +168,7 @@ export class SettingsPanel {
       <div class="st-row"><span>Graphics</span><div class="st-seg">${QUALITIES.map((q) => `<button data-quality="${q}" class="${q === s.quality ? 'active' : ''}">${q[0]!.toUpperCase() + q.slice(1)}</button>`).join('')}</div></div>
       ${check('tilt', s.tiltShift, 'Tilt-shift', 'The miniature blur (T)')}
       ${check('motion', s.reducedMotion, 'Reduced motion', 'No camera shake, softer flashes, calmer UI')}
+      ${check('icons', s.icons, 'Activity icons', 'What each villager is doing, over their head (U)')}
       <div class="st-row"><span>Sound</span><input type="range" name="volume" min="0" max="100" value="${Math.round(s.volume * 100)}" aria-label="Volume"></div>
       ${check('mute', s.muted, 'Mute', 'M')}
       <h3>Game</h3>

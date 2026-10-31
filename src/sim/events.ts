@@ -61,6 +61,8 @@ export type SimEventBody =
   | { type: 'birth'; id: number; parents: number[] }
   | { type: 'death'; id: number; cause: DeathCause; x: number; z: number }
   | { type: 'couple'; a: number; b: number }
+  | { type: 'theft'; id: number; hutId: number; victims: number[]; x: number; z: number }
+  | { type: 'quarrel'; a: number; b: number; x: number; z: number }
   | { type: 'built'; structureId: number; kind: string }
   | { type: 'destroyed'; structureId: number; kind: string };
 

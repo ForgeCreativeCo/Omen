@@ -31,6 +31,7 @@ export class Hud {
         <span class="hud-seed" title="Island seed"></span>
         <button class="hud-menu" title="Back to the title">Menu</button>
         <button class="hud-new" title="Generate a new island">New island</button>
+        <button class="hud-life" title="Village life: who did what (J)">Life</button>
         <button class="hud-beliefs" title="Village Beliefs (V)">Beliefs</button>
         <button class="hud-book" title="The Holy Book (H)">Holy Book</button>
         <button class="hud-settings" title="Settings, sound and saving" aria-label="Settings">⚙</button>

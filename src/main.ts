@@ -16,6 +16,9 @@ import { Toasts } from './ui/Toasts';
 import { GoalsPanel } from './ui/GoalsPanel';
 import { Reactions } from './ui/Reactions';
 import { SeasonReport } from './ui/SeasonReport';
+import { Overhead } from './ui/Overhead';
+import { VillageLog } from './ui/VillageLog';
+import { TUNING } from './sim/tuning';
 import { DebugPanel } from './debug/DebugPanel';
 
 const params = new URLSearchParams(location.search);
@@ -54,9 +57,30 @@ const book = new HolyBookPanel(hudRoot, sim);
 const goals = chosen ? new GoalsPanel(hudRoot, sim) : null;
 // What they make of it: words over witnesses' heads, and a card each season.
 const reactions = chosen ? new Reactions(hudRoot, renderer) : null;
-const report = chosen ? new SeasonReport(hudRoot, sim, () => beliefs.toggle(true)) : null;
+const report = chosen ? new SeasonReport(hudRoot, sim, () => showBeliefs(true)) : null;
+// Who is doing what: marks over heads, a card on hover, and the day's happenings.
+const overhead = chosen ? new Overhead(hudRoot, renderer) : null;
+const life = chosen
+  ? new VillageLog(hudRoot, sim, (id) => {
+      const v = sim.villagers.byId(id);
+      if (!v) return;
+      const half = TUNING.world.sizeX / 2;
+      if (v.alive) renderer.orbit.focus(v.x - half, v.z - half, 45);
+      inspector.open(id);
+    })
+  : null;
+/** Beliefs and Village life share the right side: one at a time. */
+function showBeliefs(show = beliefs.el.hidden): void {
+  beliefs.toggle(show);
+  if (show) life?.toggle(false);
+}
+function showLife(show = !life?.open): void {
+  life?.toggle(show);
+  if (show) beliefs.toggle(false);
+}
+hudRoot.querySelector('.hud-life')!.addEventListener('click', () => showLife());
 beliefs.onVerse = (id) => book.showVerse(id);
-hudRoot.querySelector('.hud-beliefs')!.addEventListener('click', () => beliefs.toggle());
+hudRoot.querySelector('.hud-beliefs')!.addEventListener('click', () => showBeliefs());
 hudRoot.querySelector('.hud-book')!.addEventListener('click', () => book.toggle());
 
 /** Save the game in progress (not the title screen's idle island). */
@@ -74,6 +98,7 @@ const settings = new SettingsPanel(
     renderer.reducedMotion = s.reducedMotion;
     document.body.classList.toggle('reduce-motion', s.reducedMotion);
     sound.setVolume(s.muted ? 0 : s.volume);
+    if (overhead) overhead.enabled = s.icons;
   },
   chosen ? saveNow : null,
 );
@@ -144,7 +169,8 @@ renderer.onTap = (x, y) => {
 };
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && inspector.villagerId >= 0 && !miracles.armed && !book.open) inspector.close();
-  if (e.code === 'KeyV' && !(e.target instanceof HTMLInputElement)) beliefs.toggle();
+  if (e.code === 'KeyV' && !(e.target instanceof HTMLInputElement)) showBeliefs();
+  if (e.code === 'KeyJ' && !(e.target instanceof HTMLInputElement)) showLife();
 });
 
 // Dev-only handle for poking at state from the console.
@@ -169,8 +195,10 @@ function frame(now: number): void {
     goals.update(dt);
   }
   reactions?.update(sim, dt);
+  overhead?.update(sim, dt);
+  life?.update(dt);
   if (report) {
-    report.covered = tutorial.running || !beliefs.el.hidden || book.open || end !== null;
+    report.covered = tutorial.running || !beliefs.el.hidden || !!life?.open || book.open || end !== null;
     report.update(dt);
   }
   checkOutcome();

@@ -1854,6 +1854,7 @@ body.reduce-motion *::after {
     top: 106px;
   }
   .beliefs-panel,
+  .village-log,
   .settings-panel {
     top: 158px;
   }
@@ -2293,4 +2294,197 @@ body.reduce-motion *::after {
 
 .sr-sec.turning li {
   color: #e8a0c8;
+}
+
+/* ---- What they're doing: marks over heads */
+.overhead {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.doing {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(40, 32, 26, 0.72);
+  color: var(--hud-fg);
+  will-change: transform;
+}
+
+.doing.work {
+  opacity: 0.7;
+  width: 17px;
+  height: 17px;
+}
+
+.doing.rite {
+  color: #c8b8ff;
+}
+
+.doing.love {
+  color: #f08aa8;
+}
+
+.doing.deed {
+  color: #ff8a70;
+  box-shadow: 0 0 0 1px rgba(255, 138, 112, 0.6);
+}
+
+.doing.alarm {
+  color: #ffd27a;
+}
+
+.doing.dissent {
+  color: #e8a0c8;
+}
+
+.reaction.deed {
+  border-color: rgba(255, 138, 112, 0.7);
+}
+
+.reaction.love {
+  border-color: rgba(240, 138, 168, 0.7);
+}
+
+/* ---- Hover card */
+.hover-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  background: rgba(40, 32, 26, 0.88);
+  border: 1px solid rgba(243, 233, 216, 0.18);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+  line-height: 1.35;
+  max-width: 220px;
+  z-index: 5;
+}
+
+.hover-card b {
+  color: var(--hud-accent);
+  font-weight: normal;
+}
+
+.hover-card small {
+  opacity: 0.6;
+}
+
+.hc-tags span {
+  display: inline-block;
+  font-size: 11px;
+  border: 1px solid rgba(243, 233, 216, 0.3);
+  border-radius: 999px;
+  padding: 0 6px;
+  margin: 3px 4px 0 0;
+}
+
+/* ---- Village life log */
+.village-log {
+  top: 64px;
+  right: 12px;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  max-height: calc(100vh - 230px);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.village-log h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: normal;
+  color: var(--hud-accent);
+}
+
+.vl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.vl-filters button {
+  font: inherit;
+  font-size: 12px;
+  color: var(--hud-fg);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(243, 233, 216, 0.22);
+  border-radius: 999px;
+  padding: 2px 9px;
+  cursor: pointer;
+}
+
+.vl-filters button.on {
+  color: var(--hud-accent);
+  border-color: var(--hud-accent);
+}
+
+.vl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 0 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(243, 233, 216, 0.3) transparent;
+  line-height: 1.4;
+}
+
+.vl-list li {
+  padding: 3px 0 3px 10px;
+  border-left: 2px solid transparent;
+}
+
+.vl-list li.vl-day {
+  padding: 8px 0 2px;
+  border: 0;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.vl-list li.vl-deeds {
+  border-left-color: #ff8a70;
+}
+
+.vl-list li.vl-love {
+  border-left-color: #f08aa8;
+}
+
+.vl-list li.vl-life {
+  border-left-color: #9fd38a;
+}
+
+.vl-list li.vl-faith {
+  border-left-color: #c8b8ff;
+}
+
+.vl-list a {
+  color: var(--hud-accent);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.vl-empty {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+@media (max-width: 1240px) and (min-width: 761px) {
+  .village-log,
+  .beliefs-panel {
+    top: 116px;
+    max-height: calc(100vh - 280px);
+  }
 }

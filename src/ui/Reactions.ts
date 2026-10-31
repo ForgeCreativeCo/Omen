@@ -9,6 +9,16 @@ import { reactionLine, ritualLine } from './describe';
 
 const LIFE = 5.5;
 
+const QUARREL_A = ['You took my share!', 'Liar!', 'Stay out of my field!', 'Say that again!', 'I saw what you did.'];
+const QUARREL_B = ['Get away from me!', 'You are the liar!', 'Leave it be!', 'Mind your own hut!', 'Prove it!'];
+const pick = (lines: string[], seed: number) => lines[Math.abs(seed) % lines.length]!;
+
+/** "Fenma's hut", from the people who live there. */
+function hutOwner(sim: Sim, residents: number[]): string {
+  const owner = residents.map((id) => sim.villagers.byId(id)).find((p) => p && p.lifeStage !== 'child');
+  return owner ? `${owner.name}'s hut` : 'a neighbor’s hut';
+}
+
 /** What a Doubter or False Prophet says out loud at the moments that matter. */
 function dissentLine(e: SimEvent): { id: number; line: string; tone: string } | null {
   switch (e.type) {
@@ -62,7 +72,7 @@ export class Reactions {
   ) {
     this.el = document.createElement('div');
     this.el.className = 'reactions';
-    root.appendChild(this.el);
+    root.prepend(this.el); // under the HUD panels
   }
 
   update(sim: Sim, dt: number): void {
@@ -80,6 +90,18 @@ export class Reactions {
         const rite = sim.belief.active('RITUAL', 0).filter((b) => b.subject === subject).sort((a, b) => b.strength - a.strength)[0];
         this.lastRitual = this.clock;
         this.say(v, ritualLine(sim, subject.slice(9), rite?.response), 'rite');
+      } else if (e.type === 'theft') {
+        const v = sim.villagers.byId(e.id);
+        if (v?.alive && !v.inside) this.say(v, `slips grain out of ${hutOwner(sim, e.victims)}.`, 'deed');
+      } else if (e.type === 'quarrel') {
+        const a = sim.villagers.byId(e.a);
+        const b = sim.villagers.byId(e.b);
+        if (a?.alive) this.say(a, pick(QUARREL_A, e.a + sim.tick), 'deed');
+        if (b?.alive) this.say(b, pick(QUARREL_B, e.b + sim.tick), 'deed');
+      } else if (e.type === 'couple') {
+        const a = sim.villagers.byId(e.a);
+        const b = sim.villagers.byId(e.b);
+        if (a?.alive && b) this.say(a, `and ${b.name} are together now.`, 'love');
       } else {
         const said = dissentLine(e);
         const v = said && sim.villagers.byId(said.id);

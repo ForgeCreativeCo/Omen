@@ -305,11 +305,13 @@ export class BeliefEffects {
       if (!victims.length) continue;
       const h = this.rng.pick(victims);
       this.b.deeds.add({ key: 'deed:theft', actorId: v.id, victimIds: [...h.residents], x: h.door.x, z: h.door.z, tick: sim.tick });
+      sim.events.push(sim.tick, { type: 'theft', id: v.id, hutId: h.id, victims: [...h.residents], x: h.door.x, z: h.door.z });
       if (theftTaboo > 0) v.standing = Math.max(0, v.standing - 0.25 * theftTaboo);
     }
     if (present.length >= 2 && this.rng.chance(T.fightChancePerDay * present.length * (1 - this.taboo('deed:fight')))) {
-      const [a] = this.rng.shuffle([...present]);
-      this.b.deeds.add({ key: 'deed:fight', actorId: a!.id, victimIds: [], x: Math.floor(a!.x), z: Math.floor(a!.z), tick: sim.tick });
+      const [a, b] = this.rng.shuffle([...present]);
+      this.b.deeds.add({ key: 'deed:fight', actorId: a!.id, victimIds: [b!.id], x: Math.floor(a!.x), z: Math.floor(a!.z), tick: sim.tick });
+      sim.events.push(sim.tick, { type: 'quarrel', a: a!.id, b: b!.id, x: Math.floor(a!.x), z: Math.floor(a!.z) });
     }
   }
 }

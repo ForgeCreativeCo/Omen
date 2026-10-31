@@ -63,6 +63,11 @@ export class OrbitCamera {
     this.update(1);
   }
 
+  /** How far the camera sits from what it looks at. */
+  get zoom(): number {
+    return this.distance;
+  }
+
   /** Smoothly frame a scene-space point. */
   focus(x: number, z: number, distance?: number): void {
     this.goalTarget.x = x;

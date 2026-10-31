@@ -27,7 +27,7 @@ const TRAIT_LABEL: Record<string, string> = {
   gossip: 'Gossip',
 };
 
-function activity(v: Villager, a: Action | null): string {
+export function activity(v: Villager, a: Action | null): string {
   if (!a) return 'thinking';
   if (a.phase === 'deliver' && v.carrying) return `carrying ${v.carrying.kind} home`;
   const what = ACTIVITY[a.kind] ?? a.kind;
