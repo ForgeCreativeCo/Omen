@@ -214,6 +214,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   private settle(t: Tribe, rng: Rng, target: number, huts: number, fields: number): void {
     const v = t.village;
     v.population = target;
+    // A people settling somewhere new clears the trees first (the first people's valley is already open).
+    if (t.id > 0) v.clearLand();
     v.found(t.view, huts, fields);
     const people = this.villagers;
     const c = v.center;
@@ -271,6 +273,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       if (priest) priest.role = 'priest';
     }
     t.village.population = people.length;
+    t.village.clearLand();
     t.village.found(t.view, 0, 0);
     t.village.rebuilding = true;
     root.villagers.newDayRolesAndHomes();

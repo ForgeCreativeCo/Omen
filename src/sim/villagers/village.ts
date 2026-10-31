@@ -780,14 +780,19 @@ export class Village {
       if (h >= 0 && this.world.get(x, h, z) === M.STONE) this.stoneSpots.push({ x, z });
       if (this.stoneSpots.length >= 40) break;
     }
-    // Clear the land: trees around the new fire come down (their wood goes in the store).
-    for (const t of this.trees) {
-      if (this.treeAlive(t) && Math.hypot(t.x - site.x, t.z - site.z) <= WORK.clearRadius) this.store.wood += this.fell(t);
-    }
+    this.clearLand();
     this.retryHutAt = this.retryFieldAt = 0;
     this.rebuilding = true;
     this.region = this.nav.regions();
     this.found(host, 0, 0);
+  }
+
+  /** Clear the land around the fire: the trees come down (their wood goes in the store). */
+  clearLand(): void {
+    const c = this.center;
+    for (const t of this.trees) {
+      if (this.treeAlive(t) && Math.hypot(t.x - c.x, t.z - c.z) <= WORK.clearRadius) this.store.wood += this.fell(t);
+    }
   }
 
   /** Give up on construction sites nobody has managed to work on for a while. */
