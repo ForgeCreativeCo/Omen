@@ -326,7 +326,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
 
     this.weather.step(this);
     this.fire.step(this);
-    this.village.growCrops(this);
+    // Every people's crops grow, not just the first's.
+    for (const t of this.tribes) t.village.growCrops(this);
     this.villagers.step();
     this.recorder.step();
     for (const t of this.tribes) {

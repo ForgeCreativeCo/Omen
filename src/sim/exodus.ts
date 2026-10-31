@@ -160,7 +160,12 @@ export function findSettlement(
     const r = regions[Math.floor(p.x) + Math.floor(p.z) * W] ?? 0;
     if (r) count.set(r, (count.get(r) ?? 0) + 1);
   }
-  const home = [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? regions[Math.floor(from.x) + Math.floor(from.z) * W] ?? 0;
+  // (The fire itself blocks its cell: look around it for the ground they stand on.)
+  let fromRegion = regions[Math.floor(from.x) + Math.floor(from.z) * W] ?? 0;
+  for (let r = 1; r <= 6 && !fromRegion; r++)
+    for (let dz = -r; dz <= r && !fromRegion; dz++)
+      for (let dx = -r; dx <= r && !fromRegion; dx++) fromRegion = regions[Math.floor(from.x) + dx + (Math.floor(from.z) + dz) * W] ?? 0;
+  const home = [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? fromRegion;
   const others = sim.tribes.map((t) => t.village.center);
   let best: { x: number; y: number; z: number } | null = null;
   let bestScore = -Infinity;

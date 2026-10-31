@@ -155,40 +155,6 @@ export function generateIsland(rng: Rng): Island {
     }
   }
 
-  // ---- 1b. Islets: small islands in the sea ring, clear of the coast and of each other.
-  // Their own stream, so the main island comes out the same whatever they do.
-  const isletRng = rng.fork('islets');
-  const islets: Islet[] = [];
-  const wantIslets = isletRng.int(T.isletCount[0]!, T.isletCount[1]!);
-  for (let tries = 0; tries < 120 && islets.length < wantIslets; tries++) {
-    const ang = isletRng.range(0, Math.PI * 2);
-    const r0 = isletRng.range(T.isletRadius[0]!, T.isletRadius[1]!);
-    const lo = landRadius(ang) + T.coastWidth * 0.35 + r0 + T.isletGap;
-    const hi = platformRadius(ang) - r0 - 3;
-    if (lo > hi) continue;
-    const d = isletRng.range(lo, hi);
-    const ix = cx + Math.cos(ang) * d;
-    const iz = cz + Math.sin(ang) * d;
-    if (islets.some((o) => Math.hypot(o.x - ix, o.z - iz) < o.r + r0 + T.isletGap)) continue;
-    const top = T.seaLevel + isletRng.range(T.isletHeight[0]!, T.isletHeight[1]!);
-    for (let z = Math.floor(iz - r0 - 2); z <= Math.ceil(iz + r0 + 2); z++)
-      for (let x = Math.floor(ix - r0 - 2); x <= Math.ceil(ix + r0 + 2); x++) {
-        if (x < 0 || z < 0 || x >= sizeX || z >= sizeZ) continue;
-        const k = idx(x, z);
-        if ((height[k] as number) < 0) continue;
-        // A rounded hump with a wobbling shore and a sandy rim.
-        const wob = 1 + 0.18 * nCoast(x * 0.15 + 50, z * 0.15 - 50);
-        const rr = Math.hypot(x + 0.5 - ix, z + 0.5 - iz) / (r0 * wob);
-        if (rr > 1.15) continue;
-        const h = rr < 1 ? T.seaLevel + 0.6 + (top - T.seaLevel) * (1 - rr * rr) : T.seaLevel - 1 - (rr - 1) * 10;
-        if (h > (height[k] as number)) {
-          height[k] = h;
-          region[k] = REGION.meadows;
-        }
-      }
-    islets.push({ x: Math.round(ix), y: Math.round(top), z: Math.round(iz), r: Math.round(r0) });
-  }
-
   const ground = new Int16Array(sizeX * sizeZ).fill(-1);
   for (let i = 0; i < ground.length; i++) {
     const h = height[i] as number;
@@ -423,6 +389,81 @@ export function generateIsland(rng: Rng): Island {
       plantTree(world, x, h + 1, z, pine, rng);
       trees.push({ x, y: h + 1, z });
     }
+  }
+
+  // ---- 5b. The outer sea and its islets --------------------------------------
+  // Added after the main island is finished, on a stream of their own, so the
+  // main island comes out exactly as it always has for a given seed.
+  const isletRng = rng.fork('islets');
+  const outerRadius = (ang: number) => Math.min(sizeX / 2 - 2, T.outerSeaRadius + T.platformRadiusNoise * nCoast(Math.cos(ang) * 2 - 9, Math.sin(ang) * 2));
+  const fillColumn = (x: number, z: number, h: number, top: MaterialId) => {
+    const k = idx(x, z);
+    const r = Math.hypot(x + 0.5 - cx, z + 0.5 - cz);
+    const shell = Math.pow(Math.min(1, r / outerRadius(Math.atan2(z + 0.5 - cz, x + 0.5 - cx))), 1.6);
+    const bottom = Math.max(0, Math.round(T.undersideBottom + shell * (T.seaLevel - T.seaDepth - 3 - T.undersideBottom) + 3 * fbm(nUnder, x * 0.09, z * 0.09, 3)));
+    for (let y = 0; y < sizeY; y++) if (world.get(x, y, z) !== M.AIR) world.set(x, y, z, M.AIR);
+    for (let y = Math.min(bottom, h); y <= h; y++) world.set(x, y, z, y === h ? top : h - y <= 2 && top !== M.STONE ? (top === M.SAND ? M.SAND : M.DIRT) : M.STONE);
+    ground[k] = h;
+    waterTop[k] = h < T.seaLevel ? T.seaLevel : -1;
+    for (let y = h + 1; y <= T.seaLevel; y++) world.set(x, y, z, M.WATER);
+  };
+  // The sea ring past the old platform's edge.
+  for (let z = 0; z < sizeZ; z++)
+    for (let x = 0; x < sizeX; x++) {
+      if ((ground[idx(x, z)] as number) >= 0) continue;
+      const dx = x + 0.5 - cx;
+      const dz = z + 0.5 - cz;
+      const ang = Math.atan2(dz, dx);
+      const r = Math.hypot(dx, dz);
+      if (r > outerRadius(ang)) continue;
+      fillColumn(x, z, Math.max(2, Math.round(seabedAt(r, landRadius(ang)))), M.SAND);
+    }
+  const islets: Islet[] = [];
+  const wantIslets = isletRng.int(T.isletCount[0]!, T.isletCount[1]!);
+  for (let tries = 0; tries < 160 && islets.length < wantIslets; tries++) {
+    const ang = isletRng.range(0, Math.PI * 2);
+    const r0 = isletRng.range(T.isletRadius[0]!, T.isletRadius[1]!);
+    const lo = landRadius(ang) + T.coastWidth * 0.35 + r0 + T.isletGap;
+    const hi = outerRadius(ang) - r0 - 1;
+    if (lo > hi) continue;
+    const d = isletRng.range(lo, hi);
+    const ix = cx + Math.cos(ang) * d;
+    const iz = cz + Math.sin(ang) * d;
+    if (islets.some((o) => Math.hypot(o.x - ix, o.z - iz) < o.r + r0 + T.isletGap)) continue;
+    // Clear of the main island's land: only sea where it will stand.
+    let clear = true;
+    for (let z = Math.floor(iz - r0 - 2); z <= Math.ceil(iz + r0 + 2) && clear; z++)
+      for (let x = Math.floor(ix - r0 - 2); x <= Math.ceil(ix + r0 + 2) && clear; x++) {
+        if (x < 0 || z < 0 || x >= sizeX || z >= sizeZ) clear = false;
+        else if ((ground[idx(x, z)] as number) >= T.seaLevel) clear = false;
+      }
+    if (!clear) continue;
+    const top = T.seaLevel + Math.round(isletRng.range(T.isletHeight[0]!, T.isletHeight[1]!));
+    for (let z = Math.floor(iz - r0 - 2); z <= Math.ceil(iz + r0 + 2); z++)
+      for (let x = Math.floor(ix - r0 - 2); x <= Math.ceil(ix + r0 + 2); x++) {
+        const k = idx(x, z);
+        if ((ground[k] as number) < 0) continue;
+        // A flat top (room for a village) falling to a wobbling shore and a sandy rim.
+        const wob = 1 + 0.18 * nCoast(x * 0.15 + 50, z * 0.15 - 50);
+        const rr = Math.hypot(x + 0.5 - ix, z + 0.5 - iz) / (r0 * wob);
+        if (rr > 1) continue;
+        const h = Math.round(rr < 0.7 ? top : T.seaLevel + 0.6 + (top - T.seaLevel - 0.6) * (1 - smoothstep(0.7, 1, rr)));
+        if (h <= (ground[k] as number)) continue;
+        fillColumn(x, z, h, h <= T.seaLevel + 1 ? M.SAND : M.GRASS);
+        region[k] = REGION.meadows;
+      }
+    // A few trees on the high ground.
+    for (let n = 0; n < r0; n++) {
+      const a = isletRng.range(0, Math.PI * 2);
+      const rr = isletRng.range(0.2, 0.75) * r0;
+      const x = Math.round(ix + Math.cos(a) * rr);
+      const z = Math.round(iz + Math.sin(a) * rr);
+      const h = ground[idx(x, z)] as number;
+      if (world.get(x, h, z) !== M.GRASS || trees.some((t) => Math.abs(t.x - x) <= T.treeSpacing && Math.abs(t.z - z) <= T.treeSpacing)) continue;
+      plantTree(world, x, h + 1, z, false, isletRng);
+      trees.push({ x, y: h + 1, z });
+    }
+    islets.push({ x: Math.round(ix), y: top, z: Math.round(iz), r: Math.round(r0) });
   }
 
   // ---- 6. Landmarks ----------------------------------------------------------

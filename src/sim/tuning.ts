@@ -41,7 +41,9 @@ export const TUNING = {
     landRadius: 96,
     landRadiusNoise: 20,
     coastWidth: 12,
-    platformRadius: 124,
+    platformRadius: 110,
+    /** The sea reaches this far past the land, beyond the platform the main island is built on (room for the islets). */
+    outerSeaRadius: 124,
     platformRadiusNoise: 4,
     /** The home valley (village, east hill, ridge, river) keeps its old scale inside this radius. */
     homeRadius: 44,
@@ -80,9 +82,9 @@ export const TUNING = {
     treeClearOfVillage: 11,
     /** Small islands in the sea around the main one: how many, how big, how high, and the water kept between. */
     isletCount: [2, 4] as readonly number[],
-    isletRadius: [8, 12] as readonly number[],
-    isletHeight: [3, 6] as readonly number[],
-    isletGap: 6,
+    isletRadius: [10, 13] as readonly number[],
+    isletHeight: [3, 5] as readonly number[],
+    isletGap: 5,
   },
 
   villagers: {
@@ -723,6 +725,10 @@ export const TUNING = {
     speed: 0.35,
     /** How the new people feel toward the one they left. */
     startFondness: 0.3,
+    /** Days of food each settler carries (they have fields to plant first). */
+    foodDays: 30,
+    /** An islet whose settlers die out this soon is never tried again. */
+    failedYears: 10,
   },
 
   /** How a people answers a cruel god (dread, great offerings, sacrifice, defiance, rivalry). */

@@ -40,6 +40,10 @@ export class Boats {
   readonly boats: Boat[] = [];
   /** Tribe → tick it last sent settlers. */
   readonly lastSent = new Map<number, number>();
+  /** Islets settled: islet → the people there and when they landed. */
+  readonly colonies = new Map<number, { tribe: number; tick: number }>();
+  /** Islets whose settlers died out: nobody tries them again. */
+  readonly failed = new Set<number>();
   private nextId = 1;
 
   constructor(
@@ -63,7 +67,7 @@ export class Boats {
       .map((_, i) => i)
       .filter((i) => {
         const l = sim.island.landmarks.islets[i]!;
-        if (this.boats.some((b) => b.islet === i)) return false;
+        if (this.boats.some((b) => b.islet === i) || this.failed.has(i)) return false;
         return !sim.tribes.some((t) => t.members.length && Math.hypot(t.village.center.x - l.x, t.village.center.z - l.z) <= l.r + 4);
       });
   }
@@ -72,6 +76,12 @@ export class Boats {
 
   dawn(): void {
     const sim = this.sim;
+    // A colony that died out soon after landing marks its islet as a place that kills.
+    for (const [i, c] of this.colonies) {
+      if (sim.tribes[c.tribe]?.members.length) continue;
+      this.colonies.delete(i);
+      if (sim.tick - c.tick < T.failedYears * TICKS_PER_YEAR) this.failed.add(i);
+    }
     if (sim.mode === 'warning') return;
     for (const t of sim.tribes) {
       if (t.members.length < T.crowdedAt || this.boats.some((b) => b.tribe === t.id)) continue;
@@ -248,6 +258,13 @@ export class Boats {
     if (site.y < 0) site = { x: crew[0] ? Math.floor(crew[0].x) : l.x, y: sim.nav.at(Math.floor(crew[0]?.x ?? l.x), Math.floor(crew[0]?.z ?? l.z)), z: crew[0] ? Math.floor(crew[0].z) : l.z };
     const leader = crew.find((v) => v.lifeStage === 'adult');
     const t = sim.foundTribe(crew, site, { reason: 'settlers', leaderId: leader?.id });
+    this.colonies.set(b.islet, { tribe: t.id, tick: sim.tick });
+    // They brought provisions to last until the first harvest.
+    const from = sim.tribes[b.tribe];
+    const want = crew.length * T.foodDays * TUNING.villagers.hungerPerDay * 2 * TUNING.villagers.mealFood;
+    const take = Math.min(want, from ? from.village.store.food * 0.4 : 0);
+    if (from) from.village.store.food -= take;
+    t.village.store.food += take;
     // They left on good terms.
     sim.war.relations.set(b.tribe < t.id ? `${b.tribe}:${t.id}` : `${t.id}:${b.tribe}`, T.startFondness);
     sim.events.push(sim.tick, { type: 'landfall', tribe: t.id, from: b.tribe, ids: crew.map((v) => v.id), x: b.landing.x, z: b.landing.z });
