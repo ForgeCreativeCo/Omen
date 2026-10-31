@@ -11,12 +11,18 @@ export interface TutorialHost {
   inspectorOpen: () => boolean;
   beliefsOpen: () => boolean;
   book: HolyBookPanel;
+  /** The Village life log is open. */
+  lifeOpen: () => boolean;
+  /** Which people the faith panels show. */
+  focusId: () => number;
 }
 
 /** What a step remembers about the moment it began. */
 interface Since {
   tick: number;
   day: number;
+  /** Which people the panels showed. */
+  focus: number;
   cam: { x: number; y: number; z: number };
 }
 
@@ -33,6 +39,12 @@ interface Step {
   done?: (h: TutorialHost, s: Since) => boolean;
   /** Extra advice while waiting (e.g. "nobody saw that"). */
   note?: (h: TutorialHost, s: Since) => string | null;
+  /** Only in some games (several peoples, the sandbox). */
+  when?: (h: TutorialHost) => boolean;
+}
+
+function eventsSince(h: TutorialHost, s: Since, types: string[]) {
+  return h.sim.events.all().filter((e) => e.tick > s.tick && types.includes(e.type));
 }
 
 const DONE_KEY = 'omen.tutorial.done';
@@ -110,11 +122,30 @@ const STEPS: Step[] = [
     target: '.hud-book',
     done: (h) => h.book.open && h.book.showingTruth,
   },
+  {
+    title: 'The Hand',
+    body: 'Pick <b>The Hand</b> (<b>F</b>) and <b>press on a villager</b> to take hold. Drag to carry them through the sky, and let go <b>gently</b> to set them down. Those who see it will say they were chosen. (Flick as you let go and you throw them. Few survive that.)',
+    target: '.miracle[data-id="hand"]',
+    done: (h, s) => eventsSince(h, s, ['handPlace', 'handImpact']).length > 0,
+  },
+  {
+    title: 'Who did what',
+    body: 'Open <b>Life</b> (<b>J</b>): every birth, death, love, theft and quarrel, by day. When someone is <b>accused</b> of a wrong, they wait a day for you to speak: strike near them to punish, <b>Bless</b> them to pardon, or stay silent and let the village judge by its own lights. Click a name to go to them.',
+    target: '.hud-life',
+    done: (h) => h.lifeOpen(),
+  },
+  {
+    title: 'Other peoples',
+    body: 'Yours aren’t the only people on the island. Each has its own village, priest, beliefs and name for you, and they <b>feud, ally and go to war</b>. The switcher at the top of <b>Beliefs</b>, the <b>Holy Book</b> and <b>Purposes</b> chooses whose you see; clicking a villager follows their people. <b>Switch to another people now.</b>',
+    target: '.hud-beliefs',
+    when: (h) => h.sim.tribes.length > 1,
+    done: (h, s) => h.focusId() !== s.focus,
+  },
 ];
 
 const LAST_SANDBOX: Step = {
   title: 'Now it’s yours',
-  body: 'That’s the loop: act, watch them read it, see what grows. <b>Purposes</b> (bottom left) shows what to aim for next and how, with a tip for the moment. Your other powers: <b>Holy Light</b> (I) makes a place holy, <b>Bless</b> (K) picks a favorite, <b>Blight</b> (X) curses ground, a <b>Falling Star</b> (O) leaves a crater they’ll name, and <b>Dream</b> (N) plants symbols at night. Stay silent too long and someone will speak in your place. When someone is accused of a wrong, you have until the fire to judge them yourself; <b>Life</b> (J) shows who did what. Press <b>F3</b> for God’s Eye: the real reasoning behind every belief.',
+  body: 'That’s the loop: act, watch them read it, see what grows. <b>Purposes</b> (bottom left) shows what to aim for next, with a tip for the moment. <b>Holy Light</b> (I) makes a place holy, <b>Bless</b> (K) picks a favorite, <b>Blight</b> (X) curses ground, a <b>Falling Star</b> (O) leaves a crater they’ll name, <b>Dream</b> (N) plants symbols at night. The red powers are your wrath: <b>Earthquake</b> (Y), <b>Firestorm</b> (C), <b>Tidal Wave</b> (Z), <b>Plague</b> (P) and <b>Swarm</b> (5). A people you are cruel to will burn offerings, give one of their own to you, or <b>defy you</b> openly; their neighbors will say they had it coming. At war, a priest prays to you for victory: harm the enemy and they’ll say you answered. Stay silent too long and someone will speak in your place. Press <b>F3</b> for God’s Eye: the real reasoning behind every belief.',
 };
 
 const LAST_WARNING: Step = {
@@ -130,14 +161,14 @@ export class Tutorial {
   private readonly el: HTMLElement;
   private readonly steps: Step[];
   private i = -1;
-  private since: Since = { tick: 0, day: 0, cam: { x: 0, y: 0, z: 0 } };
+  private since: Since = { tick: 0, day: 0, focus: 0, cam: { x: 0, y: 0, z: 0 } };
   private glowing: Element | null = null;
 
   constructor(
     root: HTMLElement,
     private readonly h: TutorialHost,
   ) {
-    this.steps = [...STEPS, h.sim.warning ? LAST_WARNING : LAST_SANDBOX];
+    this.steps = [...STEPS.filter((s) => !s.when || s.when(h)), h.sim.warning ? LAST_WARNING : LAST_SANDBOX];
     this.el = document.createElement('div');
     this.el.className = 'hud-panel tutorial';
     this.el.hidden = true;
@@ -171,7 +202,7 @@ export class Tutorial {
     this.i = i;
     const h = this.h;
     const p = h.renderer.camera.position;
-    this.since = { tick: h.sim.tick, day: h.sim.calendar.day, cam: { x: p.x, y: p.y, z: p.z } };
+    this.since = { tick: h.sim.tick, day: h.sim.calendar.day, focus: h.focusId(), cam: { x: p.x, y: p.y, z: p.z } };
     const step = this.steps[i]!;
     if (step.grace && h.sim.miracles.grace < step.grace) h.sim.miracles.grace = step.grace;
     const spot = step.guide?.(h) ?? null;

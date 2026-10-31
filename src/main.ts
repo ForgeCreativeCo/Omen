@@ -136,6 +136,8 @@ const tutorial = new Tutorial(hudRoot, {
   inspectorOpen: () => inspector.villagerId >= 0,
   beliefsOpen: () => !beliefs.el.hidden,
   book,
+  lifeOpen: () => !!life?.open,
+  focusId: () => focus.id,
 });
 hudRoot.querySelector('.hud-help')!.addEventListener('click', () => (tutorial.running ? tutorial.finish() : tutorial.start()));
 // First time in a game, the tutorial starts by itself (after the Warning's vision).
