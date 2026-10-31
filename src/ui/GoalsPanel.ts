@@ -1,6 +1,7 @@
 import { MILESTONES } from '../sim/milestones';
 import { CRIME_TEXT, whenJudged } from './describe';
 import type { Sim } from '../sim/Sim';
+import type { PeopleFocus } from './PeopleFocus';
 
 const OPEN_KEY = 'omen.goals.open';
 
@@ -19,14 +20,16 @@ export class GoalsPanel {
 
   constructor(
     root: HTMLElement,
-    private readonly sim: Sim,
+    private readonly focus: PeopleFocus,
   ) {
     this.el = document.createElement('div');
     this.el.className = 'hud-panel goals';
     root.appendChild(this.el);
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.el.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('[data-g="toggle"]')) this.toggle();
+      const t = e.target as HTMLElement;
+      if (focus.click(t)) return void (this.timer = 0);
+      if (t.closest('[data-g="toggle"]')) this.toggle();
     });
     let open = true;
     try {
@@ -36,6 +39,10 @@ export class GoalsPanel {
     }
     // Narrow screens start folded; there is little room.
     this.open = open && !matchMedia('(max-width: 760px)').matches;
+  }
+
+  private get sim(): Sim {
+    return this.focus.view;
   }
 
   toggle(): void {
@@ -67,6 +74,7 @@ export class GoalsPanel {
     const head = `<button class="g-head" data-g="toggle" aria-expanded="${this.open}"><span>Purposes</span><span class="g-count">${done} / ${MILESTONES.length}</span><span class="g-caret">${this.open ? '▾' : '▸'}</span></button>`;
     const safety = this.safety();
     if (!this.open) return head + (safety ? `<div class="g-safety compact">${safety}</div>` : '');
+    const tabs = this.focus.tabs();
     const next = ms.next(2);
     const list = next
       .map(
@@ -76,6 +84,7 @@ export class GoalsPanel {
       .join('');
     const idea = this.idea();
     return `${head}
+      ${tabs}
       ${safety ? `<div class="g-safety">${safety}</div>` : ''}
       ${idea ? `<div class="g-idea"><span>Now</span> ${idea}</div>` : ''}
       ${list ? `<ol class="g-list">${list}</ol>` : '<div class="g-all">Every purpose fulfilled. The religion is theirs now.</div>'}`;

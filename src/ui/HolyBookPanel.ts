@@ -1,6 +1,7 @@
 import type { DriftKind, Verse } from '../sim/myth/HolyBook';
 import type { Sim } from '../sim/Sim';
 import { calendarAt, formatCalendar } from '../sim/time';
+import type { PeopleFocus } from './PeopleFocus';
 
 const DRIFT_LABEL: Record<DriftKind, string> = {
   tradition: 'reason forgotten',
@@ -25,7 +26,7 @@ export class HolyBookPanel {
   private timer = 1;
   private highlight = -1;
 
-  constructor(root: HTMLElement, private readonly sim: Sim) {
+  constructor(root: HTMLElement, private readonly focus: PeopleFocus) {
     this.el = document.createElement('div');
     this.el.className = 'hud-panel holy-book';
     this.el.hidden = true;
@@ -35,12 +36,14 @@ export class HolyBookPanel {
         <label class="hb-truth"><input type="checkbox"><span class="hb-switch"></span>Show the Truth</label>
         <button class="ins-close" data-close aria-label="Close">×</button>
       </header>
+      <div class="hb-peoples"></div>
       <nav class="hb-nav"></nav>
       <div class="hb-body"></div>`;
     this.body = this.el.querySelector('.hb-body')!;
     this.nav = this.el.querySelector('.hb-nav')!;
     this.title = this.el.querySelector('.hb-title')!;
     root.appendChild(this.el);
+    focus.onChange(() => this.open && this.render(true));
     const box = this.el.querySelector<HTMLInputElement>('.hb-truth input')!;
     box.addEventListener('change', () => {
       this.truth = box.checked;
@@ -50,6 +53,7 @@ export class HolyBookPanel {
     this.el.addEventListener('click', (e) => {
       const t = e.target as HTMLElement;
       if (t.closest('[data-close]')) return this.toggle(false);
+      if (focus.click(t)) return;
       const ch = t.closest<HTMLElement>('[data-chapter]');
       if (ch) this.body.querySelector(`#hb-ch-${ch.dataset.chapter}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -60,6 +64,10 @@ export class HolyBookPanel {
       if (e.code === 'KeyH' && !(e.target instanceof HTMLInputElement)) this.toggle();
       if (e.code === 'Escape' && !this.el.hidden) this.toggle(false);
     });
+  }
+
+  private get sim(): Sim {
+    return this.focus.view;
   }
 
   /** Turn "Show the Truth" on or off from outside (the end screen). */
@@ -103,11 +111,13 @@ export class HolyBookPanel {
   private render(force: boolean): void {
     const sim = this.sim;
     const book = sim.myth.book;
-    const sig = `${book.chapters.length}|${book.verses().length}|${book.verses().reduce((n, v) => n + v.drift.length, 0)}|${sim.myth.god}`;
+    const sig = `${this.focus.id}|${this.focus.many}|${book.chapters.length}|${book.verses().length}|${book.verses().reduce((n, v) => n + v.drift.length, 0)}|${sim.myth.god}`;
     if (!force && sig === this.signature) return;
     this.signature = sig;
     const name = sim.myth.godName;
-    this.title.innerHTML = name ? `The Holy Book of <b>${escape(name)}</b>` : 'The Holy Book';
+    const whose = this.focus.many ? ` <small>as ${escape(this.focus.tribe.name)} tell it</small>` : '';
+    this.title.innerHTML = (name ? `The Holy Book of <b>${escape(name)}</b>` : 'The Holy Book') + whose;
+    this.el.querySelector('.hb-peoples')!.innerHTML = this.focus.tabs();
     const atBottom = this.body.scrollTop + this.body.clientHeight >= this.body.scrollHeight - 30;
     const scroll = this.body.scrollTop;
 

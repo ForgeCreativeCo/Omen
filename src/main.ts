@@ -18,6 +18,7 @@ import { Reactions } from './ui/Reactions';
 import { SeasonReport } from './ui/SeasonReport';
 import { Overhead } from './ui/Overhead';
 import { VillageLog } from './ui/VillageLog';
+import { PeopleFocus } from './ui/PeopleFocus';
 import { TUNING } from './sim/tuning';
 import { DebugPanel } from './debug/DebugPanel';
 
@@ -53,13 +54,15 @@ const toasts = new Toasts(hudRoot);
 const inspector = new Inspector(hudRoot, () => (renderer.villagers.selectedId = -1));
 const miracles = new MiracleController(hudRoot, sim, renderer, loop, toasts);
 const debug = new DebugPanel(hudRoot, sim, renderer);
-const beliefs = new BeliefsPanel(hudRoot, sim);
-const book = new HolyBookPanel(hudRoot, sim);
+// Which people the faith panels show; clicking a villager follows theirs.
+const focus = new PeopleFocus(sim);
+const beliefs = new BeliefsPanel(hudRoot, focus);
+const book = new HolyBookPanel(hudRoot, focus);
 // The title screen's idle island has no purposes.
-const goals = chosen ? new GoalsPanel(hudRoot, sim) : null;
+const goals = chosen ? new GoalsPanel(hudRoot, focus) : null;
 // What they make of it: words over witnesses' heads, and a card each season.
 const reactions = chosen ? new Reactions(hudRoot, renderer) : null;
-const report = chosen ? new SeasonReport(hudRoot, sim, () => showBeliefs(true)) : null;
+const report = chosen ? new SeasonReport(hudRoot, focus, () => showBeliefs(true)) : null;
 // Who is doing what: marks over heads, a card on hover, and the day's happenings.
 const overhead = chosen ? new Overhead(hudRoot, renderer) : null;
 const life = chosen
@@ -76,6 +79,8 @@ const life = chosen
 const narrow = () => matchMedia('(max-width: 600px)').matches;
 function openVillager(id: number): void {
   inspector.open(id);
+  const v = sim.villagers.byId(id);
+  if (v) focus.set(v.tribeId);
   if (narrow()) {
     life?.toggle(false);
     beliefs.toggle(false);
@@ -187,7 +192,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 // Dev-only handle for poking at state from the console.
-if (import.meta.env.DEV) Object.assign(window, { omen: { sim, loop, renderer, debug, miracles, inspector, beliefs, book, settings } });
+if (import.meta.env.DEV) Object.assign(window, { omen: { sim, loop, renderer, debug, miracles, inspector, beliefs, book, settings, focus } });
 
 let last = performance.now();
 function frame(now: number): void {

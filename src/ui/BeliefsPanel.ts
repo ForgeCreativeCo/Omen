@@ -3,6 +3,7 @@ import type { Belief } from '../sim/belief/BeliefSystem';
 import type { Sim } from '../sim/Sim';
 import { TUNING } from '../sim/tuning';
 import { describeOmen } from './describe';
+import type { PeopleFocus } from './PeopleFocus';
 
 const T = TUNING.belief;
 
@@ -17,14 +18,16 @@ export class BeliefsPanel {
   /** Opens the Holy Book at a verse; set by main. */
   onVerse: (verseId: number) => void = () => {};
 
-  constructor(root: HTMLElement, private readonly sim: Sim) {
+  constructor(root: HTMLElement, private readonly focus: PeopleFocus) {
     this.el = document.createElement('div');
     this.el.className = 'hud-panel beliefs-panel';
     this.el.hidden = true;
     root.appendChild(this.el);
+    focus.onChange(() => !this.el.hidden && this.render());
     this.el.addEventListener('click', (e) => {
       const t = e.target as HTMLElement;
       if (t.closest('[data-close]')) return this.toggle(false);
+      if (focus.click(t)) return;
       const verse = t.closest<HTMLElement>('[data-verse]');
       if (verse) return this.onVerse(Number(verse.dataset.verse));
       const row = t.closest<HTMLElement>('[data-belief]');
@@ -34,6 +37,11 @@ export class BeliefsPanel {
       else this.open.add(id);
       this.render();
     });
+  }
+
+  /** The focused people's view of the world. */
+  private get sim(): Sim {
+    return this.focus.view;
   }
 
   toggle(show = this.el.hidden): void {
@@ -57,7 +65,8 @@ export class BeliefsPanel {
     const rows = list.map((b) => this.row(b)).join('');
     this.el.innerHTML = `
       <button class="ins-close" data-close aria-label="Close">×</button>
-      <h2>Village Beliefs</h2>
+      <h2>${this.focus.many ? `Beliefs of ${this.focus.tribe.name}` : 'Village Beliefs'}</h2>
+      ${this.focus.tabs()}
       <div class="bp-priest">High priest: ${priest ? `<b>${priest.name}</b> · ${bs.personality}` : 'none'}</div>
       ${rows || '<div class="ins-empty">The people believe nothing in particular yet.</div>'}`;
   }
