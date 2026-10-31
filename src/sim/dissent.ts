@@ -324,7 +324,8 @@ export class Dissent {
     this.prophecy = null;
     const people = ids.map((id) => sim.villagers.byId(id)!).filter((v) => v.alive);
     const X = TUNING.exodus;
-    const site = findSettlement(sim, people, sim.village.center, X.splitMin, X.splitMax, this.rng);
+    // The Warning is one people's story: there, those who split away leave the island.
+    const site = sim.mode === 'warning' ? null : findSettlement(sim, people, sim.village.center, X.splitMin, X.splitMax, this.rng);
     for (const id of ids) this.pull.delete(id);
     for (const [id, p] of this.pull) this.pull.set(id, p * 0.3);
     this.restUntil = sim.tick + T.restAfterSplitYears * TICKS_PER_YEAR;
@@ -333,7 +334,7 @@ export class Dissent {
       // A prophet leads their people as priest; a doubter's people keep no priest of the old faith.
       sim.foundTribe(people, site, { reason: 'schism', leaderId: lead.id, priestId: lead.kind === 'prophet' ? lead.id : undefined });
     } else {
-      // Nowhere to go on this island: they leave it.
+      // Nowhere to go (or the Warning): they leave the island.
       for (const p of people) {
         this.departing.add(p.id);
         sim.villagers.exile(p);
