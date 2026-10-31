@@ -70,16 +70,28 @@ export type SimEventBody =
   | { type: 'vindicated'; id: number }
   | { type: 'defianceEnd'; id: number; reason: 'struck' | 'humbled' | 'died' | 'gone' }
   | { type: 'milestone'; id: string }
-  | { type: 'war'; a: number; b: number }
+  /** `ally`: joined to stand with an ally already at war. */
+  | { type: 'war'; a: number; b: number; ally?: number }
+  | { type: 'alliance'; a: number; b: number; against: number }
+  | { type: 'allianceEnd'; a: number; b: number }
+  /** People of `from` carried off by `by`. */
+  | { type: 'captured'; ids: number[]; from: number; by: number }
+  | { type: 'captiveJoined'; id: number; by: number; from: number }
+  /** A beaten people taken in by its conqueror, or driven from its land. */
+  | { type: 'conquest'; winner: number; loser: number; outcome: 'absorbed' | 'driven'; ids: number[] }
+  | { type: 'prayForVictory'; tribe: number; against: number; priest: number }
+  /** The god struck the enemy (`answered`), or the ones who prayed. */
+  | { type: 'prayerAnswered'; tribe: number; against: number; answered: boolean }
   /** The last of a people were taken in by another. */
   | { type: 'absorbed'; from: number; into: number; ids: number[] }
-  | { type: 'peace'; a: number; b: number }
+  /** `freed`: captives sent home under the peace. */
+  | { type: 'peace'; a: number; b: number; freed?: number[] }
   /** A war party sets out. */
   | { type: 'raid'; raid: number; from: number; to: number; ids: number[] }
   /** It reaches the enemy fire. */
   | { type: 'battle'; raid: number; from: number; to: number; x: number; z: number }
   | { type: 'slain'; killer: number; victim: number; raid: number; x: number; z: number }
-  | { type: 'raidEnd'; raid: number; from: number; to: number; loot: number; burned: boolean; raidersLost: number; defendersLost: number }
+  | { type: 'raidEnd'; raid: number; from: number; to: number; loot: number; burned: boolean; raidersLost: number; defendersLost: number; captives?: number }
   /** A new people: `from` is the tribe they broke away from. */
   | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles'; leaderId: number; x: number; z: number }
   /** The village gave up its site and moved (`region`: REGION of the new home). */

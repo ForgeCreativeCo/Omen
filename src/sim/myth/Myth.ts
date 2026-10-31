@@ -40,6 +40,7 @@ const EXODUS_WHY: Record<string, string> = {
   ruined: 'for their homes lay broken',
   cursed: 'for the ground was cursed',
   drowned: 'for the waters had taken it',
+  conquered: 'for their enemies had driven them from it',
 };
 
 /** How a law reads: "whoever {deed} {sentence}". */
@@ -210,7 +211,7 @@ export class MythSystem {
         break;
       case 'exodus':
         this.addVerse('exodus', '*', { to: REGION_WORDS[e.region] ?? 'new country', why: EXODUS_WHY[e.reason] ?? 'for they could not stay' }, {
-          truth: [`The village moved because ${e.reason === 'drowned' ? 'the water covered it' : e.reason === 'cursed' ? 'they believed the ground cursed' : 'it lay in ruins'}.`],
+          truth: [`The village moved because ${e.reason === 'drowned' ? 'the water covered it' : e.reason === 'cursed' ? 'they believed the ground cursed' : e.reason === 'conquered' ? 'they lost a war' : 'it lay in ruins'}.`],
           omenIds: [],
           drift: [],
         });
@@ -229,6 +230,27 @@ export class MythSystem {
         const who = this.sim.villagers.byId(e.id)?.name ?? 'one of the people';
         this.addVerse('wrath', e.reason, { person: who }, {
           truth: [e.reason === 'struck' ? `${who} defied you openly, and something you did killed or harmed them.` : `${who} defied you, until you touched them.`],
+          omenIds: [],
+          drift: [],
+        });
+        break;
+      }
+      case 'prayerAnswered': {
+        if (!e.answered || e.tribe !== this.sim.tribe.id) break;
+        const other = this.sim.tribes[e.against]?.name ?? 'their enemies';
+        this.addVerse('wrath', 'victory', { other }, {
+          truth: [`They prayed for victory over ${other}, and then you happened to harm ${other}. You may not have meant it for them.`],
+          omenIds: [],
+          drift: [],
+        });
+        break;
+      }
+      case 'conquest': {
+        const me = this.sim.tribe.id;
+        if (e.winner !== me) break;
+        const other = this.sim.tribes[e.loser]?.name ?? 'their enemies';
+        this.addVerse('wrath', e.outcome === 'driven' ? 'droveOut' : 'tookIn', { other }, {
+          truth: [`The people beat ${other} in war by their own strength.`],
           omenIds: [],
           drift: [],
         });

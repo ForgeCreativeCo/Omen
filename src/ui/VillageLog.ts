@@ -167,7 +167,21 @@ export class VillageLog {
       case 'slain':
         return this.push(e.tick, 'deeds', `${w(e.killer)} struck down ${w(e.victim)}.`);
       case 'raidEnd':
-        return this.push(e.tick, 'deeds', `The raid on ${sim.tribes[e.to]?.name ?? 'a people'} ended: ${e.raidersLost} raiders and ${e.defendersLost} defenders dead${e.loot ? `, ${e.loot} food taken` : ''}${e.burned ? ', a hut burned' : ''}.`);
+        return this.push(e.tick, 'deeds', `The raid on ${sim.tribes[e.to]?.name ?? 'a people'} ended: ${e.raidersLost} raiders and ${e.defendersLost} defenders dead${e.loot ? `, ${e.loot} food taken` : ''}${e.captives ? `, ${e.captives} carried off` : ''}${e.burned ? ', a hut burned' : ''}.`);
+      case 'captured':
+        return this.push(e.tick, 'deeds', `${e.ids.map(w).join(' and ')} ${e.ids.length > 1 ? 'were' : 'was'} carried off by ${sim.tribes[e.by]?.name ?? 'raiders'}.`);
+      case 'captiveJoined':
+        return this.push(e.tick, 'life', `${w(e.id)}, taken from ${sim.tribes[e.from]?.name ?? 'another people'}, is one of ${sim.tribes[e.by]?.name ?? 'them'} now.`);
+      case 'alliance':
+        return this.push(e.tick, 'deeds', `${sim.tribes[e.a]?.name ?? 'A people'} and ${sim.tribes[e.b]?.name ?? 'a people'} made an alliance against ${sim.tribes[e.against]?.name ?? 'a common enemy'}.`);
+      case 'allianceEnd':
+        return this.push(e.tick, 'deeds', `The alliance of ${sim.tribes[e.a]?.name ?? 'a people'} and ${sim.tribes[e.b]?.name ?? 'a people'} ended.`);
+      case 'conquest':
+        return this.push(e.tick, 'deeds', e.outcome === 'driven' ? `${sim.tribes[e.winner]?.name ?? 'A people'} drove ${sim.tribes[e.loser]?.name ?? 'their enemies'} from their land.` : `${sim.tribes[e.loser]?.name ?? 'A people'} were conquered by ${sim.tribes[e.winner]?.name ?? 'their enemies'} and live under them.`);
+      case 'prayForVictory':
+        return this.push(e.tick, 'faith', `${w(e.priest)} prayed to the god for victory over ${sim.tribes[e.against]?.name ?? 'the enemy'}.`);
+      case 'prayerAnswered':
+        return this.push(e.tick, 'faith', e.answered ? `They believe the god answered: it struck ${sim.tribes[e.against]?.name ?? 'the enemy'}.` : 'They prayed for victory, and the god struck them instead.');
       case 'absorbed':
         return this.push(e.tick, 'life', `The last of ${sim.tribes[e.from]?.name ?? 'a people'} (${e.ids.map(w).join(', ')}) went to live with ${sim.tribes[e.into]?.name ?? 'a people'}.`);
       case 'tribeFounded':

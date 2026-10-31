@@ -1,6 +1,6 @@
 import type { Rng } from './rng';
 import type { Sim } from './Sim';
-import { TICKS_PER_DAY } from './time';
+import { TICKS_PER_DAY, TICKS_PER_YEAR } from './time';
 import type { Tribe } from './tribe';
 import { TUNING } from './tuning';
 import type { Villager, VillagerId } from './villagers/types';
@@ -24,6 +24,22 @@ export interface Raid {
   raidersLost: number;
   defendersLost: number;
   startSize: number;
+  /** Enemy people carried off. */
+  captives: VillagerId[];
+}
+
+/** One of another people, carried off in a raid. */
+export interface Captive {
+  from: number;
+  by: number;
+  tick: number;
+}
+
+/** A people praying for victory over another: until when, and whether the god has answered. */
+export interface Prayer {
+  against: number;
+  until: number;
+  answered: 'none' | 'answered' | 'spurned';
 }
 
 const key = (a: number, b: number) => (a < b ? `${a}:${b}` : `${b}:${a}`);
@@ -48,6 +64,14 @@ export class War {
   readonly raids: Raid[] = [];
   /** Tribe → tick its last war party set out. */
   readonly lastRaid = new Map<number, number>();
+  /** Taken in raids, not yet one of their captors. */
+  readonly captives = new Map<VillagerId, Captive>();
+  /** Pair key → the people they stand together against. */
+  readonly alliances = new Map<string, number>();
+  /** Tribe → its prayer for victory. */
+  readonly prayers = new Map<number, Prayer>();
+  /** Tribe → raid chance multiplier until a tick (a prayer answered). */
+  readonly heartened = new Map<number, number>();
   private nextId = 1;
   private lastSeq = 0;
 
@@ -67,6 +91,18 @@ export class War {
 
   atWar(a: number, b: number): boolean {
     return this.wars.has(key(a, b));
+  }
+
+  allied(a: number, b: number): boolean {
+    return this.alliances.has(key(a, b));
+  }
+
+  /** The peoples `t` is allied with. */
+  allies(t: number): number[] {
+    return [...this.alliances.keys()].flatMap((k) => {
+      const [a, b] = k.split(':').map(Number) as [number, number];
+      return a === t ? [b] : b === t ? [a] : [];
+    });
   }
 
   /** The raid a villager is fighting in, if any. */
@@ -93,6 +129,8 @@ export class War {
     for (const e of sim.events.since(this.lastSeq)) {
       // A people born of a schism starts out bitter toward the one it left.
       if (e.type === 'tribeFounded' && e.reason === 'schism') this.shift(e.id, e.from, T.schismStart);
+      // The god's hand in a war: harm to the enemy answers a people's prayer; harm to them spurns it.
+      if (e.type === 'disaster' && e.tribe !== undefined) this.onDisaster(e.tribe);
     }
     this.lastSeq = sim.events.lastSeq;
     for (const r of [...this.raids]) this.advance(r);
@@ -125,6 +163,11 @@ export class War {
     if (back >= party.length * 0.6 || r.left <= 0) {
       const t = sim.tribes[r.from]!;
       t.village.store.food += r.loot;
+      // The captives are theirs now: they'll live among them.
+      for (const id of r.captives) {
+        const v = sim.villagers.byId(id);
+        if (v?.alive) v.nextThink = sim.tick;
+      }
       this.end(r);
     }
   }
@@ -189,12 +232,54 @@ export class War {
       r.loot = Math.min(victims.village.store.food, T.lootPerRaider * alive);
       victims.village.store.food -= r.loot;
       if (this.rng.chance(T.burnChance)) r.burned = this.burnAHut(victims);
+      this.takeCaptives(r, target);
     }
     r.phase = 'return';
     r.left = TICKS_PER_DAY * 3;
     const home = sim.tribes[r.from]!.village.center;
     for (const v of this.members(r)) this.march(v, home.x, home.z);
     for (const v of victims.members) if (v.action?.kind === 'defend') sim.villagers.order(v, 'idle', Math.floor(v.x), Math.floor(v.z), 1);
+  }
+
+  /** Winners carry off a few of the enemy who couldn't run: the young first. */
+  private takeCaptives(r: Raid, target: { x: number; z: number }): void {
+    const sim = this.sim;
+    const victims = sim.tribes[r.to]!;
+    const near = victims.members
+      .filter((v) => !v.inside && v.id !== victims.belief.priestId && Math.hypot(v.x - target.x, v.z - target.z) <= T.defendRadius * 1.5)
+      .sort((a, b) => a.age - b.age);
+    const taken: Villager[] = [];
+    for (const v of near) {
+      if (taken.length >= T.captivesMax) break;
+      if (v.age < 4 || !this.rng.chance(T.captiveChance)) continue;
+      taken.push(v);
+    }
+    if (!taken.length) return;
+    const captors = sim.tribes[r.from]!;
+    for (const v of taken) {
+      // Their family won't forget who took them.
+      for (const id of [v.partnerId, ...v.parentIds]) {
+        const k = sim.villagers.byId(id);
+        const leader = sim.villagers.byId(r.members[0] ?? -1);
+        if (k?.alive && leader) sim.society.shift(k, leader, -TUNING.society.bloodGrudge * 0.5);
+      }
+      const home = v.homeId >= 0 ? victims.village.byId(v.homeId) : undefined;
+      if (home) home.residents = home.residents.filter((x) => x !== v.id);
+      v.homeId = -1;
+      v.tribeId = r.from;
+      if (v.partnerId >= 0) {
+        const p = sim.villagers.byId(v.partnerId);
+        if (p) p.partnerId = -1;
+        v.partnerId = -1;
+      }
+      v.standing = Math.min(v.standing, 0.2);
+      this.captives.set(v.id, { from: r.to, by: r.from, tick: sim.tick });
+      r.captives.push(v.id);
+      r.members.push(v.id);
+    }
+    captors.belief.adopt(victims.belief, taken);
+    this.shift(r.from, r.to, -T.deathGrudge * taken.length);
+    sim.events.push(sim.tick, { type: 'captured', ids: taken.map((v) => v.id), from: r.to, by: r.from });
   }
 
   private slay(killer: Villager, victim: Villager, r: Raid): void {
@@ -225,7 +310,7 @@ export class War {
       v.action = null;
       v.nextThink = sim.tick;
     }
-    sim.events.push(sim.tick, { type: 'raidEnd', raid: r.id, from: r.from, to: r.to, loot: Math.round(r.loot), burned: r.burned, raidersLost: r.raidersLost, defendersLost: r.defendersLost });
+    sim.events.push(sim.tick, { type: 'raidEnd', raid: r.id, from: r.from, to: r.to, loot: Math.round(r.loot), burned: r.burned, raidersLost: r.raidersLost, defendersLost: r.defendersLost, captives: r.captives.length });
   }
 
   // ------------------------------------------------------------------ daily
@@ -233,6 +318,8 @@ export class War {
   dawn(): void {
     const sim = this.sim;
     const tribes = sim.tribes.filter((t) => t.members.length);
+    this.settleCaptives();
+    this.alliancesDawn(tribes);
     for (const a of tribes)
       for (const b of tribes) {
         if (b.id <= a.id) continue;
@@ -247,11 +334,10 @@ export class War {
           }
           continue;
         }
+        // One side broken: conquered.
+        if (this.conquest(a, b) || this.conquest(b, a)) continue;
         if (rel >= T.peaceAt || (this.weariness.get(k) ?? 0) >= T.peaceWeariness || !this.fighters(a).length || !this.fighters(b).length) {
-          this.wars.delete(k);
-          this.weariness.delete(k);
-          this.relations.set(k, Math.max(rel, T.afterPeace));
-          sim.events.push(sim.tick, { type: 'peace', a: a.id, b: b.id });
+          this.makePeace(a, b);
           continue;
         }
         // At war: each side may send a party.
@@ -313,17 +399,177 @@ export class War {
   private maybeRaid(from: Tribe, to: Tribe): void {
     const sim = this.sim;
     if (this.raids.some((r) => r.from === from.id)) return;
-    if (sim.tick - (this.lastRaid.get(from.id) ?? -Infinity) < T.raidRestDays * TICKS_PER_DAY) return;
-    if (!this.rng.chance(T.raidChancePerDay)) return;
+    const heart = (this.heartened.get(from.id) ?? -1) > sim.tick ? T.answeredRaidBoost : 1;
+    if (sim.tick - (this.lastRaid.get(from.id) ?? -Infinity) < (T.raidRestDays / heart) * TICKS_PER_DAY) return;
+    if (!this.rng.chance(T.raidChancePerDay * heart)) return;
     const fighters = this.fighters(from);
     const n = Math.max(T.partyMin, Math.round(fighters.length * T.partyShare));
     if (fighters.length < T.partyMin) return;
     const party = this.rng.shuffle([...fighters]).slice(0, n);
-    const r: Raid = { id: this.nextId++, from: from.id, to: to.id, members: party.map((v) => v.id), phase: 'march', left: TICKS_PER_DAY * 3, loot: 0, burned: false, raidersLost: 0, defendersLost: 0, startSize: party.length };
+    const r: Raid = { id: this.nextId++, from: from.id, to: to.id, members: party.map((v) => v.id), phase: 'march', left: TICKS_PER_DAY * 3, loot: 0, burned: false, raidersLost: 0, defendersLost: 0, startSize: party.length, captives: [] };
     this.raids.push(r);
     this.lastRaid.set(from.id, sim.tick);
     const c = to.village.center;
     for (const v of party) this.march(v, c.x, c.z);
     sim.events.push(sim.tick, { type: 'raid', raid: r.id, from: from.id, to: to.id, ids: [...r.members] });
+    // Before they go, their priest asks the god for victory.
+    const p = this.prayers.get(from.id);
+    if (!p || p.until < sim.tick || p.against !== to.id) {
+      this.prayers.set(from.id, { against: to.id, until: sim.tick + T.prayerDays * TICKS_PER_DAY, answered: 'none' });
+      sim.events.push(sim.tick, { type: 'prayForVictory', tribe: from.id, against: to.id, priest: from.belief.priestId });
+    }
+  }
+
+  // ------------------------------------------------------------------ prayers, peace, conquest, alliances
+
+  /** A people the god just struck: answer for whoever prayed against them; a spurned prayer for them. */
+  private onDisaster(struck: number): void {
+    const sim = this.sim;
+    for (const [tribe, p] of this.prayers) {
+      if (p.until < sim.tick || p.answered !== 'none') continue;
+      const t = sim.tribes[tribe];
+      if (!t) continue;
+      if (p.against === struck) {
+        p.answered = 'answered';
+        for (const v of t.members) v.faith.love = Math.min(1 - v.faith.fear, v.faith.love + T.answeredLove);
+        this.heartened.set(tribe, sim.tick + T.prayerDays * 2 * TICKS_PER_DAY);
+        sim.events.push(sim.tick, { type: 'prayerAnswered', tribe, against: struck, answered: true });
+      } else if (tribe === struck) {
+        p.answered = 'spurned';
+        const k = key(tribe, p.against);
+        if (this.wars.has(k)) this.weariness.set(k, (this.weariness.get(k) ?? 0) + T.spurnedWeariness);
+        sim.events.push(sim.tick, { type: 'prayerAnswered', tribe, against: p.against, answered: false });
+      }
+    }
+  }
+
+  private makePeace(a: Tribe, b: Tribe): void {
+    const sim = this.sim;
+    const k = key(a.id, b.id);
+    this.wars.delete(k);
+    this.weariness.delete(k);
+    this.relations.set(k, Math.max(this.relation(a.id, b.id), T.afterPeace));
+    // Peace terms: those carried off in this war go home.
+    const freed: VillagerId[] = [];
+    for (const [id, c] of this.captives) {
+      if (!((c.from === a.id && c.by === b.id) || (c.from === b.id && c.by === a.id))) continue;
+      const v = sim.villagers.byId(id);
+      this.captives.delete(id);
+      if (!v?.alive || v.tribeId !== c.by) continue;
+      v.tribeId = c.from;
+      v.homeId = -1;
+      v.inside = false;
+      v.nextThink = sim.tick;
+      freed.push(id);
+    }
+    sim.events.push(sim.tick, { type: 'peace', a: a.id, b: b.id, freed });
+  }
+
+  /** Is `loser` beaten by `winner`? Then it's taken in, or driven from its land. */
+  private conquest(winner: Tribe, loser: Tribe): boolean {
+    const sim = this.sim;
+    const lf = this.fighters(loser).length;
+    const wf = this.fighters(winner).length;
+    if (lf > T.conquestFighters || wf < Math.max(T.minFighters, lf * T.conquestRatio)) return false;
+    const k = key(winner.id, loser.id);
+    this.wars.delete(k);
+    this.weariness.delete(k);
+    const sameGod = !!winner.myth.godName && winner.myth.godName === loser.myth.godName;
+    const hate = this.relation(winner.id, loser.id);
+    if (sameGod || hate > T.driveOutBelow) {
+      // Taken in: they live under the conqueror now.
+      const ids = loser.members.map((v) => v.id);
+      for (const v of loser.members) {
+        const home = v.homeId >= 0 ? loser.village.byId(v.homeId) : undefined;
+        if (home) home.residents = home.residents.filter((r) => r !== v.id);
+        v.homeId = -1;
+        v.tribeId = winner.id;
+        if (v.role === 'priest') v.role = 'gatherer';
+        v.standing = Math.min(v.standing, 0.4);
+        v.nextThink = sim.tick;
+      }
+      winner.belief.adopt(loser.belief, ids.map((id) => sim.villagers.byId(id)!));
+      // Their stores go to the conqueror.
+      for (const r of ['food', 'wood', 'stone'] as const) {
+        winner.village.store[r] += loser.village.store[r];
+        loser.village.store[r] = 0;
+      }
+      sim.events.push(sim.tick, { type: 'conquest', winner: winner.id, loser: loser.id, outcome: 'absorbed', ids });
+    } else {
+      // Driven out: they leave their land and go far from the conqueror.
+      const moved = loser.exodus.driveOut(winner.village.center);
+      this.relations.set(k, T.afterPeace);
+      sim.events.push(sim.tick, { type: 'conquest', winner: winner.id, loser: loser.id, outcome: moved ? 'driven' : 'absorbed', ids: [] });
+      if (!moved) return this.conquestAbsorbFallback(winner, loser);
+    }
+    for (const [id, c] of this.captives) if (c.from === loser.id) this.captives.delete(id);
+    return true;
+  }
+
+  /** Nowhere to drive them: they submit after all. */
+  private conquestAbsorbFallback(winner: Tribe, loser: Tribe): boolean {
+    const sim = this.sim;
+    const left = loser.members;
+    for (const v of left) {
+      const home = v.homeId >= 0 ? loser.village.byId(v.homeId) : undefined;
+      if (home) home.residents = home.residents.filter((r) => r !== v.id);
+      v.homeId = -1;
+      v.tribeId = winner.id;
+      if (v.role === 'priest') v.role = 'gatherer';
+      v.nextThink = sim.tick;
+    }
+    winner.belief.adopt(loser.belief, left);
+    return true;
+  }
+
+  /** Captives held long enough are one of their captors; those whose captors are gone go home. */
+  private settleCaptives(): void {
+    const sim = this.sim;
+    for (const [id, c] of this.captives) {
+      const v = sim.villagers.byId(id);
+      if (!v?.alive || v.tribeId !== c.by) {
+        this.captives.delete(id);
+        continue;
+      }
+      if (sim.tick - c.tick >= T.captiveYears * TICKS_PER_YEAR) {
+        this.captives.delete(id);
+        v.standing = Math.max(v.standing, 0.4);
+        sim.events.push(sim.tick, { type: 'captiveJoined', id, by: c.by, from: c.from });
+      }
+    }
+  }
+
+  /** Two peoples who like each other and hate the same third stand together; allies who fall out part. */
+  private alliancesDawn(tribes: Tribe[]): void {
+    const sim = this.sim;
+    for (const [k, enemy] of [...this.alliances]) {
+      const [a, b] = k.split(':').map(Number) as [number, number];
+      const gone = !sim.tribes[a]?.members.length || !sim.tribes[b]?.members.length;
+      const foeGone = !sim.tribes[enemy]?.members.length;
+      const calm = !this.atWar(a, enemy) && !this.atWar(b, enemy) && this.relation(a, enemy) > T.allyEnemyBelow && this.relation(b, enemy) > T.allyEnemyBelow;
+      if (gone || foeGone || calm || this.relation(a, b) < T.allyBreakBelow || this.atWar(a, b)) {
+        this.alliances.delete(k);
+        sim.events.push(sim.tick, { type: 'allianceEnd', a, b });
+        continue;
+      }
+      this.shift(a, b, T.allyWarmth);
+      // An ally's war is ours.
+      for (const [x, y] of [[a, b], [b, a]] as const) {
+        if (this.atWar(x, enemy) && !this.atWar(y, enemy) && this.fighters(sim.tribes[y]!).length >= T.minFighters) {
+          this.wars.add(key(y, enemy));
+          this.weariness.set(key(y, enemy), 0);
+          this.shift(y, enemy, -0.2);
+          sim.events.push(sim.tick, { type: 'war', a: Math.min(y, enemy), b: Math.max(y, enemy), ally: x });
+        }
+      }
+    }
+    for (const a of tribes)
+      for (const b of tribes) {
+        if (b.id <= a.id || this.allied(a.id, b.id) || this.atWar(a.id, b.id) || this.relation(a.id, b.id) < T.allyAt) continue;
+        const foe = tribes.find((c) => c.id !== a.id && c.id !== b.id && (this.atWar(a.id, c.id) || this.relation(a.id, c.id) <= T.allyEnemyBelow) && (this.atWar(b.id, c.id) || this.relation(b.id, c.id) <= T.allyEnemyBelow));
+        if (!foe) continue;
+        this.alliances.set(key(a.id, b.id), foe.id);
+        sim.events.push(sim.tick, { type: 'alliance', a: a.id, b: b.id, against: foe.id });
+      }
   }
 }

@@ -126,6 +126,13 @@ export class Reactions {
         const lead = sim.villagers.byId(e.ids[0] ?? -1);
         const god = sim.tribes[e.from]?.myth.god ?? 'the god';
         if (lead?.alive && !lead.inside) this.say(lead, `For ${god}! Take what they have!`, 'deed');
+      } else if (e.type === 'prayForVictory') {
+        const p = sim.villagers.byId(e.priest);
+        const t = sim.tribes[e.tribe];
+        if (p?.alive && !p.inside && t) this.say(p, `${t.myth.god}, give us victory over ${sim.tribes[e.against]?.name ?? 'them'}!`, 'rite');
+      } else if (e.type === 'captured') {
+        const v = sim.villagers.byId(e.ids[0] ?? -1);
+        if (v?.alive && !v.inside) this.say(v, 'Let me go! Mother!', 'deed');
       } else if (e.type === 'battle') {
         const t = sim.tribes[e.to];
         const c = t?.village.center;

@@ -284,6 +284,12 @@ const T: Record<VerseKind, Table> = {
       'And {person} said, I will not bow. And {god} answered.',
     ],
     humbled: ['{Person} cursed {god}, and {god} laid a hand upon {person}, and {person} cursed no more.'],
+    victory: [
+      'The people cried to {god} for victory over {other}, and {god} heard them, and struck {other}.',
+      'And {priest} prayed: give us {other}. And {god} gave them.',
+    ],
+    tookIn: ['{God} gave {other} into the hands of the people, and they became one people.'],
+    droveOut: ['{God} gave the land of {other} to the people, and {other} were driven out of it.'],
     scorn: [
       'And {god} struck {other}, for they had angered {god}. Therefore the people gave more, lest they be next.',
       'The people saw what {god} did to {other}, and said: they have angered {god}; let it not be us.',

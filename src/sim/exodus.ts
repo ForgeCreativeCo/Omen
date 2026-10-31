@@ -9,7 +9,7 @@ import { REGION } from './world/terrain';
 
 const T = TUNING.exodus;
 
-export type ExodusReason = 'ruined' | 'cursed' | 'drowned';
+export type ExodusReason = 'ruined' | 'cursed' | 'drowned' | 'conquered';
 
 /** How much they'd like to live in each part of the island. */
 const REGION_PULL: Record<number, number> = {
@@ -96,6 +96,35 @@ export class Exodus {
     this.lastMoveTick = sim.tick;
     const region = sim.island.region[site.x + site.z * sim.world.sizeX] ?? REGION.home;
     sim.events.push(sim.tick, { type: 'exodus', fromX: from.x, fromZ: from.z, toX: site.x, toZ: site.z, reason: why, region });
+  }
+
+  /** Beaten in war: leave this land for ground far from the conqueror. False if there's nowhere to go. */
+  driveOut(from: { x: number; z: number }): boolean {
+    const sim = this.sim;
+    const v = sim.village;
+    const here = { x: v.center.x, z: v.center.z };
+    // Away from the conqueror: search from the far side of home.
+    const dx = here.x - from.x;
+    const dz = here.z - from.z;
+    const d = Math.max(1, Math.hypot(dx, dz));
+    const away = { x: here.x + (dx / d) * T.minMove, z: here.z + (dz / d) * T.minMove };
+    const site =
+      findSettlement(sim, sim.villagers.alive, away, 0, T.maxMove, this.rng, v.forbidden, null) ??
+      findSettlement(sim, sim.villagers.alive, here, T.minMove, T.maxMove * 1.5, this.rng, v.forbidden, null);
+    if (!site || Math.hypot(site.x - from.x, site.z - from.z) < Math.hypot(here.x - from.x, here.z - from.z)) return false;
+    v.relocate(sim, site);
+    for (const p of sim.villagers.alive) {
+      const home = p.homeId >= 0 ? v.byId(p.homeId) : undefined;
+      if (home?.abandoned) {
+        p.homeId = -1;
+        p.inside = false;
+      }
+      p.nextThink = sim.tick;
+    }
+    this.lastMoveTick = sim.tick;
+    const region = sim.island.region[site.x + site.z * sim.world.sizeX] ?? REGION.home;
+    sim.events.push(sim.tick, { type: 'exodus', fromX: here.x, fromZ: here.z, toX: site.x, toZ: site.z, reason: 'conquered', region });
+    return true;
   }
 
   /** The best new ground the survivors can walk to. */

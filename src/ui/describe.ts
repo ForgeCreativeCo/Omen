@@ -178,6 +178,7 @@ export const EXODUS_TEXT: Record<string, string> = {
   ruined: 'Their homes lie in ruins.',
   cursed: 'They believe the ground is cursed.',
   drowned: 'The water has taken it.',
+  conquered: 'Beaten in war, they have been driven from their land.',
 };
 
 /** Crimes and sentences, in plain words. */

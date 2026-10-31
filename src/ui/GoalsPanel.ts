@@ -144,7 +144,9 @@ export class GoalsPanel {
       const from = sim.tribes[raid.from]?.name ?? 'a people';
       const to = sim.tribes[raid.to]?.name ?? 'another';
       const what = raid.phase === 'march' ? 'are marching on' : raid.phase === 'fight' ? 'are fighting' : 'are coming home from raiding';
-      return `<b>${from.charAt(0).toUpperCase() + from.slice(1)}</b> ${what} <b>${to}</b>. Strike the raiders with <b>Lightning</b> or the <b>Hand</b>, and the defenders will believe you chose their side. Or let them fight.`;
+      const prayed = sim.war.prayers.get(raid.from);
+      const prayer = prayed && prayed.answered === 'none' && prayed.until > sim.tick ? ` They prayed to you for victory: harm <b>${to}</b> and they will say you answered.` : '';
+      return `<b>${from.charAt(0).toUpperCase() + from.slice(1)}</b> ${what} <b>${to}</b>. Strike the raiders with <b>Lightning</b> or the <b>Hand</b>, and the defenders will believe you chose their side. Or let them fight.${prayer}`;
     }
     const ap = sim.appease;
     if (ap.defiers.length) {

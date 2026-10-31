@@ -82,9 +82,27 @@ export class Toasts {
       case 'affairExposed':
         return `${who(e.by)} found out about ${who(e.a)} and ${who(e.b)}.${e.breakup ? ' They have parted.' : ''}`;
       case 'war':
-        return `<b>War.</b> ${cap(sim.tribes[e.a]?.name ?? 'a people')} and ${sim.tribes[e.b]?.name ?? 'a people'} have taken up arms against each other.`;
+        return e.ally !== undefined
+          ? `<b>War.</b> ${cap(sim.tribes[e.ally === e.a ? e.b : e.a]?.name ?? 'a people')} join their allies' war.`
+          : `<b>War.</b> ${cap(sim.tribes[e.a]?.name ?? 'a people')} and ${sim.tribes[e.b]?.name ?? 'a people'} have taken up arms against each other.`;
       case 'peace':
-        return `<b>Peace</b> between ${sim.tribes[e.a]?.name ?? 'a people'} and ${sim.tribes[e.b]?.name ?? 'a people'}.`;
+        return `<b>Peace</b> between ${sim.tribes[e.a]?.name ?? 'a people'} and ${sim.tribes[e.b]?.name ?? 'a people'}.${e.freed?.length ? ` ${e.freed.length} captive${e.freed.length > 1 ? 's go' : ' goes'} home.` : ''}`;
+      case 'alliance':
+        return `${cap(sim.tribes[e.a]?.name ?? 'a people')} and ${sim.tribes[e.b]?.name ?? 'a people'} stand together against ${sim.tribes[e.against]?.name ?? 'a common enemy'}.`;
+      case 'allianceEnd':
+        return `The alliance of ${sim.tribes[e.a]?.name ?? 'a people'} and ${sim.tribes[e.b]?.name ?? 'a people'} is over.`;
+      case 'captured':
+        return `${cap(sim.tribes[e.by]?.name ?? 'the raiders')} carry off ${e.ids.map(who).join(' and ')}.`;
+      case 'conquest':
+        return e.outcome === 'driven'
+          ? `<b>Conquest.</b> ${cap(sim.tribes[e.winner]?.name ?? 'a people')} have driven ${sim.tribes[e.loser]?.name ?? 'their enemies'} from their land.`
+          : `<b>Conquest.</b> ${cap(sim.tribes[e.loser]?.name ?? 'a people')} submit to ${sim.tribes[e.winner]?.name ?? 'their conquerors'} and live under them now.`;
+      case 'prayForVictory':
+        return `${cap(sim.tribes[e.tribe]?.name ?? 'a people')} pray to you for victory over ${sim.tribes[e.against]?.name ?? 'their enemies'}.`;
+      case 'prayerAnswered':
+        return e.answered
+          ? `${cap(sim.tribes[e.tribe]?.name ?? 'a people')} believe you answered their prayer: you struck ${sim.tribes[e.against]?.name ?? 'their enemies'}.`
+          : `${cap(sim.tribes[e.tribe]?.name ?? 'a people')} prayed for victory, and you struck them instead. Their heart for war falters.`;
       case 'raid':
         return `${cap(sim.tribes[e.from]?.name ?? 'a people')} march on ${sim.tribes[e.to]?.name ?? 'a people'}: ${e.ids.length} fighters.`;
       case 'battle':

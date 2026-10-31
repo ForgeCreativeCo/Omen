@@ -653,6 +653,27 @@ export const TUNING = {
     burnChance: 0.4,
     /** A people down to this many is taken in by the neighbor it gets on with best. */
     absorbAtOrBelow: 2,
+    /** A winning raid carries off this many of the enemy (children and the young first). */
+    captivesMax: 2,
+    captiveChance: 0.6,
+    /** Captives become one of their captors after this long; at peace, newer ones go home. */
+    captiveYears: 2,
+    /** Conquest: a people with this few fighters left, against an enemy this many times stronger, is beaten. */
+    conquestFighters: 2,
+    conquestRatio: 3,
+    /** …absorbed by a conqueror that shares its god's name or doesn't hate it this much, else driven out. */
+    driveOutBelow: -0.75,
+    /** Alliances: two peoples this fond of each other, both bitter toward a third. */
+    allyAt: 0.05,
+    allyEnemyBelow: -0.45,
+    /** Allies grow fonder each day; an alliance ends below this. */
+    allyWarmth: 0.01,
+    allyBreakBelow: -0.1,
+    /** A raid's people pray for victory: the god's answer (harm to the enemy, or to them) shifts their faith and fight. */
+    prayerDays: 3,
+    answeredLove: 0.08,
+    answeredRaidBoost: 2,
+    spurnedWeariness: 0.25,
   },
 
   /** Leaving a ruined home: when the village gives up its site, and where it goes. */
