@@ -10,6 +10,7 @@ import { PostFX } from './post/PostFX';
 import { VillagerRenderer } from './villagers/VillagerRenderer';
 import { WeatherFx } from './vfx/WeatherFx';
 import { MiracleFx } from './vfx/MiracleFx';
+import { HandFx } from './vfx/HandFx';
 import { WitnessLines } from './vfx/WitnessLines';
 
 /** Pixel-ratio ceiling and shadow detail per graphics quality (settings). */
@@ -43,6 +44,7 @@ export class GameRenderer {
   readonly villagers: VillagerRenderer;
   readonly fx: WeatherFx;
   readonly miracleFx: MiracleFx;
+  readonly handFx: HandFx;
   readonly witnessLines: WitnessLines;
   private readonly raycaster = new THREE.Raycaster();
   /** Fired on a tap/click that wasn't a drag (screen coords). */
@@ -130,9 +132,10 @@ export class GameRenderer {
     this.villagers = new VillagerRenderer(-half0, -half0);
     this.fx = new WeatherFx(-half0, -half0);
     this.miracleFx = new MiracleFx(-half0, -half0);
+    this.handFx = new HandFx(-half0, -half0);
     this.witnessLines = new WitnessLines(-half0, -half0);
     this.scene.add(this.witnessLines.group);
-    this.scene.add(this.villagers.group, this.fx.group, this.miracleFx.group);
+    this.scene.add(this.villagers.group, this.fx.group, this.miracleFx.group, this.handFx.group);
 
     const half = TUNING.world.sizeX / 2;
     const ground = sim.island.ground;
@@ -251,6 +254,7 @@ export class GameRenderer {
     const night = this.env.update(dayFrac, yearFrac, this.elapsed, dt, this.fx.overcast, Math.max(this.fx.flash, this.miracleFx.flash) * (this.reducedMotion ? 0.25 : 1));
     this.fx.update(sim, dt, this.elapsed, night);
     this.miracleFx.update(sim, dt, this.elapsed, alpha);
+    this.handFx.update(sim, dt);
     this.witnessLines.update(sim, this.elapsed);
     this.villagers.update(sim, alpha, dt, this.elapsed);
     this.orbit.update(Math.min(dt, 0.1));

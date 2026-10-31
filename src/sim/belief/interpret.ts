@@ -35,6 +35,8 @@ export const BASE_VALENCE: Record<OmenKind, number> = {
   blessing: 0.5,
   blight: -0.5,
   meteor: -0.25,
+  // Awe either way: what happened to whom decides the feeling.
+  hand: 0,
 };
 
 /** Who did what to whom lately, for "the thief got what he deserved" readings. */

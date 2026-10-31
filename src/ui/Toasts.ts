@@ -21,6 +21,9 @@ const CAUSE: Record<string, string> = {
   lightning: 'was struck by lightning',
   flood: 'drowned',
   meteor: 'was killed by the falling star',
+  thrown: 'was hurled down by the god',
+  crushed: 'was crushed by what the god threw',
+  executed: 'was put to death',
 };
 
 /** Short-lived notices for notable moments. Rate-limited so 16× stays readable. */
@@ -63,7 +66,7 @@ export class Toasts {
     switch (e.type) {
       case 'death':
         // A killing has its own notice.
-        return e.cause === 'killed' ? null : `${who(e.id)} ${CAUSE[e.cause] ?? 'died'}.`;
+        return e.cause === 'killed' || e.cause === 'executed' ? null : `${who(e.id)} ${CAUSE[e.cause] ?? 'died'}.`;
       case 'killing':
         return e.seen
           ? `<b>${who(e.killer)} killed ${who(e.victim)}</b> in front of everyone.`

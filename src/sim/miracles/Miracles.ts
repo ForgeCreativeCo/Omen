@@ -4,6 +4,7 @@ import { TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
 import { CROP_STAGES, M, material, type MaterialId } from '../world/materials';
 import { plantTree } from '../world/terrain';
+import { Hand, type GrabTarget } from './hand';
 import { DREAM_SYMBOLS, miracleDef, type DreamSymbol, type MiracleId, type PointMiracle } from './defs';
 
 const G = TUNING.grace;
@@ -19,7 +20,10 @@ export type Command =
   | { type: 'stroke'; x: number; z: number; raise: boolean }
   | { type: 'moveCloud'; cloudId: number; x: number; z: number }
   | { type: 'dream'; villagerId: number; symbols: DreamSymbol[] }
-  | { type: 'bless'; villagerId: number };
+  | { type: 'bless'; villagerId: number }
+  | { type: 'grab'; target: GrabTarget; x: number; z: number }
+  | { type: 'carry'; x: number; z: number }
+  | { type: 'release'; vx: number; vz: number };
 
 export type CastFailure = 'grace' | 'cooldown' | 'night' | 'target' | 'interval';
 
@@ -81,8 +85,10 @@ export class Miracles {
     bless: 0,
     blight: 0,
     meteor: 0,
+    hand: 0,
   };
   readonly clouds: RainCloud[] = [];
+  readonly hand: Hand;
   readonly beams: LightBeam[] = [];
   readonly falling: FallingStar[] = [];
   private nextCloudId = 1;
@@ -93,7 +99,9 @@ export class Miracles {
   constructor(
     private readonly sim: Sim,
     private readonly rng: Rng,
-  ) {}
+  ) {
+    this.hand = new Hand(sim, rng.fork('hand'));
+  }
 
   get cap(): number {
     const believers = this.sim.villagers.alive.filter((v) => v.faith.love + v.faith.fear >= 0.1).length;
@@ -142,6 +150,7 @@ export class Miracles {
 
   step(): void {
     const sim = this.sim;
+    this.hand.step();
     // Grace regenerates with faith, up to a cap that grows with the number of believers.
     const cap = this.cap;
     if (this.grace < cap) this.grace = Math.min(cap, this.grace + this.regenPerDay / TICKS_PER_DAY);
@@ -210,6 +219,15 @@ export class Miracles {
         } else fail = 'target';
         break;
       }
+      case 'grab':
+        fail = this.check('hand') ?? (this.hand.grab(cmd.target, cmd.x, cmd.z) ? null : 'target');
+        break;
+      case 'carry':
+        this.hand.carry(cmd.x, cmd.z);
+        break;
+      case 'release':
+        this.hand.release(cmd.vx, cmd.vz);
+        break;
       case 'bless':
         fail = this.check('bless') ?? this.blessCheck(cmd.villagerId);
         if (!fail) {

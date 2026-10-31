@@ -58,6 +58,7 @@ const FAMILY: Partial<Record<OmenKind, string>> = {
   blessing: 'blessing',
   blight: 'blight',
   meteor: 'meteor',
+  hand: 'hand',
 };
 
 const TRUE_NAME: Record<OmenKind, string> = {
@@ -70,6 +71,7 @@ const TRUE_NAME: Record<OmenKind, string> = {
   blessing: 'your Blessing',
   blight: 'your Blight',
   meteor: 'your Falling Star',
+  hand: 'your Hand',
   naturalRain: 'an ordinary shower',
   storm: 'a natural storm',
   naturalLightning: 'a natural lightning strike',

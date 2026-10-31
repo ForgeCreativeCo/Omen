@@ -18,6 +18,7 @@ const KIND_TEXT: Record<OmenKind, string> = {
   blessing: 'Someone was touched by the god',
   blight: 'The land withered',
   meteor: 'A star fell from the sky',
+  hand: 'A great hand came down from the sky',
 };
 
 /** Where an omen happened, in the villagers' words (nearest named place). */
@@ -48,6 +49,7 @@ const MEMORY_TEXT: Record<OmenKind, string> = {
   blessing: 'someone touched by the god',
   blight: 'the land wither',
   meteor: 'a star fall from the sky',
+  hand: 'a great hand come down from the sky',
 };
 
 /** A villager's memory, in their own terms. */
@@ -78,6 +80,7 @@ const HEARSAY_TEXT: Record<OmenKind, string> = {
   blessing: 'a {size}blessing',
   blight: 'a {size}withering',
   meteor: 'a {size}falling star',
+  hand: 'a {size}hand from the sky',
 };
 
 const RESPONSE_WORD: Record<string, string> = {
@@ -90,6 +93,7 @@ const RESPONSE_WORD: Record<string, string> = {
   wrath: 'mercy',
   shapeEarth: 'the earth to move',
   meteor: 'a sign',
+  hand: 'the hand',
 };
 
 /** "Dancing for rain!" */

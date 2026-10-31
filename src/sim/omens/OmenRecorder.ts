@@ -202,6 +202,48 @@ export class OmenRecorder {
         });
         break;
       }
+      case 'handPlace': {
+        // Carried through the sky and set down unharmed: chosen, surely.
+        const v = sim.villagers.byId(e.id);
+        if (!v) break;
+        this.record({
+          kind: 'hand',
+          isDivine: true,
+          position: { x: e.x, y: Math.floor(v.y), z: e.z },
+          radius: 2,
+          magnitude: 0.7,
+          outcomes: [{ type: 'blessed', entity: `person:${v.id}`, people: [v.id] }],
+          range: 60,
+          sky: TUNING.miracles.hand.carryHeight,
+          affected: [v.id],
+          also: [v.id],
+        });
+        break;
+      }
+      case 'handImpact': {
+        const outcomes: Outcome[] = [
+          ...e.killed.map((id): Outcome => ({ type: 'died', entity: `person:${id}`, people: [id] })),
+          ...e.wrecked.flatMap((id): Outcome[] => {
+            const h = sim.village.byId(id);
+            return h && h.kind === 'hut' ? [{ type: 'hutDamaged', entity: `structure:${id}`, people: [...h.residents] }] : [];
+          }),
+        ];
+        if (e.what === 'villager' && e.survived) outcomes.push({ type: 'injured', entity: `person:${e.id}`, people: [e.id] });
+        const thrownOne = e.what === 'villager' ? [e.id] : [];
+        this.record({
+          kind: 'hand',
+          isDivine: true,
+          position: { x: e.x, y: e.y, z: e.z },
+          radius: 2,
+          magnitude: Math.min(1, 0.5 + e.speed * 0.25),
+          outcomes,
+          range: 60,
+          sky: TUNING.miracles.hand.carryHeight,
+          affected: [...thrownOne, ...e.killed],
+          also: e.survived ? thrownOne : [],
+        });
+        break;
+      }
       case 'meteor': {
         const r = TUNING.miracles.meteor;
         const shaken = sim.villagers.alive.filter((v) => Math.hypot(v.x - (e.x + 0.5), v.z - (e.z + 0.5)) <= r.fearRadius).map((v) => v.id);

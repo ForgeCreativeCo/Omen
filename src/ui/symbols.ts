@@ -32,6 +32,7 @@ export const MIRACLE_PATHS: Record<MiracleId, string> = {
   bless: 'M7 21v-7l-2-4a1.5 1.5 0 0 1 2.6-1.5L9 11V4a1.5 1.5 0 0 1 3 0v6-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v9a7 7 0 0 1-3 6v1M3 4l1 1M3 9h1',
   blight: 'M12 21v-9M12 12c-3 0-5-2-6-5 3 0 5 1 6 5zM12 15c3 0 4-1 5-3-2 0-4 0-5 3zM5 21h14M8 18l-1 3M16 18l1 3',
   meteor: 'M15 9a3 3 0 1 1-6 6 3 3 0 0 1 6-6zM14 10l7-7M11 9l5-6M15 13l6-5',
+  hand: 'M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5.5a1.5 1.5 0 0 1 3 0V11M17 11V8a1.5 1.5 0 0 1 3 0v6c0 4.5-3 8-7.5 8-2.5 0-4-1-5.5-3l-3-4.5a1.5 1.5 0 0 1 2.5-1.7L8 15',
 };
 
 export function svgIcon(path: string, size = 24): string {

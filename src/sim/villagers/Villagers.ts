@@ -134,6 +134,8 @@ export class Villagers {
       v.px = v.x;
       v.py = v.y;
       v.pz = v.z;
+      // In the god's hand or in the air: the hand moves them.
+      if (sim.miracles.hand.holds(v)) continue;
 
       // Needs
       v.needs.hunger = Math.min(1, v.needs.hunger + hungerTick * (v.lifeStage === 'child' ? V.childHungerFactor : 1));
@@ -331,6 +333,24 @@ export class Villagers {
   }
 
   /** Drop reservations held by the current action. */
+  /** Taken up by the god's hand: whatever they were doing stops. */
+  lift(v: Villager): void {
+    this.setAction(v, null);
+    v.lying = false;
+    v.inside = false;
+    v.path = [];
+    v.pathPos = -1;
+  }
+
+  /** Back on the ground (set down, or landed) at a cell; `y` overrides the surface (water). */
+  setDown(v: Villager, x: number, z: number, y?: number): void {
+    v.x = x + 0.5;
+    v.z = z + 0.5;
+    v.y = y ?? this.sim.nav.at(x, z) + 1;
+    v.pathPos = -1;
+    v.nextThink = this.sim.tick;
+  }
+
   private release(v: Villager): void {
     const a = v.action;
     if (!a) return;

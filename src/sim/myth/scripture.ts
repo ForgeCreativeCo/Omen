@@ -58,6 +58,7 @@ export const RESPONSE_PAST: Record<string, string[]> = {
   blessing: ['laid a hand upon one of the people', 'blessed one among us'],
   blight: ['withered the land', 'struck the fields barren'],
   meteor: ['cast down a star', 'threw a star upon the earth'],
+  hand: ['reached down and took one of them up', 'lifted the people in its hand'],
 };
 
 /** What the god will do (follows "the god will …"). */
@@ -75,6 +76,7 @@ export const RESPONSE_FUTURE: Record<string, string[]> = {
   blessing: ['lay a hand upon the chosen', 'bless the faithful'],
   blight: ['wither the fields', 'blight the land'],
   meteor: ['cast down a star'],
+  hand: ['reach down and take us up'],
 };
 
 /** Subjects as acts: [past clause, base phrase ("so it is that we …"), noun]. */
@@ -111,6 +113,7 @@ export const FAMILY_TITLE: Record<string, string[]> = {
   blessing: ['the Laying of Hands', 'the Touch'],
   blight: ['the Withering', 'the Blight'],
   meteor: ['the Falling Star', 'the Night the Sky Fell'],
+  hand: ['the Day of the Hand', 'the Reaching'],
 };
 
 const COUNT_WORDS = ['', 'once', 'twice', 'thrice', 'four times', 'five times', 'six times', 'seven times', 'eight times', 'nine times', 'ten times', 'eleven times', 'a dozen times'];

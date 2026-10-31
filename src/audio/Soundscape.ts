@@ -167,6 +167,12 @@ export class Soundscape {
       case 'meteorFall':
         if (this.ok('whoosh', 1)) this.whoosh();
         break;
+      case 'handGrab':
+        if (this.ok('whoosh', 0.4)) this.whoosh();
+        break;
+      case 'handImpact':
+        if (!e.water) this.rumble(e.what === 'villager' ? 0.4 : 0.9);
+        break;
       case 'meteor':
         this.thunder(1);
         this.rumble(3);

@@ -264,6 +264,33 @@ export const TUNING = {
     },
     bloom: { cost: 12, cooldown: 20, radius: 5, flowerChance: 0.25, saplings: 2 },
     dream: { cost: 40, cooldownDays: 2, symbols: 3 },
+    /** The Hand: grab, carry, set down or throw. Distances in voxels, speeds per tick. */
+    hand: {
+      cost: 0,
+      cooldown: 0,
+      /** How high above the ground things are carried, and how fast the hand moves. */
+      carryHeight: 9,
+      carrySpeed: 3,
+      /** How close to the pointer a tree must be to take hold of it. */
+      reach: 2,
+      /** Earth torn up: a disc this wide, this many layers deep. */
+      earthRadius: 1,
+      earthDepth: 2,
+      /** Let go slower than this and a villager is set down unharmed. */
+      placeSpeed: 0.25,
+      maxThrowSpeed: 2.4,
+      /** Upward toss on a full-speed throw. */
+      throwLift: 0.5,
+      gravity: 0.09,
+      /** Landing faster than this kills a thrown villager (a drop from carry height does). */
+      survivableSpeed: 0.9,
+      bruisedDays: 1,
+      /** Crush radius where a tree, or a clod of earth (by its size), lands. */
+      treeRadius: 1.6,
+      maxEarthRadius: 2.5,
+      /** Chance per structure block in the crush radius that it's knocked off. */
+      smashChance: 0.6,
+    },
     /** Holy Light: a pillar of light, harmless and seen from far off. */
     light: { cost: 22, cooldown: 40, radius: 3, durationTicks: 120, range: 60 },
     /** Bless: one villager restored; people close by see the glow and feel it a little. */

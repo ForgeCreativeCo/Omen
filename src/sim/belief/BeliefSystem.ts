@@ -85,6 +85,22 @@ interface Expectation {
   until: number;
 }
 
+/** What a belief says the god sends, in words. */
+const RESPONSE_WORD: Record<string, string> = {
+  favor: 'blessings',
+  wrath: 'wrath',
+  lightning: 'fire from the sky',
+  rain: 'rain',
+  bloom: 'a blooming',
+  light: 'the pillar of light',
+  blessing: 'a blessing',
+  blight: 'a withering',
+  meteor: 'a falling star',
+  hand: 'the great hand',
+  shapeEarth: 'the earth moving',
+  drought: 'drought',
+};
+
 /** Plausible stand-ins when a retelling swaps a detail (SPEC §12). */
 const SWAP_FALLBACK: Record<string, string[]> = {
   activity: ['activity:dance', 'activity:farming', 'activity:gathering', 'activity:praying', 'activity:woodcutting', 'activity:building'],
@@ -166,7 +182,7 @@ export class BeliefSystem {
     const sim = this.sim;
     if (b.type === 'DEPICTION') return BELIEF_TYPES.DEPICTION.statement.replace('{s}', this.depictionPhrase(b));
     if (b.type === 'TEMPERAMENT') return BELIEF_TYPES.TEMPERAMENT.statement.replace('{s}', this.temperamentWord(b));
-    const r = b.response === 'favor' ? 'blessings' : b.response === 'wrath' ? 'wrath' : b.response === 'lightning' ? 'fire from the sky' : (b.response ?? '');
+    const r = RESPONSE_WORD[b.response ?? ''] ?? b.response ?? '';
     const s = featureLabel(sim, b.subject);
     const sentence = BELIEF_TYPES[b.type].statement.replace('{s}', s).replace('{r}', r);
     return sentence.charAt(0).toUpperCase() + sentence.slice(1);

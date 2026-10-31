@@ -324,6 +324,19 @@ export class MiracleFx {
           this.spark(x + ox, y, z + oz, this.rng.jitter(0.2), this.rng.range(-0.4, 0.2), this.rng.jitter(0.2), this.rng.pick([0x6b5a7a, 0x4d4a3a, 0x7a6a52]), this.rng.range(1.2, 2.4), -0.5);
         }
         break;
+      case 'handImpact': {
+        // Where something thrown comes down: dust, a thump.
+        if (e.water) break;
+        for (let i = 0; i < (e.what === 'villager' ? 14 : 50); i++) {
+          const a = this.rng.range(0, Math.PI * 2);
+          const r = this.rng.range(0, e.what === 'villager' ? 1 : 2.5);
+          const x = Math.round(e.x + Math.cos(a) * r);
+          const z = Math.round(e.z + Math.sin(a) * r);
+          this.dustAt(x + 0.5 + ox, sim.world.topY(x, z) + 1, z + 0.5 + oz);
+        }
+        this.shake = Math.max(this.shake, e.what === 'villager' ? 0.25 : 0.7);
+        break;
+      }
       case 'meteor': {
         const y = e.y + 1;
         const S = TUNING.miracles.meteor;

@@ -30,6 +30,7 @@ const DEED: Record<string, string[]> = {
   blessing: ['Lays-on-Hands', 'Chooses'],
   blight: ['Withers', 'Eats-the-Harvest'],
   meteor: ['Throws-Stars', 'Brings-Down-the-Sky'],
+  hand: ['the Great Hand', 'Takes-Us-Up', 'Who-Holds-Us'],
 };
 const KIN = new Set(['Father', 'Mother']);
 
@@ -45,6 +46,7 @@ export const NAME_WHY: Record<string, string> = {
   blessing: 'it lays its hand on those it chooses',
   blight: 'it withers what it hates',
   meteor: 'it throws down the stars',
+  hand: 'it reaches down and takes us in its hand',
 };
 
 /** Small stable string hash, so the same image and deeds always give the same name. */

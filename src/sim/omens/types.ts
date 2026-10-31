@@ -11,6 +11,7 @@ export type OmenKind =
   | 'blessing'
   | 'blight'
   | 'meteor'
+  | 'hand'
   | 'naturalRain'
   | 'storm'
   | 'naturalLightning'

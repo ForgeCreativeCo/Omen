@@ -3,11 +3,12 @@
  * and toasts; M4's omen recorder will turn many of them into omens.
  */
 
-export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed';
+export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed' | 'thrown' | 'crushed';
 
 /** Who speaks in the god's place when it falls silent: one who denies it, or one who claims its voice. */
 export type DissentKind = 'doubter' | 'prophet';
 export type { Crime, Judge, Sentence } from './justice';
+import type { HandWhat } from './miracles/hand';
 import type { Crime, Judge, Sentence } from './justice';
 export type DissentEndReason = 'converted' | 'recanted' | 'discredited' | 'died' | 'gone';
 
@@ -38,6 +39,12 @@ export type SimEventBody =
   | { type: 'meteorFall'; x: number; z: number; impactTick: number }
   | { type: 'meteor'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean }
   | { type: 'milestone'; id: string }
+  /** The god's hand took hold of something (`id`: the villager, else -1). */
+  | { type: 'handGrab'; what: HandWhat; id: number; x: number; z: number }
+  /** A villager set down gently. */
+  | { type: 'handPlace'; id: number; x: number; z: number }
+  /** Something thrown came down. `survived`: a thrown villager lived. */
+  | { type: 'handImpact'; what: HandWhat; id: number; x: number; y: number; z: number; speed: number; killed: number[]; wrecked: number[]; survived: boolean; water: boolean }
   | { type: 'silence'; days: number }
   | { type: 'dissent'; id: number; kind: DissentKind; rule?: string }
   | { type: 'dissentEnd'; id: number; kind: DissentKind; reason: DissentEndReason }

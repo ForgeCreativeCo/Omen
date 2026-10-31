@@ -30,6 +30,9 @@ const DEATH: Record<string, string> = {
   lightning: 'was struck by lightning',
   flood: 'drowned',
   meteor: 'was killed by the falling star',
+  thrown: 'was hurled down by the god',
+  crushed: 'was crushed by what the god threw',
+  executed: 'was put to death',
 };
 
 const RITE: Record<string, string> = {
@@ -134,7 +137,7 @@ export class VillageLog {
       case 'birth':
         return this.push(e.tick, 'life', `${w(e.id)} was born${e.parents.length ? ` to ${e.parents.map(w).join(' and ')}` : ''}.`);
       case 'death':
-        return e.cause === 'killed' ? undefined : this.push(e.tick, 'life', `${w(e.id)} ${DEATH[e.cause] ?? 'died'}.`);
+        return e.cause === 'killed' || e.cause === 'executed' ? undefined : this.push(e.tick, 'life', `${w(e.id)} ${DEATH[e.cause] ?? 'died'}.`);
       case 'killing':
         return this.push(e.tick, 'deeds', e.seen ? `<b>${w(e.killer)} killed ${w(e.victim)}</b> at the fire.` : `${w(e.victim)} was found dead. Nobody saw ${w(e.killer)} do it.`);
       case 'fight':

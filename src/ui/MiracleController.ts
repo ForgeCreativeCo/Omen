@@ -1,6 +1,7 @@
 import type { FixedLoop } from '../loop';
 import type { GameRenderer } from '../render/GameRenderer';
 import { DREAM_SYMBOLS, MIRACLES, miracleDef, type DreamSymbol, type MiracleId, type PointMiracle } from '../sim/miracles/defs';
+import type { GrabTarget } from '../sim/miracles/hand';
 import type { CastFailure, Command } from '../sim/miracles/Miracles';
 import type { Sim } from '../sim/Sim';
 import { TUNING } from '../sim/tuning';
@@ -18,6 +19,9 @@ const FAILURE_TEXT: Record<CastFailure, string> = {
 const HOTKEYS: Record<string, MiracleId> = Object.fromEntries(MIRACLES.map((m) => [`Key${m.key}`, m.id]));
 /** Minimum real time between brush strokes / cloud drags sent to the sim. */
 const STROKE_MS = 90;
+/** The hand: how often to tell the sim where it is, and how far back a flick is measured. */
+const CARRY_MS = 50;
+const FLICK_MS = 120;
 
 /**
  * The player's hands (SPEC §6, §15): the Grace meter and miracle bar, targeting
@@ -39,6 +43,8 @@ export class MiracleController {
   private resumeSpeed = -1;
   private hover: { x: number; y: number; z: number } | null = null;
   private painting = false;
+  private grabbing = false;
+  private samples: { t: number; x: number; z: number }[] = [];
   private draggingCloud = -1;
   private lastSend = 0;
 
@@ -117,6 +123,7 @@ export class MiracleController {
       up: () => {
         this.painting = false;
         this.draggingCloud = -1;
+        if (this.grabbing) this.letGo();
       },
     };
   }
@@ -154,7 +161,9 @@ export class MiracleController {
           ? 'Tap a sleeper (marked).'
           : def.targeting === 'person'
             ? 'Tap someone who is awake.'
-            : 'Tap the land.';
+            : def.targeting === 'hand'
+              ? 'Press and drag. Let go gently, or flick to throw.'
+              : 'Tap the land.';
     this.hint.innerHTML = `<b>${def.name}</b> <span>${how}</span>${modes}<button data-cancel class="cancel">Cancel</button><div class="m-blurb">${def.blurb}</div>`;
     this.hint.hidden = false;
   }
@@ -167,6 +176,7 @@ export class MiracleController {
       this.pickSleeper(clientX, clientY);
       return true;
     }
+    if (def.targeting === 'hand') return true;
     if (def.targeting === 'person') {
       const id = this.view.pickVillager(this.sim, clientX, clientY);
       if (id < 0) this.toast('target');
@@ -187,6 +197,7 @@ export class MiracleController {
       this.draggingCloud = cloud;
       return true;
     }
+    if (this.armed === 'hand') return this.grab(e.clientX, e.clientY);
     if (this.armed === 'shapeEarth') {
       const hit = this.view.groundAt(e.clientX, e.clientY);
       if (hit) this.stroke(hit.x, hit.z);
@@ -198,6 +209,15 @@ export class MiracleController {
 
   private onDrag(e: PointerEvent): void {
     this.updateHover(e.clientX, e.clientY);
+    if (this.grabbing) {
+      const hit = this.view.groundAt(e.clientX, e.clientY);
+      if (!hit) return;
+      const now = performance.now();
+      this.samples.push({ t: now, x: hit.x + 0.5, z: hit.z + 0.5 });
+      while (this.samples.length > 2 && now - this.samples[0]!.t > FLICK_MS) this.samples.shift();
+      if (now - this.lastSend >= CARRY_MS) this.send({ type: 'carry', x: hit.x + 0.5, z: hit.z + 0.5 }, null);
+      return;
+    }
     if (performance.now() - this.lastSend < STROKE_MS) return;
     const hit = this.hover;
     if (!hit) return;
@@ -206,6 +226,41 @@ export class MiracleController {
     } else if (this.painting) {
       this.stroke(hit.x, hit.z);
     }
+  }
+
+  /** Take hold of whoever or whatever is under the pointer: a villager, else a tree, else the ground. */
+  private grab(clientX: number, clientY: number): boolean {
+    const hit = this.view.groundAt(clientX, clientY);
+    const id = this.view.pickVillager(this.sim, clientX, clientY);
+    if (id < 0 && !hit) return false;
+    const v = id >= 0 ? this.sim.villagers.byId(id) : undefined;
+    const x = v ? v.x : hit!.x + 0.5;
+    const z = v ? v.z : hit!.z + 0.5;
+    const R = TUNING.miracles.hand.reach;
+    const tree = !v && this.sim.village.trees.some((t) => this.sim.village.treeAlive(t) && Math.hypot(t.x + 0.5 - x, t.z + 0.5 - z) <= R);
+    const target: GrabTarget = v ? { what: 'villager', id: v.id } : tree ? { what: 'tree' } : { what: 'earth' };
+    this.send({ type: 'grab', target, x, z }, 'hand');
+    this.grabbing = true;
+    this.samples = [{ t: performance.now(), x, z }];
+    return true;
+  }
+
+  /** Let go: the pointer's recent motion is the throw (world units per second → per tick). */
+  private letGo(): void {
+    this.grabbing = false;
+    const s = this.samples;
+    let vx = 0;
+    let vz = 0;
+    if (s.length >= 2) {
+      const a = s[0]!;
+      const b = s[s.length - 1]!;
+      const dt = (b.t - a.t) / 1000;
+      if (dt > 0.01 && performance.now() - b.t < FLICK_MS) {
+        vx = (b.x - a.x) / dt / TUNING.time.ticksPerSecond;
+        vz = (b.z - a.z) / dt / TUNING.time.ticksPerSecond;
+      }
+    }
+    this.send({ type: 'release', vx, vz }, null);
   }
 
   private stroke(x: number, z: number): void {
@@ -341,7 +396,7 @@ export class MiracleController {
       b.classList.toggle('dim', def.nightOnly && !m.isNight());
       (b.querySelector('.m-cool') as HTMLElement).style.setProperty('--p', `${(1 - ready) * 100}%`);
     }
-    if (this.armed && this.armed !== 'dream' && this.armed !== 'bless') {
+    if (this.armed && this.armed !== 'dream' && this.armed !== 'bless' && this.armed !== 'hand') {
       const fail = m.check(this.armed);
       this.view.miracleFx.setReticle(this.hover, miracleDef(this.armed).radius, !fail || fail === 'interval');
     } else {

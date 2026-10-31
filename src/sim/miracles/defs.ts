@@ -2,7 +2,7 @@ import { TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
 
 /** The miracles (SPEC §6, plus the later powers), as data: UI and casting both read from here. */
-export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'bless' | 'blight' | 'meteor';
+export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'bless' | 'blight' | 'meteor' | 'hand';
 
 /** Miracles cast by tapping a point on the ground. */
 export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'blight' | 'meteor';
@@ -15,7 +15,9 @@ export type Targeting =
   /** Tap a sleeping villager, then choose symbols. */
   | 'sleeper'
   /** Tap a villager who is awake. */
-  | 'person';
+  | 'person'
+  /** Press on someone or something to take hold, drag to carry, let go or flick. */
+  | 'hand';
 
 export interface MiracleDef {
   id: MiracleId;
@@ -121,6 +123,17 @@ export const MIRACLES: readonly MiracleDef[] = [
     radius: MT.meteor.craterRadius,
     nightOnly: false,
     key: 'O',
+  },
+  {
+    id: 'hand',
+    name: 'The Hand',
+    blurb: 'Press on a villager, a tree or the ground to take hold. Drag to carry. Let go gently to set them down, or flick to throw.',
+    targeting: 'hand',
+    cost: MT.hand.cost,
+    cooldownTicks: MT.hand.cooldown,
+    radius: 0,
+    nightOnly: false,
+    key: 'F',
   },
   {
     id: 'dream',

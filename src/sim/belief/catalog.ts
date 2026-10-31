@@ -224,6 +224,7 @@ export const DEPICTION_FROM_OMEN: Record<string, [DepictionAxis, string][]> = {
   blessing: [['body', 'humanoid'], ['feature', 'raisedHand']],
   blight: [['element', 'fire'], ['body', 'serpent'], ['feature', 'horns']],
   meteor: [['element', 'stone'], ['body', 'sunDisc'], ['feature', 'eyes']],
+  hand: [['body', 'humanoid'], ['feature', 'raisedHand']],
 };
 
 /** How much each omen kind shapes the image: everyday weather barely registers. */
