@@ -143,7 +143,7 @@ export class GameRenderer {
     this.orbit = new OrbitCamera(this.camera, this.renderer.domElement, {
       boundsRadius: half * 0.85,
       minDistance: 14,
-      maxDistance: 340,
+      maxDistance: 620,
       minPitch: 25,
       maxPitch: 75,
       onTap: (x, y) => this.onTap?.(x, y),

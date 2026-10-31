@@ -78,7 +78,12 @@ describe('the flood', () => {
     for (const v of people.slice(8)) sim.belief.hold(v, 'SACRED_PLACE', 'place:ridge', 'favor', 0.1, null);
     sim.belief.refreshStrengths();
     const f = flood(sim);
-    while (!sim.warning!.outcome) sim.step();
+    // The others stay unconvinced until the water comes (the believers would talk them round at the fire).
+    const ridge = sim.belief.beliefs.get(sim.belief.key('SACRED_PLACE', 'place:ridge', 'favor'))!;
+    while (!sim.warning!.outcome) {
+      if (f.phase === 'waiting') for (const v of people.slice(8)) if (v.alive) ridge.holders.set(v.id, 0.1);
+      sim.step();
+    }
     const L = sim.island.landmarks;
     const alive = (vs: Villager[]) => vs.filter((v) => v.alive);
     // Believers were born before the flood and lived through it, up on the ridge.

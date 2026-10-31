@@ -21,9 +21,9 @@ export const TUNING = {
   },
 
   world: {
-    sizeX: 128,
-    sizeZ: 128,
-    sizeY: 48,
+    sizeX: 256,
+    sizeZ: 256,
+    sizeY: 64,
     chunkSize: 16,
     /** Max chunk-column re-meshes per rendered frame (~3 ms each; SPEC §4). */
     remeshBudgetPerFrame: 2,
@@ -38,11 +38,13 @@ export const TUNING = {
     valleyHeight: 17,
     valleyNoise: 1.6,
     /** Radius of the land (before coastline noise) and of the floating platform. */
-    landRadius: 43,
-    landRadiusNoise: 6,
-    coastWidth: 9,
-    platformRadius: 55,
-    platformRadiusNoise: 3,
+    landRadius: 96,
+    landRadiusNoise: 20,
+    coastWidth: 12,
+    platformRadius: 110,
+    platformRadiusNoise: 4,
+    /** The home valley (village, east hill, ridge, river) keeps its old scale inside this radius. */
+    homeRadius: 44,
     /** Ridge: rises from ridgeStart to ridgeCrest (distance toward the ridge side). */
     ridgeStart: 0,
     ridgeCrest: 31,
@@ -54,7 +56,14 @@ export const TUNING = {
     hillRadius: 12,
     hillHeight: 8,
     /** Max height for terrain so trees still fit under the world ceiling. */
-    maxGroundY: 38,
+    maxGroundY: 52,
+    /** Highlands past the ridge: peaks this tall over the plateau. */
+    highlandHeight: 12,
+    /** Lowlands across the valley: rolling hills this high. */
+    lowlandHills: 4,
+    /** Badlands on the far flank: flat-topped mesas this tall, in steps (kept under the Warning's sea). */
+    mesaHeight: 6,
+    mesaStep: 3,
     riverSourceDistance: 19,
     riverWidthStart: 0.9,
     riverWidthEnd: 1.9,

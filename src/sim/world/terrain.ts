@@ -29,6 +29,9 @@ export interface Landmarks {
   riverPath: Point2[];
 }
 
+/** Broad regions of the island, past the home valley. */
+export const REGION = { home: 0, highlands: 1, lowlands: 2, badlands: 3, meadows: 4 } as const;
+
 export interface Island {
   world: VoxelWorld;
   /** Top solid terrain y per column (x + z * sizeX), ignoring trees; -1 off the platform. */
@@ -37,6 +40,8 @@ export interface Island {
   trees: Point3[];
   /** Top water y per column, or -1 if the column holds no water. */
   waterTop: Int16Array;
+  /** REGION per column. */
+  region: Uint8Array;
   landmarks: Landmarks;
 }
 
@@ -80,6 +85,7 @@ export function generateIsland(rng: Rng): Island {
   const nRidge = createNoise2D(rand);
   const nForest = createNoise2D(rand);
   const nUnder = createNoise2D(rand);
+  const nRegion = createNoise2D(rand);
 
   const cx = sizeX / 2;
   const cz = sizeZ / 2;
@@ -97,6 +103,10 @@ export function generateIsland(rng: Rng): Island {
 
   // ---- 1. Height field -------------------------------------------------------
   const height = new Float32Array(sizeX * sizeZ).fill(-1);
+  const region = new Uint8Array(sizeX * sizeZ);
+  // The flank away from the east hill is the badlands; toward it, meadows.
+  const perpSide = { x: ridgeDir.z, z: -ridgeDir.x };
+  const badSign = (hill.x - cx) * perpSide.x + (hill.z - cz) * perpSide.z > 0 ? -1 : 1;
   const seabedAt = (r: number, R: number) => T.seaLevel - T.seaDepth - Math.max(0, (r - R) * 0.12);
 
   for (let z = 0; z < sizeZ; z++) {
@@ -119,7 +129,19 @@ export function generateIsland(rng: Rng): Island {
       const hillH = hr < T.hillRadius ? T.hillHeight * 0.5 * (1 + Math.cos((Math.PI * hr) / T.hillRadius)) : 0;
 
       const base = T.valleyHeight + T.valleyNoise * fbm(nDetail, x * 0.045, z * 0.045, 4);
-      const land = Math.min(T.maxGroundY, base + Math.max(ridgeH, hillH * (1 - ridgeT)));
+      // Past the home valley, the land changes by direction.
+      const out = smoothstep(T.homeRadius - 6, T.homeRadius + 14, r);
+      const high = smoothstep(T.ridgeCrest, T.ridgeCrest + 22, along) * out;
+      const low = smoothstep(T.homeRadius * 0.6, T.homeRadius, -along) * out;
+      const side = lateral * badSign;
+      const bad = smoothstep(T.homeRadius * 0.5, T.homeRadius, side) * (1 - ridgeT) * out;
+      const peaks = T.highlandHeight * high * Math.max(0, fbm(nRegion, x * 0.035, z * 0.035, 4) * 1.4 + 0.35);
+      const hills = T.lowlandHills * low * fbm(nRegion, x * 0.03 + 40, z * 0.03 - 40, 3);
+      const mesaN = fbm(nRegion, x * 0.025 - 80, z * 0.025 + 80, 3);
+      const mesa = mesaN > 0.12 ? Math.round((T.mesaHeight * bad * Math.min(1, (mesaN - 0.12) * 6)) / T.mesaStep) * T.mesaStep : 0;
+      const land = Math.min(T.maxGroundY, base + Math.max(ridgeH + peaks, hillH * (1 - ridgeT)) + hills + mesa);
+      const k = idx(x, z);
+      region[k] = out < 0.5 ? REGION.home : high > 0.3 ? REGION.highlands : bad > 0.35 ? REGION.badlands : low > 0.35 ? REGION.lowlands : REGION.meadows;
 
       const m = smoothstep(R + T.coastWidth * 0.35, R - T.coastWidth, r);
       const seabed = seabedAt(r, R);
@@ -244,7 +266,7 @@ export function generateIsland(rng: Rng): Island {
       if (rd < T.villageMinRiverDist || rd > T.villageMaxRiverDist) continue;
       const r = Math.hypot(x - cx, z - cz);
       const ang = Math.atan2(z - cz, x - cx);
-      if (r > landRadius(ang) - 10) continue;
+      if (r > landRadius(ang) - 10 || r > T.homeRadius - 8) continue;
       if (Math.hypot(x - hill.x, z - hill.z) < T.hillRadius) continue;
       const f = flatness(x, z, 5);
       if (f > 3) continue;
@@ -310,6 +332,7 @@ export function generateIsland(rng: Rng): Island {
       else if (h > T.valleyHeight + T.rockLine + nDetail(x * 0.2, z * 0.2) * 2) top = M.STONE;
       else if (isRiver) top = M.SAND;
       else if (h <= T.seaLevel + 1) top = M.SAND;
+      else if (region[k] === REGION.badlands) top = nDetail(x * 0.15, z * 0.15) > 0.35 ? M.GRASS : h > T.valleyHeight + 2 ? M.STONE : M.SAND;
       else top = M.GRASS;
 
       for (let y = Math.min(bottom, h); y <= h; y++) {
@@ -349,7 +372,11 @@ export function generateIsland(rng: Rng): Island {
       const h = ground[idx(x, z)] as number;
       if (h <= T.seaLevel + 1) continue;
       const forest = fbm(nForest, x * 0.035, z * 0.035, 3);
-      const chance = forest > T.forestThreshold ? T.forestTreeChance : T.meadowTreeChance;
+      const reg = region[idx(x, z)];
+      // Lowlands are thick with forest, badlands nearly bare.
+      const threshold = reg === REGION.lowlands ? T.forestThreshold - 0.25 : T.forestThreshold;
+      let chance = forest > threshold ? T.forestTreeChance : T.meadowTreeChance;
+      if (reg === REGION.badlands) chance *= 0.08;
       if (!rng.chance(chance) || !treeOk(x, z)) continue;
       taken[idx(x, z)] = 1;
       const pine = h > T.valleyHeight + 7;
@@ -365,7 +392,8 @@ export function generateIsland(rng: Rng): Island {
     for (let x = 0; x < sizeX; x++) {
       const h = ground[idx(x, z)] as number;
       const along = (x + 0.5 - cx) * ridgeDir.x + (z + 0.5 - cz) * ridgeDir.z;
-      if (along > T.ridgeCrest * 0.6 && h > ridgePeak.y) ridgePeak = { x, y: h, z };
+      // The ridge above the valley (not the highland peaks beyond it).
+      if (along > T.ridgeCrest * 0.6 && along < T.ridgeCrest * 1.3 && Math.abs((x + 0.5 - cx) * ridgeDir.z - (z + 0.5 - cz) * ridgeDir.x) < T.homeRadius * 0.6 && h > ridgePeak.y) ridgePeak = { x, y: h, z };
       if (Math.hypot(x - hill.x, z - hill.z) < T.hillRadius * 0.5 && h > hillTop.y) hillTop = { x, y: h, z };
     }
   const sx = Math.floor(src.x);
@@ -376,6 +404,7 @@ export function generateIsland(rng: Rng): Island {
     ground,
     trees,
     waterTop,
+    region,
     landmarks: {
       center: { x: cx, z: cz },
       seaLevel: T.seaLevel,

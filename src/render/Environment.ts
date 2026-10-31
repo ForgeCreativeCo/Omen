@@ -122,7 +122,7 @@ export class Environment {
       const ang = rng.range(0, Math.PI * 2);
       const dist = below ? rng.range(R * 0.2, R * 1.5) : rng.range(R * 1.3, R * 2.4);
       this.cloudCenters.push({
-        pos: new THREE.Vector3(Math.cos(ang) * dist, below ? rng.range(-34, -8) : rng.range(40, 70), Math.sin(ang) * dist),
+        pos: new THREE.Vector3(Math.cos(ang) * dist, below ? rng.range(-34, -8) : rng.range(TUNING.world.sizeY, TUNING.world.sizeY + 30), Math.sin(ang) * dist),
         speed: rng.range(0.004, 0.012) * (rng.chance(0.5) ? 1 : -1),
       });
       const blobs = rng.int(3, 6);
