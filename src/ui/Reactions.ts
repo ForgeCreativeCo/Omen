@@ -91,13 +91,16 @@ export class Reactions {
     for (const e of sim.events.since(this.lastSeq)) {
       if (!this.enabled) continue;
       if (e.type === 'omen') {
-        const o = sim.belief.omens.find((x) => x.id === e.omenId);
-        if (o) this.react(sim, o);
+        // Each people has its own copy, with its own witnesses.
+        for (const t of sim.tribes) {
+          const o = t.belief.omens.find((x) => x.id === e.omenId);
+          if (o) this.react(t.view, o);
+        }
       } else if (e.type === 'ritual' && e.villagerId !== undefined && this.clock - this.lastRitual > 8) {
         const v = sim.villagers.byId(e.villagerId);
         if (!v?.alive) continue;
         const subject = e.activity === 'pray' ? 'activity:praying' : `activity:${e.activity}`;
-        const rite = sim.belief.active('RITUAL', 0).filter((b) => b.subject === subject).sort((a, b) => b.strength - a.strength)[0];
+        const rite = (sim.tribes[v.tribeId] ?? sim.tribe).belief.active('RITUAL', 0).filter((b) => b.subject === subject).sort((a, b) => b.strength - a.strength)[0];
         this.lastRitual = this.clock;
         this.say(v, ritualLine(sim, subject.slice(9), rite?.response), 'rite');
       } else if (e.type === 'theft') {
@@ -120,7 +123,8 @@ export class Reactions {
         const p = sim.villagers.byId(e.by);
         if (p?.alive) this.say(p, pick(BETRAYED, e.by + sim.tick), 'deed');
       } else if (e.type === 'exodus') {
-        const p = sim.villagers.byId(sim.belief.priestId) ?? sim.villagers.alive.find((x) => x.lifeStage !== 'child');
+        const t = sim.tribes[e.tribe ?? 0] ?? sim.tribe;
+        const p = sim.villagers.byId(t.belief.priestId) ?? t.members.find((x) => x.lifeStage !== 'child');
         if (p?.alive && !p.inside) this.say(p, e.reason === 'cursed' ? 'This ground is cursed. We go.' : 'We cannot stay here. Take what you can carry.', 'rite');
       } else if (e.type === 'accused') {
         const v = sim.villagers.byId(e.accused);

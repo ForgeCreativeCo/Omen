@@ -123,7 +123,18 @@ export class VillageLog {
   }
 
   private add(e: SimEvent): void {
-    const sim = this.sim;
+    // A people's news, in its own terms (its beliefs, its god); named when there are several.
+    const t = e.tribe !== undefined ? this.sim.tribes[e.tribe] : undefined;
+    const before = this.entries.length;
+    this.addFor(t?.view ?? this.sim, e);
+    if (t && this.sim.tribes.length > 1)
+      for (let i = before; i < this.entries.length; i++) {
+        const en = this.entries[i]!;
+        en.html = `<small class="vl-tribe" style="color:#${t.color.toString(16).padStart(6, '0')}">${t.name}</small> ${en.html}`;
+      }
+  }
+
+  private addFor(sim: Sim, e: SimEvent): void {
     const w = (id: number) => this.who(id);
     switch (e.type) {
       case 'theft': {
@@ -142,6 +153,8 @@ export class VillageLog {
         return this.push(e.tick, 'deeds', e.seen ? `<b>${w(e.killer)} killed ${w(e.victim)}</b> at the fire.` : `${w(e.victim)} was found dead. Nobody saw ${w(e.killer)} do it.`);
       case 'fight':
         return this.push(e.tick, 'deeds', `${w(e.a)} struck ${w(e.b)}${e.hurt >= 0 ? ', and hurt them' : ''}.`);
+      case 'tribeFounded':
+        return this.push(e.tick, 'life', `<b>${e.name}</b> broke away${e.leaderId >= 0 ? `, led by ${w(e.leaderId)},` : ''} and settled in ${REGION_TEXT[sim.island.region[e.x + e.z * sim.world.sizeX] ?? 0] ?? 'new country'}.`);
       case 'exodus':
         return this.push(e.tick, 'life', `<b>The village moved</b> to ${REGION_TEXT[e.region] ?? 'new ground'}. ${EXODUS_TEXT[e.reason]}`);
       case 'accused':

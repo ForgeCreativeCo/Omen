@@ -170,7 +170,7 @@ export class MythSystem {
   // ------------------------------------------------------------------ events
 
   step(): void {
-    for (const e of this.sim.events.since(this.lastSeq)) this.onEvent(e);
+    for (const e of this.sim.events.since(this.lastSeq)) if (e.tribe === undefined || e.tribe === this.sim.tribe.id) this.onEvent(e);
     this.lastSeq = this.sim.events.lastSeq;
   }
 

@@ -40,6 +40,8 @@ export type SimEventBody =
   | { type: 'meteorFall'; x: number; z: number; impactTick: number }
   | { type: 'meteor'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean }
   | { type: 'milestone'; id: string }
+  /** A new people: `from` is the tribe they broke away from. */
+  | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles'; leaderId: number; x: number; z: number }
   /** The village gave up its site and moved (`region`: REGION of the new home). */
   | { type: 'exodus'; fromX: number; fromZ: number; toX: number; toZ: number; reason: ExodusReason; region: number }
   /** The god's hand took hold of something (`id`: the villager, else -1). */
@@ -89,7 +91,8 @@ export type SimEventBody =
   | { type: 'built'; structureId: number; kind: string }
   | { type: 'destroyed'; structureId: number; kind: string };
 
-export type SimEvent = SimEventBody & { seq: number; tick: number };
+/** `tribe`: the people whose systems raised it (absent for the shared world: weather, miracles). */
+export type SimEvent = SimEventBody & { seq: number; tick: number; tribe?: number };
 
 const KEEP = 1000;
 
@@ -97,8 +100,8 @@ export class EventLog {
   private readonly list: SimEvent[] = [];
   private seq = 0;
 
-  push(tick: number, body: SimEventBody): SimEvent {
-    const e = { ...body, seq: ++this.seq, tick } as SimEvent;
+  push(tick: number, body: SimEventBody, tribe?: number): SimEvent {
+    const e = (tribe === undefined ? { ...body, seq: ++this.seq, tick } : { ...body, seq: ++this.seq, tick, tribe }) as SimEvent;
     this.list.push(e);
     if (this.list.length > KEEP * 1.5) this.list.splice(0, this.list.length - KEEP);
     return e;

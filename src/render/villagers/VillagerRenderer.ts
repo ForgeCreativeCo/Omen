@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TRIBE_COLORS } from '../../sim/tribe';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Sim } from '../../sim/Sim';
 import type { Role, Villager } from '../../sim/villagers/types';
@@ -68,6 +69,7 @@ const tmpE = new THREE.Euler();
 const tmpP = new THREE.Vector3();
 const tmpS = new THREE.Vector3();
 const tmpC = new THREE.Color();
+const tmpT = new THREE.Color();
 
 /**
  * Instanced voxel villagers (body, skin, hair, carried load): four draw calls for
@@ -143,6 +145,7 @@ export class VillagerRenderer {
       role: Role,
       carrying: string | null,
       lying: boolean,
+      tribe = -1,
     ) => {
       if (n >= MAX) return;
       tmpE.set(lying ? -Math.PI / 2 : tilt, yaw, 0, 'YXZ');
@@ -153,7 +156,10 @@ export class VillagerRenderer {
       this.clothes.setMatrixAt(n, tmpM);
       this.skin.setMatrixAt(n, tmpM);
       this.hair.setMatrixAt(n, tmpM);
-      this.clothes.setColorAt(n, tmpC.setHex(ROLE_COLORS[role]));
+      tmpC.setHex(ROLE_COLORS[role]);
+      // Several peoples: their tunics take on their people's color.
+      if (tribe >= 0) tmpC.lerp(tmpT.setHex(TRIBE_COLORS[tribe % TRIBE_COLORS.length]!), 0.6);
+      this.clothes.setColorAt(n, tmpC);
       this.skin.setColorAt(n, tmpC.setHex(SKIN[(id * 7) % SKIN.length]!));
       this.hair.setColorAt(n, tmpC.setHex(HAIR[(id * 13) % HAIR.length]!));
       if (carrying) {
@@ -181,7 +187,7 @@ export class VillagerRenderer {
         d = Math.atan2(Math.sin(d), Math.cos(d));
         yaw += d * Math.min(1, dt * 12);
       } else if (v.action?.kind === 'gathering' || v.action?.kind === 'eat') {
-        const c = sim.village.center;
+        const c = (sim.tribes[v.tribeId] ?? sim.tribe).village.center;
         const target = Math.atan2(c.x + 0.5 - x, c.z + 0.5 - z);
         let d = target - yaw;
         d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -207,7 +213,7 @@ export class VillagerRenderer {
         bob = 0;
         tilt = 0.45 + Math.sin(time * 1.5 + v.id) * 0.15;
       }
-      place(v.id, x, y + bob, z, spin, scale, tilt, v.role, v.carrying?.kind ?? null, v.lying);
+      place(v.id, x, y + bob, z, spin, scale, tilt, v.role, v.carrying?.kind ?? null, v.lying, sim.tribes.length > 1 ? v.tribeId : -1);
       if (v.id === this.selectedId) {
         this.ring.visible = true;
         this.ring.position.set(x + this.offsetX, y + 0.05, z + this.offsetZ);

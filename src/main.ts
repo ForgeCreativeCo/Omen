@@ -33,7 +33,9 @@ const mode: GameMode = chosen === 'warning' ? 'warning' : 'sandbox';
 
 // ?years=N shortens the Warning (testing, or a quick game).
 const years = header ? header.floodInYears : Number(params.get('years')) || undefined;
-const sim = new Sim({ seed, mode, floodInYears: years });
+// A sandbox island has several peoples; the Warning is one people's story. (?tribes=N to choose.)
+const tribes = header ? (header.tribes ?? 1) : Number(params.get('tribes')) || (mode === 'sandbox' && chosen ? TUNING.sandboxTribes : 1);
+const sim = new Sim({ seed, mode, floodInYears: years, tribes });
 if (saved && header) {
   try {
     restoreGame(sim, saved);
@@ -86,7 +88,7 @@ hudRoot.querySelector('.hud-book')!.addEventListener('click', () => book.toggle(
 /** Save the game in progress (not the title screen's idle island). */
 function saveNow(): string | null {
   if (!chosen) return 'Nothing to save on the title screen.';
-  return writeSave(saveGame(sim, { seed, mode, floodInYears: years, label: formatCalendar(sim.calendar) }));
+  return writeSave(saveGame(sim, { seed, mode, floodInYears: years, tribes, label: formatCalendar(sim.calendar) }));
 }
 const sound = new Soundscape();
 const settings = new SettingsPanel(

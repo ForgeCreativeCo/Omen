@@ -18,6 +18,8 @@ export interface SaveHeader {
   seed: string;
   mode: GameMode;
   floodInYears?: number;
+  /** Peoples at the start (founded ones come back from the save itself). */
+  tribes?: number;
   tick: number;
   /** For the title screen: "Year 34 · Spring". */
   label: string;

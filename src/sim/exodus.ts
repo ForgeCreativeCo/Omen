@@ -1,6 +1,7 @@
 import type { Omen } from './omens/types';
 import type { Rng } from './rng';
 import type { Sim } from './Sim';
+import type { Villager } from './villagers/types';
 import { TICKS_PER_DAY, TICKS_PER_YEAR } from './time';
 import { TUNING } from './tuning';
 import { M } from './world/materials';
@@ -40,6 +41,7 @@ export class Exodus {
   step(): void {
     const sim = this.sim;
     for (const e of sim.events.since(this.lastSeq)) {
+      if (e.tribe !== undefined && e.tribe !== sim.tribe.id) continue;
       if (e.type !== 'omen') continue;
       const o = sim.belief.omen(e.omenId);
       if (o && this.struckHome(o)) this.lastWrathTick = sim.tick;
@@ -99,58 +101,76 @@ export class Exodus {
   /** The best new ground the survivors can walk to. */
   findHome(): { x: number; y: number; z: number } | null {
     const sim = this.sim;
-    const nav = sim.nav;
-    const v = sim.village;
-    const W = sim.world.sizeX;
-    const sea = TUNING.terrain.seaLevel;
-    const regions = nav.regions();
-    // Where most of the survivors stand.
-    const count = new Map<number, number>();
-    for (const p of sim.villagers.alive) {
-      const r = regions[Math.floor(p.x) + Math.floor(p.z) * W] ?? 0;
-      if (r) count.set(r, (count.get(r) ?? 0) + 1);
-    }
-    const home = [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0;
-    const pull = v.attraction();
-    const c = v.center;
-    let best: { x: number; y: number; z: number } | null = null;
-    let bestScore = -Infinity;
-    const R = T.flatRadius;
-    for (let z = 10; z < sim.world.sizeZ - 10; z += 3)
-      for (let x = 10; x < W - 10; x += 3) {
-        const d = Math.hypot(x - c.x, z - c.z);
-        if (d < T.minMove || d > T.maxMove) continue;
-        const h = nav.at(x, z);
-        if (h < sea + 2 || (home && regions[x + z * W] !== home) || v.forbidden(x, z)) continue;
-        let lo = h;
-        let hi = h;
-        let ok = true;
-        for (let dz = -R; dz <= R && ok; dz += 2)
-          for (let dx = -R; dx <= R && ok; dx += 2) {
-            if (dx * dx + dz * dz > R * R) continue;
-            const nh = nav.at(x + dx, z + dz);
-            if (nh < 0 || v.forbidden(x + dx, z + dz)) ok = false;
-            else (lo = Math.min(lo, nh)), (hi = Math.max(hi, nh));
-          }
-        if (!ok || hi - lo > T.flatSpread) continue;
-        if (!this.waterNear(x, z)) continue;
-        let score = -d * 0.03 - (hi - lo) * 1.5 + (REGION_PULL[sim.island.region[x + z * W] ?? 0] ?? 0) + this.rng.jitter(0.3);
-        if (pull && Math.hypot(pull.x - x, pull.z - z) < 35) score += 2 * pull.strength;
-        if (score > bestScore) (bestScore = score), (best = { x, y: h, z });
-      }
-    return best;
+    return findSettlement(sim, sim.villagers.alive, sim.village.center, T.minMove, T.maxMove, this.rng, sim.village.forbidden, sim.village.attraction());
   }
+}
 
-  private waterNear(x: number, z: number): boolean {
-    const w = this.sim.world;
-    const r = T.waterWithin;
-    for (let dz = -r; dz <= r; dz += 2)
-      for (let dx = -r; dx <= r; dx += 2) {
-        if (dx * dx + dz * dz > r * r) continue;
-        const k = x + dx + (z + dz) * w.sizeX;
-        const top = this.sim.island.waterTop[k];
-        if (top !== undefined && top >= 0 && w.get(x + dx, top, z + dz) === M.WATER) return true;
-      }
-    return false;
+/**
+ * Where a people could settle: flat ground near fresh water, reachable on foot
+ * from where most of them stand (or from `from`), between minD and maxD from
+ * `from`, not on ground they shun, well clear of every other village; drawn to
+ * a holy place, preferring meadows and forest to badlands.
+ */
+export function findSettlement(
+  sim: Sim,
+  people: Villager[],
+  from: { x: number; z: number },
+  minD: number,
+  maxD: number,
+  rng: Rng,
+  forbidden: (x: number, z: number) => boolean = () => false,
+  pull: { x: number; z: number; strength: number } | null = null,
+): { x: number; y: number; z: number } | null {
+  const nav = sim.nav;
+  const W = sim.world.sizeX;
+  const sea = TUNING.terrain.seaLevel;
+  const regions = nav.regions();
+  // Where most of them stand (or the ground they set out from).
+  const count = new Map<number, number>();
+  for (const p of people) {
+    const r = regions[Math.floor(p.x) + Math.floor(p.z) * W] ?? 0;
+    if (r) count.set(r, (count.get(r) ?? 0) + 1);
   }
+  const home = [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? regions[Math.floor(from.x) + Math.floor(from.z) * W] ?? 0;
+  const others = sim.tribes.map((t) => t.village.center);
+  let best: { x: number; y: number; z: number } | null = null;
+  let bestScore = -Infinity;
+  const R = T.flatRadius;
+  for (let z = 10; z < sim.world.sizeZ - 10; z += 3)
+    for (let x = 10; x < W - 10; x += 3) {
+      const d = Math.hypot(x - from.x, z - from.z);
+      if (d < minD || d > maxD) continue;
+      if (others.some((c) => (c.x !== from.x || c.z !== from.z) && Math.hypot(c.x - x, c.z - z) < T.apart)) continue;
+      const h = nav.at(x, z);
+      if (h < sea + 2 || (home && regions[x + z * W] !== home) || forbidden(x, z)) continue;
+      let lo = h;
+      let hi = h;
+      let ok = true;
+      for (let dz = -R; dz <= R && ok; dz += 2)
+        for (let dx = -R; dx <= R && ok; dx += 2) {
+          if (dx * dx + dz * dz > R * R) continue;
+          const nh = nav.at(x + dx, z + dz);
+          if (nh < 0 || forbidden(x + dx, z + dz)) ok = false;
+          else (lo = Math.min(lo, nh)), (hi = Math.max(hi, nh));
+        }
+      if (!ok || hi - lo > T.flatSpread) continue;
+      if (!waterNear(sim, x, z)) continue;
+      let score = -d * 0.03 - (hi - lo) * 1.5 + (REGION_PULL[sim.island.region[x + z * W] ?? 0] ?? 0) + rng.jitter(0.3);
+      if (pull && Math.hypot(pull.x - x, pull.z - z) < 35) score += 2 * pull.strength;
+      if (score > bestScore) (bestScore = score), (best = { x, y: h, z });
+    }
+  return best;
+}
+
+function waterNear(sim: Sim, x: number, z: number): boolean {
+  const w = sim.world;
+  const r = T.waterWithin;
+  for (let dz = -r; dz <= r; dz += 2)
+    for (let dx = -r; dx <= r; dx += 2) {
+      if (dx * dx + dz * dz > r * r) continue;
+      const k = x + dx + (z + dz) * w.sizeX;
+      const top = sim.island.waterTop[k];
+      if (top !== undefined && top >= 0 && w.get(x + dx, top, z + dz) === M.WATER) return true;
+    }
+  return false;
 }

@@ -250,6 +250,32 @@ export class BeliefSystem {
     return b;
   }
 
+  /**
+   * A people that breaks away takes its beliefs along: each belief these people
+   * hold comes into this faith with their strength in it (and leaves the old).
+   */
+  adopt(from: BeliefSystem, people: Villager[]): void {
+    const ids = new Set(people.map((v) => v.id));
+    for (const old of from.beliefs.values()) {
+      const held = [...old.holders].filter(([id]) => ids.has(id));
+      if (!held.length) continue;
+      const b = this.ensure(old.type, old.subject, old.response, null);
+      b.valence = old.valence;
+      b.place = old.place;
+      b.area = old.area ? { ...old.area } : b.area;
+      if (old.traits) b.traits = { ...old.traits };
+      b.isTradition = old.isTradition;
+      b.originOmenIds = [...old.originOmenIds];
+      b.witnesses = old.witnesses.filter((id) => ids.has(id));
+      for (const [id, s] of held) {
+        b.holders.set(id, s);
+        old.holders.delete(id);
+      }
+    }
+    from.refreshStrengths();
+    this.refreshStrengths();
+  }
+
   /** The ground a place belief covers: named compact places whole, sprawling ones near the omen. */
   private areaFor(subject: string, omen: Omen | null): Area {
     const sim = this.sim;

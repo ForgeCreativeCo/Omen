@@ -136,6 +136,7 @@ export class Milestones {
   step(): void {
     const sim = this.sim;
     for (const e of sim.events.since(this.lastSeq)) {
+      if (e.tribe !== undefined && e.tribe !== sim.tribe.id) continue;
       for (const m of MILESTONES) if (m.on && !this.has(m.id) && m.on(e, sim)) this.reach(m.id);
     }
     this.lastSeq = sim.events.lastSeq;

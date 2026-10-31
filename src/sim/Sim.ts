@@ -7,7 +7,8 @@ import type { Dissent } from './dissent';
 import { Society } from './society';
 import type { Justice } from './justice';
 import type { Exodus } from './exodus';
-import { Tribe } from './tribe';
+import { Tribe, tribeName } from './tribe';
+import { findSettlement } from './exodus';
 import { WarningScenario } from './disaster/Warning';
 import { OmenRecorder } from './omens/OmenRecorder';
 import { Miracles, type CastFailure, type Command } from './miracles/Miracles';
@@ -33,6 +34,8 @@ export interface SimOptions {
   mode?: GameMode;
   /** The Warning: years until the disaster (default TUNING.warning.floodInYears). */
   floodInYears?: number;
+  /** Peoples on the island at the start (default 1). */
+  tribes?: number;
 }
 
 export type GameMode = 'sandbox' | 'warning';
@@ -101,7 +104,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
-    if (!opts.noVillage) this.found();
+    if (!opts.noVillage) this.found(Math.max(1, opts.tribes ?? 1));
   }
 
   // The first people's systems (single-people code and the UI read these).
@@ -187,30 +190,92 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     return this.weather.windStrength;
   }
 
-  private found(): void {
-    const v = this.village;
-    v.population = TUNING.villagers.startCount;
-    v.found(this, 4, 5);
-    const rng = this.rng.fork('founding');
+  private found(tribes: number): void {
+    this.settle(this.tribes[0]!, this.rng.fork('founding'), TUNING.villagers.startCount, 4, 5);
+    // Among several peoples, the first has a name of its own too.
+    if (tribes > 1) {
+      const c = this.village.center;
+      this.tribes[0]!.name = tribeName(this.rng.fork('tribe:0'), this.island.region[c.x + c.z * this.world.sizeX] ?? 0);
+    }
+    // Other peoples already live elsewhere on the island, out of sight of the first.
+    for (let i = 1; i < tribes; i++) {
+      const rng = this.rng.fork(`founding:${i}`);
+      const first = this.village.center;
+      const site = findSettlement(this, [], first, TUNING.exodus.startMin, TUNING.exodus.startMax, rng);
+      if (!site) break;
+      const t = new Tribe(this, i, tribeName(rng, this.island.region[site.x + site.z * this.world.sizeX] ?? 0), site);
+      this.tribes.push(t);
+      this.settle(t, rng, Math.round(TUNING.villagers.startCount * 0.65), 3, 3);
+    }
+    this.villagers.newDayRolesAndHomes();
+  }
+
+  /** A people's first village: fire, huts and fields built at once, and its families. */
+  private settle(t: Tribe, rng: Rng, target: number, huts: number, fields: number): void {
+    const v = t.village;
+    v.population = target;
+    v.found(t.view, huts, fields);
     const people = this.villagers;
     const c = v.center;
     const spot = () => v.nearestWalkable(c.x + rng.int(-4, 4), c.z + rng.int(-4, 4)) ?? { x: c.x, z: c.z };
-
+    const tribeId = t.id;
+    let n = 0;
+    const spawn = (o: Parameters<Villagers['spawn']>[0]) => (n++, people.spawn({ ...o, tribeId }));
     // Five couples with a few children, two elders, the rest young singles.
-    const target = TUNING.villagers.startCount;
-    for (let i = 0; i < 5 && people.alive.length < target; i++) {
+    for (let i = 0; i < 5 && n < target; i++) {
       const s = spot();
-      const a = people.spawn({ age: rng.range(20, 34), sex: 'f', ...s });
-      const b = people.spawn({ age: a.age + rng.range(-4, 5), sex: 'm', ...s });
+      const a = spawn({ age: rng.range(20, 34), sex: 'f', ...s });
+      const b = spawn({ age: a.age + rng.range(-4, 5), sex: 'm', ...s });
       a.partnerId = b.id;
       b.partnerId = a.id;
       const kids = rng.int(0, 2);
-      for (let k = 0; k < kids && people.alive.length < target - 2; k++)
-        people.spawn({ age: rng.range(1, Math.min(12, a.age - 16)), ...s, parents: [a.id, b.id] });
+      for (let k = 0; k < kids && n < target - 2; k++) spawn({ age: rng.range(1, Math.min(12, a.age - 16)), ...s, parents: [a.id, b.id] });
     }
-    for (let i = 0; i < 2; i++) people.spawn({ age: rng.range(40, 47), ...spot() });
-    while (people.alive.length < target) people.spawn({ age: rng.range(15, 24), ...spot() });
-    people.newDayRolesAndHomes();
+    for (let i = 0; i < 2; i++) spawn({ age: rng.range(40, 47), ...spot() });
+    while (n < target) spawn({ age: rng.range(15, 24), ...spot() });
+  }
+
+  /**
+   * A new people: these villagers leave their own and settle at `site`, taking
+   * a share of the stores and the beliefs they hold. They camp around a new fire
+   * and raise homes. Returns the new tribe.
+   */
+  foundTribe(people: Villager[], site: { x: number; y: number; z: number }, opts: { reason: 'schism' | 'exiles'; leaderId?: number; priestId?: number }): Tribe {
+    // Through a people's view this runs on that view; the tribes and the world are the real sim's.
+    const root = this.tribes[0]!.sim;
+    const from = root.tribes[people[0]?.tribeId ?? 0] ?? root.tribes[0]!;
+    const id = root.tribes.length;
+    const leader = opts.leaderId !== undefined ? root.villagers.byId(opts.leaderId) : undefined;
+    const t = new Tribe(root, id, tribeName(root.rng.fork(`tribe:${id}`), root.island.region[site.x + site.z * root.world.sizeX] ?? 0, leader?.name), site);
+    root.tribes.push(t);
+    // Their share of the stores.
+    const share = people.length / Math.max(1, from.members.length);
+    for (const k of ['food', 'wood', 'stone'] as const) {
+      const take = from.village.store[k] * share;
+      from.village.store[k] -= take;
+      t.village.store[k] = take;
+    }
+    t.belief.adopt(from.belief, people);
+    t.myth.godName = from.myth.godName;
+    for (const p of people) {
+      const home = p.homeId >= 0 ? from.village.byId(p.homeId) : undefined;
+      if (home) home.residents = home.residents.filter((r) => r !== p.id);
+      p.homeId = -1;
+      p.inside = false;
+      p.tribeId = id;
+      if (p.role === 'priest') p.role = 'gatherer';
+      p.nextThink = root.tick;
+    }
+    if (opts.priestId !== undefined) {
+      const priest = root.villagers.byId(opts.priestId);
+      if (priest) priest.role = 'priest';
+    }
+    t.village.population = people.length;
+    t.village.found(t.view, 0, 0);
+    t.village.rebuilding = true;
+    root.villagers.newDayRolesAndHomes();
+    root.events.push(root.tick, { type: 'tribeFounded', id, name: t.name, from: from.id, reason: opts.reason, leaderId: opts.leaderId ?? -1, x: site.x, z: site.z });
+    return t;
   }
 
   /** Queue a player command; it takes effect at the start of the next tick. */

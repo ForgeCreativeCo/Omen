@@ -527,6 +527,9 @@ export const TUNING = {
     bloodGrudge: 0.9,
   },
 
+  /** Peoples on a new sandbox island. */
+  sandboxTribes: 3,
+
   /** Leaving a ruined home: when the village gives up its site, and where it goes. */
   exodus: {
     /** Huts destroyed (share) that, with the god's hand in it, means home is lost. */
@@ -542,6 +545,14 @@ export const TUNING = {
     waterWithin: 14,
     /** Years before they'll move again. */
     restYears: 1,
+    /** No two villages closer than this. */
+    apart: 30,
+    /** A breakaway people settles this far from the village it left. */
+    splitMin: 40,
+    splitMax: 130,
+    /** Peoples at the start of a game settle this far from the first. */
+    startMin: 60,
+    startMax: 200,
   },
 
   /** Village justice: accusation, the god's window, judgment at the fire, custom and law. */

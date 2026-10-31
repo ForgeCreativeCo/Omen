@@ -5,6 +5,7 @@ import { Exodus } from './exodus';
 import { Justice } from './justice';
 import { Milestones } from './milestones';
 import { MythSystem } from './myth/Myth';
+import type { SimEventBody } from './events';
 import type { Sim } from './Sim';
 import type { Villager } from './villagers/types';
 import { Village } from './villagers/village';
@@ -77,6 +78,15 @@ export class Tribe {
       },
     });
     Object.defineProperty(view, 'villagers', { value: people });
+    // What this people's systems announce is marked as theirs.
+    const events = new Proxy(sim.events, {
+      get(target, prop) {
+        if (prop === 'push') return (tick: number, body: SimEventBody) => target.push(tick, body, id);
+        const value = Reflect.get(target, prop, target) as unknown;
+        return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    Object.defineProperty(view, 'events', { value: events });
     Object.defineProperty(view, 'tribe', { value: this });
     // Not saved: rebuilt by bind().
     Object.defineProperty(this, 'view', { value: view, configurable: true, writable: true, enumerable: false });
@@ -101,4 +111,19 @@ export class Tribe {
   get members(): Villager[] {
     return this.sim.villagers.alive.filter((v) => v.tribeId === this.id);
   }
+}
+
+const FOLK_ADJ: Record<number, readonly string[]> = {
+  0: ['River', 'Valley', 'Reed'],
+  1: ['Stone', 'High', 'Pine'],
+  2: ['Green', 'Fern', 'Forest'],
+  3: ['Dust', 'Red', 'Dry'],
+  4: ['Meadow', 'Bright', 'Hill'],
+};
+const FOLK_NOUN = ['Folk', 'Kin', 'Clan', 'People'] as const;
+
+/** "the Fern Kin", or after a leader, "Orrin's people". */
+export function tribeName(rng: { pick<T>(a: readonly T[]): T; chance(p: number): boolean }, region: number, leader?: string): string {
+  if (leader && rng.chance(0.5)) return `${leader}'s people`;
+  return `the ${rng.pick(FOLK_ADJ[region] ?? FOLK_ADJ[0]!)} ${rng.pick(FOLK_NOUN)}`;
 }

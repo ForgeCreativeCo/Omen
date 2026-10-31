@@ -48,14 +48,16 @@ const TONE: Record<DoingIcon, string> = {
 /** Labels for the hover card's tags. */
 export function villagerTags(sim: Sim, v: Villager): string[] {
   const tags: string[] = [];
-  if (v.id === sim.belief.priestId) tags.push('Priest');
-  if (sim.belief.chosenIds().has(v.id)) tags.push('Chosen');
-  if (sim.effects.outcastIds().has(v.id)) tags.push('Outcast');
-  const c = sim.justice.pending(v);
+  const t = sim.tribes[v.tribeId] ?? sim.tribe;
+  if (sim.tribes.length > 1) tags.push(t.name.replace(/^the /, ''));
+  if (v.id === t.belief.priestId) tags.push('Priest');
+  if (t.belief.chosenIds().has(v.id)) tags.push('Chosen');
+  if (t.effects.outcastIds().has(v.id)) tags.push('Outcast');
+  const c = t.justice.pending(v);
   if (c) tags.push(`Accused of ${CRIME_TEXT[c.crime]}`);
-  const lead = sim.dissent.leader;
+  const lead = t.dissent.leader;
   if (lead?.id === v.id) tags.push(lead.kind === 'doubter' ? 'Doubter' : 'False Prophet');
-  else if (lead && sim.dissent.follows(v)) tags.push(lead.kind === 'doubter' ? 'Doubts' : 'Follows the prophet');
+  else if (lead && t.dissent.follows(v)) tags.push(lead.kind === 'doubter' ? 'Doubts' : 'Follows the prophet');
   return tags;
 }
 
@@ -122,8 +124,9 @@ export class Overhead {
     const recent = this.recent.get(v.id);
     if (recent) return recent.icon;
     const a = v.action;
-    if (sim.dissent.leader?.id === v.id) return 'dissent';
-    if (sim.justice.pending(v)) return 'judge';
+    const t = sim.tribes[v.tribeId] ?? sim.tribe;
+    if (t.dissent.leader?.id === v.id) return 'dissent';
+    if (t.justice.pending(v)) return 'judge';
     if (sim.society.isHurt(v)) return 'hurt';
     if (a?.kind === 'ritual' && a.phase === 'work') return a.ritual === 'dance' ? 'dance' : 'pray';
     if (a?.kind === 'pilgrimage') return 'pilgrim';

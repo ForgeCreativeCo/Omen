@@ -1,4 +1,5 @@
 import type { DissentEndReason, DissentKind } from './events';
+import { findSettlement } from './exodus';
 import type { Omen } from './omens/types';
 import type { Rng } from './rng';
 import type { Sim } from './Sim';
@@ -102,6 +103,7 @@ export class Dissent {
   step(): void {
     const sim = this.sim;
     for (const e of sim.events.since(this.lastSeq)) {
+      if (e.tribe !== undefined && e.tribe !== sim.tribe.id) continue;
       switch (e.type) {
         case 'omen': {
           const o = sim.belief.omen(e.omenId);
@@ -312,7 +314,7 @@ export class Dissent {
       sim.events.push(sim.tick, { type: 'schism', leaderId: lead.id, outcome: 'drivenOut', ids: [lead.id] });
       return;
     }
-    // They go together, with their children, by the river mouth.
+    // They go together, with their children, and settle somewhere of their own.
     const going = new Set(followers.map((v) => v.id));
     for (const v of sim.villagers.alive)
       if (v.lifeStage === 'child' && v.parentIds.some((id) => going.has(id))) going.add(v.id);
@@ -320,13 +322,22 @@ export class Dissent {
     const ids = [...going].sort((a, b) => (a === lead.id ? -1 : b === lead.id ? 1 : (this.pull.get(b) ?? 0) - (this.pull.get(a) ?? 0))).slice(0, cap);
     this.leader = null;
     this.prophecy = null;
-    for (const id of ids) {
-      this.departing.add(id);
-      this.pull.delete(id);
-      sim.villagers.exile(sim.villagers.byId(id)!);
-    }
+    const people = ids.map((id) => sim.villagers.byId(id)!).filter((v) => v.alive);
+    const X = TUNING.exodus;
+    const site = findSettlement(sim, people, sim.village.center, X.splitMin, X.splitMax, this.rng);
+    for (const id of ids) this.pull.delete(id);
     for (const [id, p] of this.pull) this.pull.set(id, p * 0.3);
     this.restUntil = sim.tick + T.restAfterSplitYears * TICKS_PER_YEAR;
     sim.events.push(sim.tick, { type: 'schism', leaderId: lead.id, outcome: 'split', ids });
+    if (site) {
+      // A prophet leads their people as priest; a doubter's people keep no priest of the old faith.
+      sim.foundTribe(people, site, { reason: 'schism', leaderId: lead.id, priestId: lead.kind === 'prophet' ? lead.id : undefined });
+    } else {
+      // Nowhere to go on this island: they leave it.
+      for (const p of people) {
+        this.departing.add(p.id);
+        sim.villagers.exile(p);
+      }
+    }
   }
 }

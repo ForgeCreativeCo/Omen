@@ -81,6 +81,8 @@ export class Inspector {
     this.timer = 0;
     const v = sim.villagers.byId(this.villagerId);
     if (!v) return this.close();
+    // Their own people's beliefs, god, priest and justice.
+    sim = (sim.tribes[v.tribeId] ?? sim.tribe).view;
     const name = (id: number) => {
       const o = sim.villagers.byId(id);
       if (!o) return '';
@@ -113,7 +115,7 @@ export class Inspector {
     this.el.innerHTML = `
       <button class="ins-close" data-close aria-label="Close">×</button>
       <h2>${v.name}</h2>
-      <div class="ins-sub">${Math.floor(v.age)} years · ${cap(v.role)}${v.alive ? '' : ' · †'}</div>
+      <div class="ins-sub">${Math.floor(v.age)} years · ${cap(v.role)}${sim.tribes.length > 1 ? ` · ${cap((sim.tribes[v.tribeId] ?? sim.tribe).name)}` : ''}${v.alive ? '' : ' · †'}</div>
       <div class="ins-traits">${v.traits.map((t) => `<span>${TRAIT_LABEL[t]}</span>`).join('')}${this.dissentTag(sim, v)}</div>
       <div class="ins-now">${cap(status)}</div>
       ${v.alive ? bar('Hunger', v.needs.hunger, true) + bar('Energy', v.needs.energy) + bar('Safety', v.needs.safety) : ''}

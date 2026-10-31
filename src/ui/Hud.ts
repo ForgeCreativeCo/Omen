@@ -96,7 +96,9 @@ export class Hud {
     const c = sim.calendar;
     this.calendarEl.textContent = `${formatCalendar(c)} · ${c.timeOfDay}`;
     this.speedButtons.forEach((b, i) => b.classList.toggle('active', i === this.loop.speedIndex));
-    const vs = sim.village.store;
+    // Stores across every people.
+    const vs = { food: 0, wood: 0, stone: 0 };
+    for (const t of sim.tribes) (vs.food += t.village.store.food), (vs.wood += t.village.store.wood), (vs.stone += t.village.store.stone);
     const w = sim.weather;
     const sky = w.precipitation === 'storm' ? 'Storm' : w.raining ? 'Rain' : w.drought ? 'Drought' : '';
     // Average faith with its love / fear split (SPEC §15).
@@ -109,6 +111,7 @@ export class Hud {
     const stat = (label: string, value: number) => `<span><small>${label}</small> ${Math.floor(value)}</span>`;
     this.villageEl.innerHTML =
       stat('People', sim.villagers.alive.length) +
+      (sim.tribes.length > 1 ? stat('Peoples', sim.tribes.filter((t) => t.members.length).length) : '') +
       stat('Food', vs.food) +
       stat('Wood', vs.wood) +
       stat('Stone', vs.stone) +

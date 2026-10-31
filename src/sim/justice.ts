@@ -80,6 +80,7 @@ export class Justice {
   step(): void {
     const sim = this.sim;
     for (const e of sim.events.since(this.lastSeq)) {
+      if (e.tribe !== undefined && e.tribe !== sim.tribe.id) continue;
       switch (e.type) {
         case 'theft':
           if (e.known) this.open('theft', e.id, e.victims, e.id);
@@ -147,7 +148,8 @@ export class Justice {
   private open(crime: Crime, accused: VillagerId, victims: VillagerId[], actual: VillagerId): void {
     const sim = this.sim;
     const v = sim.villagers.byId(accused);
-    if (!v?.alive || v.lifeStage === 'child' || this.pending(v)) return;
+    // A people judges its own.
+    if (!v?.alive || v.tribeId !== sim.tribe.id || v.lifeStage === 'child' || this.pending(v)) return;
     // Judged at the first evening fire a day from now: a day and a night for the god to speak.
     const c: Case = { id: this.nextId++, crime, accused, victims, actual, opened: sim.tick, judgeAt: sim.tick + T.windowDays * TICKS_PER_DAY, lean: 0 };
     this.cases.push(c);
@@ -158,7 +160,7 @@ export class Justice {
   private suspect(crime: Crime, victims: VillagerId[], actual: VillagerId): void {
     const sim = this.sim;
     const wronged = victims.map((id) => sim.villagers.byId(id)).filter((v): v is Villager => !!v);
-    const accusers = crime === 'murder' ? wronged.flatMap((v) => [v.partnerId, ...v.childIds, ...v.parentIds].map((id) => sim.villagers.byId(id))).filter((v): v is Villager => !!v?.alive) : wronged.filter((v) => v.alive);
+    const accusers = (crime === 'murder' ? wronged.flatMap((v) => [v.partnerId, ...v.childIds, ...v.parentIds].map((id) => sim.villagers.byId(id))).filter((v): v is Villager => !!v?.alive) : wronged.filter((v) => v.alive)).filter((v) => v.tribeId === sim.tribe.id);
     if (!accusers.length) return;
     const outcast = sim.effects.outcastIds();
     let best: Villager | null = null;

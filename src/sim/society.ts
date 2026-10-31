@@ -59,6 +59,11 @@ export class Society {
     return v;
   }
 
+  /** A deed goes on record with the doer's own people (they're the ones who'll remember it). */
+  private deedsOf(v: Villager) {
+    return (this.sim.tribes[v.tribeId] ?? this.sim.tribe).belief.deeds;
+  }
+
   isHurt(v: Villager): boolean {
     return (this.hurt.get(v.id) ?? 0) > this.sim.tick;
   }
@@ -144,7 +149,7 @@ export class Society {
 
   private quarrel(a: Villager, b: Villager): void {
     const sim = this.sim;
-    sim.belief.deeds.add({ key: 'deed:fight', actorId: a.id, victimIds: [b.id], x: Math.floor(a.x), z: Math.floor(a.z), tick: sim.tick });
+    this.deedsOf(a).add({ key: 'deed:fight', actorId: a.id, victimIds: [b.id], x: Math.floor(a.x), z: Math.floor(a.z), tick: sim.tick });
     sim.events.push(sim.tick, { type: 'quarrel', a: a.id, b: b.id, x: Math.floor(a.x), z: Math.floor(a.z) });
   }
 
@@ -159,7 +164,7 @@ export class Society {
     const hurt = this.rng.chance(T.fightHurtChance) ? b.id : -1;
     if (hurt >= 0) this.hurt.set(b.id, sim.tick + T.hurtDays * TICKS_PER_DAY);
     this.shift(a, b, -0.1);
-    sim.belief.deeds.add({ key: 'deed:fight', actorId: a.id, victimIds: [b.id], x: Math.floor(a.x), z: Math.floor(a.z), tick: sim.tick });
+    this.deedsOf(a).add({ key: 'deed:fight', actorId: a.id, victimIds: [b.id], x: Math.floor(a.x), z: Math.floor(a.z), tick: sim.tick });
     sim.events.push(sim.tick, { type: 'fight', a: a.id, b: b.id, hurt, x: Math.floor(a.x), z: Math.floor(a.z) });
   }
 
@@ -169,7 +174,7 @@ export class Society {
     const x = Math.floor(victim.x);
     const z = Math.floor(victim.z);
     sim.events.push(sim.tick, { type: 'killing', killer: killer.id, victim: victim.id, seen, x, z });
-    sim.belief.deeds.add({ key: 'deed:murder', actorId: killer.id, victimIds: [victim.id], x, z, tick: sim.tick });
+    this.deedsOf(killer).add({ key: 'deed:murder', actorId: killer.id, victimIds: [victim.id], x, z, tick: sim.tick });
     const kin = [victim.partnerId, ...victim.parentIds, ...victim.childIds].map((id) => sim.villagers.byId(id)).filter((v): v is Villager => !!v?.alive);
     for (const k of kin) if (seen) this.shift(k, killer, -T.bloodGrudge);
     sim.villagers.kill(victim, 'killed');
@@ -246,7 +251,7 @@ export class Society {
     const sim = this.sim;
     this.endAffair(f);
     const p = sim.villagers.byId(a.partnerId);
-    sim.belief.deeds.add({ key: 'deed:adultery', actorId: a.id, victimIds: p ? [p.id] : [], x: Math.floor(a.x), z: Math.floor(a.z), tick: sim.tick });
+    this.deedsOf(a).add({ key: 'deed:adultery', actorId: a.id, victimIds: p ? [p.id] : [], x: Math.floor(a.x), z: Math.floor(a.z), tick: sim.tick });
     a.standing = Math.max(0, a.standing - T.exposureStanding);
     b.standing = Math.max(0, b.standing - T.exposureStanding);
     let breakup = false;

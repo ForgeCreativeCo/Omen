@@ -142,10 +142,17 @@ describe('Turning away', () => {
       const e = events(s, 'schism').at(-1);
       expect(e, big ? 'split' : 'driven out').toMatchObject({ leaderId: leader.id, outcome: big ? 'split' : 'drivenOut' });
       for (let i = 0; i < TICKS_PER_DAY * 2; i++) s.step();
-      const gone = before - s.villagers.alive.length;
       if (big) {
-        expect(gone).toBeGreaterThanOrEqual(Math.min(nFollow, Math.floor(before * D.maxLeaving)));
-        expect(events(s, 'exiled').some((x) => x.type === 'exiled' && x.left)).toBe(true);
+        // The followers become a people of their own, settled elsewhere on the island.
+        expect(s.tribes.length).toBe(2);
+        const t = s.tribes[1]!;
+        expect(events(s, 'tribeFounded').at(-1)).toMatchObject({ id: 1, from: 0, reason: 'schism', leaderId: leader.id });
+        expect(leader.tribeId).toBe(1);
+        expect(t.members.length).toBeGreaterThanOrEqual(Math.min(nFollow, Math.floor(before * D.maxLeaving)));
+        // Nobody left the island.
+        expect(events(s, 'exiled').some((x) => x.type === 'exiled' && x.left)).toBe(false);
+        const c = t.village.center;
+        expect(Math.hypot(c.x - s.village.center.x, c.z - s.village.center.z)).toBeGreaterThanOrEqual(TUNING.exodus.splitMin - 2);
       } else expect(leader.alive).toBe(false);
       expect(s.dissent.leader).toBeNull();
     }

@@ -111,7 +111,7 @@ export class Miracles {
   /** Grace per day at the current level of faith. */
   get regenPerDay(): number {
     let faith = 0;
-    for (const v of this.sim.villagers.alive) faith += (v.faith.love + v.faith.fear) * this.sim.dissent.graceShare(v);
+    for (const v of this.sim.villagers.alive) faith += (v.faith.love + v.faith.fear) * (this.sim.tribes[v.tribeId] ?? this.sim.tribe).dissent.graceShare(v);
     return G.regenBasePerDay + G.regenPerFaithPerDay * faith;
   }
 

@@ -55,8 +55,9 @@ export class Toasts {
   update(sim: Sim): void {
     if (this.lastSeq < 0) this.lastSeq = sim.events.lastSeq;
     for (const e of sim.events.since(this.lastSeq)) {
-      const msg = this.describe(sim, e);
-      if (msg) this.show(msg);
+      const t = e.tribe !== undefined ? sim.tribes[e.tribe] : undefined;
+      const msg = this.describe(t?.view ?? sim, e);
+      if (msg) this.show(t && sim.tribes.length > 1 ? `<small class="toast-tribe" style="color:#${t.color.toString(16).padStart(6, '0')}">${t.name}</small> ${msg}` : msg);
     }
     this.lastSeq = sim.events.lastSeq;
   }
@@ -73,6 +74,10 @@ export class Toasts {
           : `${who(e.victim)} has been found dead. <small>(You saw: it was ${who(e.killer)}.)</small>`;
       case 'affairExposed':
         return `${who(e.by)} found out about ${who(e.a)} and ${who(e.b)}.${e.breakup ? ' They have parted.' : ''}`;
+      case 'tribeFounded': {
+        const from = sim.tribes[e.from];
+        return `<b>A new people:</b> ${e.name}${e.leaderId >= 0 ? `, led by ${who(e.leaderId)},` : ''} broke away from ${from?.name ?? 'their people'} and settled in ${REGION_TEXT[sim.island.region[e.x + e.z * sim.world.sizeX] ?? 0] ?? 'new country'}.`;
+      }
       case 'exodus':
         return `<b>The village is abandoned.</b> ${EXODUS_TEXT[e.reason]} The survivors set out for ${REGION_TEXT[e.region] ?? 'new ground'}.`;
       case 'accused':
