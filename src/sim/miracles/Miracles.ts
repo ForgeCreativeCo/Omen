@@ -68,6 +68,8 @@ const NOT_GROUND = new Set<MaterialId>([
  */
 export class Miracles {
   grace: number = G.start;
+  /** No cooldowns, no Grace cost (tests turn it off to check the limits). */
+  unlimited: boolean = MT.unlimited;
   /** Tick at which each miracle is ready again. */
   readonly readyAt: Record<MiracleId, number> = {
     rain: 0,
@@ -113,8 +115,10 @@ export class Miracles {
   /** Why a miracle can't be cast right now, or null if it can. */
   check(id: MiracleId): CastFailure | null {
     const def = miracleDef(id);
-    if (this.sim.tick < this.readyAt[id]) return 'cooldown';
-    if (this.grace < def.cost) return 'grace';
+    if (!this.unlimited) {
+      if (this.sim.tick < this.readyAt[id]) return 'cooldown';
+      if (this.grace < def.cost) return 'grace';
+    }
     if (def.nightOnly && !this.isNight()) return 'night';
     return null;
   }
@@ -122,12 +126,13 @@ export class Miracles {
   /** Cooldown progress 0..1 (1 = ready), for the miracle bar. */
   readiness(id: MiracleId): number {
     const def = miracleDef(id);
-    if (def.cooldownTicks <= 0) return 1;
+    if (this.unlimited || def.cooldownTicks <= 0) return 1;
     const left = this.readyAt[id] - this.sim.tick;
     return left <= 0 ? 1 : 1 - left / def.cooldownTicks;
   }
 
   private spend(id: MiracleId): void {
+    if (this.unlimited) return;
     const def = miracleDef(id);
     this.grace -= def.cost;
     this.readyAt[id] = this.sim.tick + def.cooldownTicks;
@@ -476,6 +481,29 @@ export class Miracles {
         const floor = w.get(x, y, z);
         if (y > sea && floor !== M.WATER && floor !== M.AIR) w.set(x, y, z, d < 1.2 ? M.STAR_STONE : this.rng.chance(0.6) ? M.ASH : M.STONE);
       }
+    // The shockwave: past the rim, huts lose blocks and trees go down, less with distance.
+    const b = Math.ceil(S.blastRadius);
+    for (let dz = -b; dz <= b; dz++)
+      for (let dx = -b; dx <= b; dx++) {
+        const d = Math.hypot(dx, dz);
+        if (d <= S.craterRadius || d > S.blastRadius) continue;
+        const x = ix + dx;
+        const z = iz + dz;
+        const k = S.blastWreckChance * (1 - (d - S.craterRadius) / (S.blastRadius - S.craterRadius));
+        const s = sim.village.structureAt(x, z);
+        if (s && s.kind !== 'field') {
+          for (const st of s.steps) {
+            if (st.x !== x || st.z !== z || st.mat === M.AIR) continue;
+            if (w.get(st.x, st.y, st.z) === st.mat && this.rng.chance(k)) {
+              w.set(st.x, st.y, st.z, M.AIR);
+              wrecked.add(s.id);
+            }
+          }
+          continue;
+        }
+        const tree = sim.village.trees.find((t) => t.alive && t.x === x && t.z === z);
+        if (tree && this.rng.chance(k * 1.5)) sim.village.fell(tree);
+      }
     const top = Math.max(0, w.topY(ix, iz));
 
     const killed: number[] = [];
@@ -492,7 +520,7 @@ export class Miracles {
     let lit = 0;
     for (let i = 0; i < S.fires * 4 && lit < S.fires; i++) {
       const a = this.rng.range(0, Math.PI * 2);
-      const rr = S.craterRadius + this.rng.range(0, 2);
+      const rr = S.craterRadius + this.rng.range(0, S.blastRadius - S.craterRadius);
       const x = Math.round(ix + Math.cos(a) * rr);
       const z = Math.round(iz + Math.sin(a) * rr);
       const y = w.topY(x, z);

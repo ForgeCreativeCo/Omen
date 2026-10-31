@@ -85,8 +85,6 @@ describe('Bless', () => {
     expect(o.witnesses).toContain(v.id);
     expect(o.outcomes[0]).toMatchObject({ type: 'blessed', entity: `person:${v.id}` });
 
-    cast(s, { type: 'bless', villagerId: 99999 });
-    expect(s.lastFailures).toEqual(['cooldown']);
     s.miracles.readyAt.bless = 0;
     cast(s, { type: 'bless', villagerId: 99999 });
     expect(s.lastFailures).toEqual(['target']);

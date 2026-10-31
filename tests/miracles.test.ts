@@ -34,6 +34,7 @@ function groundAt(s: Sim, x: number, z: number): number {
 describe('grace and cooldowns', () => {
   it('casting costs grace; you cannot cast what you cannot afford', () => {
     const s = new Sim({ seed: 'grace' });
+    s.miracles.unlimited = false;
     s.miracles.grace = MT.lightning.cost + 1;
     const c = s.village.center;
     cast(s, { type: 'cast', miracle: 'lightning', x: c.x + 8, z: c.z });
@@ -46,6 +47,7 @@ describe('grace and cooldowns', () => {
 
   it('cooldowns block recasting until they run out', () => {
     const s = sim();
+    s.miracles.unlimited = false;
     const c = s.village.center;
     cast(s, { type: 'cast', miracle: 'bloom', x: c.x, z: c.z });
     cast(s, { type: 'cast', miracle: 'bloom', x: c.x, z: c.z });
@@ -182,6 +184,9 @@ describe('miracles change the world', () => {
     cast(s, { type: 'dream', villagerId: sleeper.id, symbols: ['mountain', 'child', 'house'] });
     expect(s.lastFailures).toEqual([]);
     expect(sleeper.dreams.at(-1)?.symbols).toEqual(['mountain', 'child', 'house']);
+    // With the god's limits on, a second dream waits for its cooldown.
+    s.miracles.unlimited = false;
+    s.miracles.readyAt.dream = s.tick + 100;
     cast(s, { type: 'dream', villagerId: sleeper.id, symbols: ['water', 'boat', 'sun'] });
     expect(s.lastFailures).toEqual(['cooldown']);
   });

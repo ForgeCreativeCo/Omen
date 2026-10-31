@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TUNING } from '../../sim/tuning';
 import { Rng } from '../../sim/rng';
 import type { SimEvent } from '../../sim/events';
 import type { Sim } from '../../sim/Sim';
@@ -206,7 +207,9 @@ export class WeatherFx {
     this.group.add(line);
     this.bolts.push({ line, t: 0.35 });
     this.flash = 1;
-    this.shake = 0.6;
-    for (let i = 0; i < 25; i++) this.emitFire(x, e.y + 1, z, 2);
+    // The god's bolt blows a pit open; a storm's just sparks.
+    this.shake = e.divine ? 1.1 : 0.6;
+    const spread = e.divine ? TUNING.miracles.lightning.blastRadius : 0;
+    for (let i = 0; i < (e.divine ? 110 : 25); i++) this.emitFire(x + this.rng.jitter(spread), e.y + 1, z + this.rng.jitter(spread), 2);
   }
 }

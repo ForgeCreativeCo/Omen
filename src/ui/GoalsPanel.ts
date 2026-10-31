@@ -149,7 +149,7 @@ export class GoalsPanel {
       if (safe < alive.length * 0.75)
         return 'Teach them the <b>ridge</b> is holy: <b>Holy Light</b> (I) on it while people can see, again and again. Dreams of mountain help too.';
     }
-    if (m.grace < 15) return 'Grace is low. It comes back as they believe in you; let time pass.';
+    if (!m.unlimited && m.grace < 15) return 'Grace is low. It comes back as they believe in you; let time pass.';
     return '';
   }
 }

@@ -326,15 +326,16 @@ export class MiracleFx {
         break;
       case 'meteor': {
         const y = e.y + 1;
-        this.burst(e.x + 0.5 + ox, y, e.z + 0.5 + oz, 260, 9, [0xffe2a0, 0xff9a4a, 0xffffff, 0xa8e4ff], 1.8, -9);
-        for (let i = 0; i < 90; i++) {
+        const S = TUNING.miracles.meteor;
+        this.burst(e.x + 0.5 + ox, y, e.z + 0.5 + oz, 420, 16, [0xffe2a0, 0xff9a4a, 0xffffff, 0xa8e4ff], 2.4, -9);
+        for (let i = 0; i < 220; i++) {
           const a = this.rng.range(0, Math.PI * 2);
-          const r = this.rng.range(0, 6);
+          const r = this.rng.range(0, S.blastRadius);
           const x = Math.round(e.x + Math.cos(a) * r);
           const z = Math.round(e.z + Math.sin(a) * r);
           this.dustAt(x + 0.5 + ox, sim.world.topY(x, z) + 1, z + 0.5 + oz);
         }
-        this.shake = Math.max(this.shake, 1.2);
+        this.shake = Math.max(this.shake, 2.2);
         this.flash = 1;
         break;
       }

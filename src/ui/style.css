@@ -2488,3 +2488,10 @@ body.reduce-motion *::after {
     max-height: calc(100vh - 280px);
   }
 }
+
+/* Limitless god: no Grace meter, no costs, no cooldowns. */
+.unlimited .grace,
+.unlimited .m-cost,
+.unlimited .m-cool {
+  display: none;
+}

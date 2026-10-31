@@ -215,6 +215,8 @@ export const TUNING = {
     rainDouse: 0.08,
     maxBurning: 600,
     lightningIgniteChance: 0.6,
+    /** The god's bolt sets nearly everything burnable around it alight, wet or dry. */
+    divineIgniteChance: 0.9,
     ashRegrowDays: [4, 9] as readonly number[],
   },
 
@@ -232,8 +234,13 @@ export const TUNING = {
 
   /** Miracle numbers (SPEC §6). Costs in Grace, durations in ticks. */
   miracles: {
+    /** No cooldowns and no Grace cost: the god's power is limitless. */
+    unlimited: true,
     rain: { cost: 10, cooldown: 20, radius: 6, durationTicks: 90, moisturePerTick: 0.02, dousePerTick: 0.3 },
     lightning: {
+      /** The god's bolt blasts a crater this wide and kills this close (storms stay small). */
+      blastRadius: 2.5,
+      killRadius: 3.5,
       cost: 25,
       cooldown: 15,
       radius: 1.5,
@@ -268,16 +275,19 @@ export const TUNING = {
       cost: 60,
       cooldownDays: 4,
       fallTicks: 10,
-      craterRadius: 4.5,
+      craterRadius: 9,
       /** Crater depth at the center, voxels. */
-      depth: 4,
-      killRadius: 2.5,
+      depth: 7,
+      killRadius: 7,
+      /** The shockwave past the rim: huts lose blocks, trees fall, people die near its edge. */
+      blastRadius: 16,
+      blastWreckChance: 0.35,
       /** Everyone this close is shaken. */
-      fearRadius: 14,
+      fearRadius: 34,
       /** Chance per structure block in the crater that it's blown away. */
-      wreckChance: 0.75,
+      wreckChance: 0.95,
       /** Fires started around the rim. */
-      fires: 4,
+      fires: 18,
     },
   },
 

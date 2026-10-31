@@ -69,7 +69,7 @@ export class MiracleController {
       const b = document.createElement('button');
       b.className = 'miracle';
       b.dataset.id = m.id;
-      b.title = `${m.name} [${m.key}] (${m.cost} Grace${m.targeting === 'brush' ? ' per stroke' : ''}): ${m.blurb}`;
+      b.title = TUNING.miracles.unlimited ? `${m.name} [${m.key}]: ${m.blurb}` : `${m.name} [${m.key}] (${m.cost} Grace${m.targeting === 'brush' ? ' per stroke' : ''}): ${m.blurb}`;
       b.innerHTML = `${svgIcon(MIRACLE_PATHS[m.id], 26)}<span class="m-name">${m.name}</span><span class="m-cost">${m.cost}</span><span class="m-key">${m.key}</span><i class="m-cool"></i>`;
       b.addEventListener('click', () => (this.armed === m.id ? this.disarm() : this.arm(m.id)));
       list.appendChild(b);
@@ -329,13 +329,15 @@ export class MiracleController {
   update(): void {
     const m = this.sim.miracles;
     const cap = m.cap;
+    // Limitless: no Grace to show, no costs, no cooldowns.
+    this.bar.classList.toggle('unlimited', m.unlimited);
     this.graceFill.style.width = `${Math.min(100, (m.grace / cap) * 100)}%`;
     this.graceText.textContent = `${Math.floor(m.grace)} / ${Math.floor(cap)}`;
     for (const [id, b] of this.buttons) {
       const def = miracleDef(id);
       const ready = m.readiness(id);
       b.classList.toggle('armed', this.armed === id);
-      b.classList.toggle('poor', m.grace < def.cost);
+      b.classList.toggle('poor', !m.unlimited && m.grace < def.cost);
       b.classList.toggle('dim', def.nightOnly && !m.isNight());
       (b.querySelector('.m-cool') as HTMLElement).style.setProperty('--p', `${(1 - ready) * 100}%`);
     }

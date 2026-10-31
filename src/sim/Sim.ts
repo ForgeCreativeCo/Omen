@@ -274,25 +274,35 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     const y = w.topY(x, z);
     const killed: number[] = [];
     let fire = false;
+    // The god's bolt blasts a pit; a storm's just scorches a spot.
+    const L = TUNING.miracles.lightning;
+    const R = divine ? L.blastRadius : 1;
+    const ri = Math.ceil(R);
     if (y >= 0) {
-      for (let dy = -1; dy <= 0; dy++)
-        for (let dz = -1; dz <= 1; dz++)
-          for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -ri; dz <= ri; dz++)
+        for (let dx = -ri; dx <= ri; dx++) {
+          const d = Math.hypot(dx, dz);
+          if (d > R + 0.5) continue;
+          const depth = divine ? Math.max(0, Math.round(2 * (1 - d / (R + 1)))) : dx === 0 && dz === 0 ? 1 : 0;
+          for (let dy = divine ? 1 : 0; dy >= -depth; dy--) {
             const id = w.get(x + dx, y + dy, z + dz);
             if (id === M.AIR || id === M.WATER) continue;
             const center = dx === 0 && dz === 0;
-            if (center || (dy === 0 && rng.chance(0.4))) w.set(x + dx, y + dy, z + dz, M.AIR);
+            if (center || divine || (dy === 0 && rng.chance(0.4))) w.set(x + dx, y + dy, z + dz, M.AIR);
           }
-      for (let dz = -1; dz <= 1; dz++)
-        for (let dx = -1; dx <= 1; dx++)
-          for (let dy = -2; dy <= 1; dy++) {
+        }
+      const ig = divine ? ri + 1 : 1;
+      for (let dz = -ig; dz <= ig; dz++)
+        for (let dx = -ig; dx <= ig; dx++)
+          for (let dy = divine ? -3 : -2; dy <= (divine ? 2 : 1); dy++) {
             const id = w.get(x + dx, y + dy, z + dz);
-            if (material(id).flammable && rng.chance(TUNING.fire.lightningIgniteChance * this.dryness)) {
+            if (material(id).flammable && rng.chance(divine ? TUNING.fire.divineIgniteChance : TUNING.fire.lightningIgniteChance * this.dryness)) {
               if (this.fire.ignite(x + dx, y + dy, z + dz)) fire = true;
             }
           }
+      const killR = divine ? L.killRadius : TUNING.villagers.lightningKillRadius;
       for (const v of [...this.villagers.alive]) {
-        if (Math.hypot(v.x - (x + 0.5), v.z - (z + 0.5)) <= TUNING.villagers.lightningKillRadius && !v.inside) {
+        if (Math.hypot(v.x - (x + 0.5), v.z - (z + 0.5)) <= killR && !v.inside) {
           killed.push(v.id);
           this.villagers.kill(v, 'lightning');
         }
