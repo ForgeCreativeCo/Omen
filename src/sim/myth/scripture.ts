@@ -18,7 +18,9 @@ export type VerseKind =
   | 'legend'
   | 'place'
   | 'works'
-  | 'statue';
+  | 'statue'
+  /** A custom the village set for itself, written down. */
+  | 'law';
 
 export interface VerseRequest {
   kind: VerseKind;
@@ -239,6 +241,13 @@ const T: Record<VerseKind, Table> = {
     cairn: ['Upon {place} the people heaped stones, one for each blessing.'],
     shrine: ['And they raised a shrine at {place}, with posts of wood and a roof against the rain.'],
     temple: ['In the days of {priest} the people built a house for {god} at {place}, of stone upon stone, that {god} might dwell among them.'],
+  },
+  law: {
+    '*': [
+      'Whoever {deed} {sentence}. So it was in the days of {priest}, and so it is.',
+      'And the people said before {god}: whoever {deed} {sentence}.',
+      'This is the law of the fire: whoever {deed} {sentence}.',
+    ],
   },
   statue: {
     first: ['They carved {god} in stone: {depiction}. And it was good.', 'With their own hands the people made {god}: {depiction}.'],

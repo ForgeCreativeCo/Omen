@@ -57,7 +57,8 @@ export type DoingIcon =
   | 'eat'
   | 'sleep'
   | 'fire'
-  | 'hurt';
+  | 'hurt'
+  | 'judge';
 
 export const DOING_PATHS: Record<DoingIcon, string> = {
   dance: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
@@ -78,4 +79,5 @@ export const DOING_PATHS: Record<DoingIcon, string> = {
   sleep: 'M5 6h6l-6 8h6M13 12h5l-5 6h5',
   fire: 'M12 3c3 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 1 4 3 4 0-3-1-5 0-8z',
   hurt: 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z',
+  judge: 'M12 3v18M7 21h10M4 7h16M4 7l-2 6a3 3 0 0 0 4 0zM20 7l-2 6a3 3 0 0 0 4 0z',
 };

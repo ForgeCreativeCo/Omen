@@ -3,6 +3,7 @@ import type { GameRenderer } from '../render/GameRenderer';
 import type { Sim } from '../sim/Sim';
 import { TUNING } from '../sim/tuning';
 import type { Villager } from '../sim/villagers/types';
+import { CRIME_TEXT } from './describe';
 import { activity } from './Inspector';
 import { DOING_PATHS, svgIcon, type DoingIcon } from './symbols';
 
@@ -41,6 +42,7 @@ const TONE: Record<DoingIcon, string> = {
   sleep: 'work',
   fire: 'work',
   hurt: 'alarm',
+  judge: 'deed',
 };
 
 /** Labels for the hover card's tags. */
@@ -49,6 +51,8 @@ export function villagerTags(sim: Sim, v: Villager): string[] {
   if (v.id === sim.belief.priestId) tags.push('Priest');
   if (sim.belief.chosenIds().has(v.id)) tags.push('Chosen');
   if (sim.effects.outcastIds().has(v.id)) tags.push('Outcast');
+  const c = sim.justice.pending(v);
+  if (c) tags.push(`Accused of ${CRIME_TEXT[c.crime]}`);
   const lead = sim.dissent.leader;
   if (lead?.id === v.id) tags.push(lead.kind === 'doubter' ? 'Doubter' : 'False Prophet');
   else if (lead && sim.dissent.follows(v)) tags.push(lead.kind === 'doubter' ? 'Doubts' : 'Follows the prophet');
@@ -119,6 +123,7 @@ export class Overhead {
     if (recent) return recent.icon;
     const a = v.action;
     if (sim.dissent.leader?.id === v.id) return 'dissent';
+    if (sim.justice.pending(v)) return 'judge';
     if (sim.society.isHurt(v)) return 'hurt';
     if (a?.kind === 'ritual' && a.phase === 'work') return a.ritual === 'dance' ? 'dance' : 'pray';
     if (a?.kind === 'pilgrimage') return 'pilgrim';

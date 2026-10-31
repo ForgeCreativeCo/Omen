@@ -1,5 +1,6 @@
 import type { DissentEndReason, SimEvent } from '../sim/events';
 import { featureLabel } from '../sim/omens/context';
+import { CRIME_TEXT, LAW_TEXT, SENTENCE_TEXT, whenJudged } from './describe';
 import { TUNING } from '../sim/tuning';
 import { MILESTONES } from '../sim/milestones';
 import type { Sim } from '../sim/Sim';
@@ -69,6 +70,14 @@ export class Toasts {
           : `${who(e.victim)} has been found dead. <small>(You saw: it was ${who(e.killer)}.)</small>`;
       case 'affairExposed':
         return `${who(e.by)} found out about ${who(e.a)} and ${who(e.b)}.${e.breakup ? ' They have parted.' : ''}`;
+      case 'accused':
+        return `${who(e.accused)} is accused of ${CRIME_TEXT[e.crime]}. The village will judge at ${whenJudged(sim, e)}, <i>unless the god speaks</i>.${e.actual !== e.accused ? ` <small>(You know it was ${who(e.actual)}.)</small>` : ''}`;
+      case 'verdict':
+        if (e.by === 'godPunished') return `The god struck at ${who(e.accused)} before the village could judge.`;
+        if (e.by === 'godPardoned') return `The god touched ${who(e.accused)}: they are spared.`;
+        return `${who(e.accused)} ${SENTENCE_TEXT[e.sentence]} for ${CRIME_TEXT[e.crime]}.${e.actual !== e.accused && e.sentence !== 'forgiven' ? ' <small>(They were innocent.)</small>' : ''}`;
+      case 'law':
+        return `<b>A law is written.</b> Whoever is guilty of ${CRIME_TEXT[e.crime]} ${LAW_TEXT[e.sentence]}.`;
       case 'feud':
         return `${who(e.a)} and ${who(e.b)} are now bitter enemies.`;
       case 'birth':

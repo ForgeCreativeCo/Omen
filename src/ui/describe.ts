@@ -1,5 +1,6 @@
 import { featureLabel } from '../sim/omens/context';
 import type { Omen, OmenKind, OmenMemoryRecord } from '../sim/omens/types';
+import type { Case } from '../sim/justice';
 import type { Sim } from '../sim/Sim';
 import { calendarAt, formatCalendar } from '../sim/time';
 
@@ -134,3 +135,36 @@ export function reactionLine(sim: Sim, v: { id: number }, m: OmenMemoryRecord, o
       return good ? `It's because of ${label}. A good sign.` : bad ? `It's because of ${label}. A bad sign.` : `Because of ${label}?`;
   }
 }
+
+/** "tonight's fire" or "tomorrow's fire". */
+export function whenJudged(sim: Sim, c: Pick<Case, 'judgeAt'>): string {
+  const d = sim.justice.judgeDay(c) - sim.calendar.day;
+  return d <= 0 ? 'tonight’s fire' : d === 1 ? 'tomorrow’s fire' : 'a coming fire';
+}
+
+/** Crimes and sentences, in plain words. */
+export const CRIME_TEXT: Record<string, string> = {
+  theft: 'theft',
+  assault: 'striking a neighbor',
+  adultery: 'faithlessness',
+  murder: 'killing',
+};
+
+export const SENTENCE_TEXT: Record<string, string> = {
+  forgiven: 'was forgiven',
+  shamed: 'was shamed before the fire',
+  labor: 'must work the fields of those they wronged',
+  flogged: 'was flogged at the fire',
+  exiled: 'was sent away from the village',
+  executed: 'was put to death',
+};
+
+/** "Whoever steals ___." */
+export const LAW_TEXT: Record<string, string> = {
+  forgiven: 'is forgiven',
+  shamed: 'is shamed before the fire',
+  labor: 'works the fields of those they wronged',
+  flogged: 'is flogged at the fire',
+  exiled: 'is sent away',
+  executed: 'is put to death',
+};

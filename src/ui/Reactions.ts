@@ -13,6 +13,14 @@ const QUARREL_A = ['You took my share!', 'Liar!', 'Stay out of my field!', 'Say 
 const QUARREL_B = ['Get away from me!', 'You are the liar!', 'Leave it be!', 'Mind your own hut!', 'Prove it!'];
 const FIGHT_A = ['This ends now!', 'You had this coming!', 'For my family!'];
 const BETRAYED = ['How could you?', 'Behind my back?', 'Get out of my house!', 'I trusted you!'];
+const GUILTY = ['Mercy...', 'I had no choice.', 'Let me explain!'];
+const VERDICT_LINE: Record<string, string> = {
+  forgiven: 'Thank you... thank you.',
+  shamed: '(cannot meet anyone’s eyes)',
+  labor: 'I will make it right.',
+  flogged: '(is beaten before everyone)',
+  exiled: '(walks away from the fire)',
+};
 const pick = (lines: string[], seed: number) => lines[Math.abs(seed) % lines.length]!;
 
 /** "Fenma's hut", from the people who live there. */
@@ -111,6 +119,13 @@ export class Reactions {
       } else if (e.type === 'affairExposed') {
         const p = sim.villagers.byId(e.by);
         if (p?.alive) this.say(p, pick(BETRAYED, e.by + sim.tick), 'deed');
+      } else if (e.type === 'accused') {
+        const v = sim.villagers.byId(e.accused);
+        if (v?.alive && !v.inside) this.say(v, e.actual !== e.accused ? 'It wasn’t me!' : pick(GUILTY, e.accused + sim.tick), 'deed');
+      } else if (e.type === 'verdict' && e.by === 'village') {
+        const v = sim.villagers.byId(e.accused);
+        const line = VERDICT_LINE[e.sentence];
+        if (v?.alive && !v.inside && line) this.say(v, line, 'deed');
       } else if (e.type === 'couple') {
         const a = sim.villagers.byId(e.a);
         const b = sim.villagers.byId(e.b);

@@ -144,7 +144,7 @@ describe('Turning away', () => {
       for (let i = 0; i < TICKS_PER_DAY * 2; i++) s.step();
       const gone = before - s.villagers.alive.length;
       if (big) {
-        expect(gone).toBeGreaterThanOrEqual(nFollow);
+        expect(gone).toBeGreaterThanOrEqual(Math.min(nFollow, Math.floor(before * D.maxLeaving)));
         expect(events(s, 'exiled').some((x) => x.type === 'exiled' && x.left)).toBe(true);
       } else expect(leader.alive).toBe(false);
       expect(s.dissent.leader).toBeNull();

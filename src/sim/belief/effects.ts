@@ -290,6 +290,7 @@ export class BeliefEffects {
     this.b.spreadAtGathering(present);
     sim.dissent.dusk(present);
     sim.society.dusk(present);
+    sim.justice.dusk();
   }
 
   /** Thefts and quarrels happen; taboos make them rarer and costlier. */

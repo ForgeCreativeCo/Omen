@@ -1,6 +1,7 @@
 import type { SimEvent } from '../sim/events';
 import { MILESTONES } from '../sim/milestones';
 import { featureLabel } from '../sim/omens/context';
+import { CRIME_TEXT, LAW_TEXT, SENTENCE_TEXT } from './describe';
 import type { Sim } from '../sim/Sim';
 import { calendarAt, TICKS_PER_DAY } from '../sim/time';
 
@@ -138,6 +139,20 @@ export class VillageLog {
         return this.push(e.tick, 'deeds', e.seen ? `<b>${w(e.killer)} killed ${w(e.victim)}</b> at the fire.` : `${w(e.victim)} was found dead. Nobody saw ${w(e.killer)} do it.`);
       case 'fight':
         return this.push(e.tick, 'deeds', `${w(e.a)} struck ${w(e.b)}${e.hurt >= 0 ? ', and hurt them' : ''}.`);
+      case 'accused':
+        return this.push(e.tick, 'deeds', `${w(e.accused)} was accused of ${CRIME_TEXT[e.crime]}.${e.actual !== e.accused ? ` <small>(It was ${w(e.actual)}.)</small>` : ''}`);
+      case 'verdict':
+        return this.push(
+          e.tick,
+          'deeds',
+          e.by === 'godPunished'
+            ? `The god struck at ${w(e.accused)} before judgment.`
+            : e.by === 'godPardoned'
+              ? `The god spared ${w(e.accused)}.`
+              : `${w(e.accused)} ${SENTENCE_TEXT[e.sentence]} for ${CRIME_TEXT[e.crime]}.`,
+        );
+      case 'law':
+        return this.push(e.tick, 'faith', `A law was written: whoever is guilty of ${CRIME_TEXT[e.crime]} ${LAW_TEXT[e.sentence]}.`);
       case 'feud':
         return this.push(e.tick, 'deeds', `${w(e.a)} and ${w(e.b)} are now bitter enemies.`);
       case 'affair':

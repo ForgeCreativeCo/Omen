@@ -23,9 +23,26 @@ import {
   type ScriptureWriter,
   type VerseKind,
 } from './scripture';
+import type { Crime, Sentence } from '../justice';
 import { depictionDistance, depictionOf, statueBlueprint, type Depiction } from './statues';
 
 const T = TUNING.myth;
+
+/** How a law reads: "whoever {deed} {sentence}". */
+const LAW_DEED: Record<Crime, string> = {
+  theft: 'takes what is not theirs',
+  assault: 'strikes down a neighbor',
+  adultery: 'lies with another’s partner',
+  murder: 'takes a life',
+};
+const LAW_SENTENCE: Record<Sentence, string> = {
+  forgiven: 'shall be forgiven, as the god forgives',
+  shamed: 'shall be shamed before the fire',
+  labor: 'shall work the fields of those they wronged',
+  flogged: 'shall be beaten at the fire',
+  exiled: 'shall be sent away from the people',
+  executed: 'shall give their own life',
+};
 
 /** Omen kinds grouped the way stories group them. Dreams aren't legends. */
 const FAMILY: Partial<Record<OmenKind, string>> = {
@@ -164,6 +181,13 @@ export class MythSystem {
       }
       case 'priest':
         if (e.id >= 0) this.succession(e.id);
+        break;
+      case 'law':
+        this.addVerse('law', '*', { deed: LAW_DEED[e.crime], sentence: LAW_SENTENCE[e.sentence] }, {
+          truth: ['The village made this law itself, from its own judgments at the fire.'],
+          omenIds: [],
+          drift: [],
+        });
         break;
       case 'built': {
         const s = this.sim.village.byId(e.structureId);

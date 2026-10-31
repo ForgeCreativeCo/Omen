@@ -1,4 +1,5 @@
 import { MILESTONES } from '../sim/milestones';
+import { CRIME_TEXT, whenJudged } from './describe';
 import type { Sim } from '../sim/Sim';
 
 const OPEN_KEY = 'omen.goals.open';
@@ -91,6 +92,18 @@ export class GoalsPanel {
     return `<div class="g-safe-row"><small>If the sea came today</small><b class="${cls}">${safe} of ${alive.length}</b><small>would climb to safety</small></div><i class="g-bar"><b class="${cls}" style="width:${k * 100}%"></b></i>`;
   }
 
+  /** Someone awaits judgment: the god's chance to speak. */
+  private trial(): string {
+    const sim = this.sim;
+    const c = sim.justice.cases[0];
+    if (!c) return '';
+    const v = sim.villagers.byId(c.accused);
+    if (!v) return '';
+    const name = `<b>${v.name}</b>`;
+    const innocent = c.actual !== c.accused ? ` (You know it was <b>${sim.villagers.byId(c.actual)?.name ?? 'someone else'}</b>.)` : '';
+    return `${name} will be judged at ${whenJudged(sim, c)} for ${CRIME_TEXT[c.crime]}.${innocent} <b>Lightning</b> near them is your punishment, <b>Bless</b> them to pardon, Bless the wronged to side with them, or <b>Dream</b> to the priest (fire hardens, water softens). Or stay silent and let them judge.`;
+  }
+
   /** A Doubter or False Prophet, or a silence that will soon raise one. */
   private turning(): string {
     const d = this.sim.dissent;
@@ -116,6 +129,8 @@ export class GoalsPanel {
     const ready = (id: Parameters<typeof m.check>[0]) => m.check(id) === null;
     if (sim.warning?.disaster.phase === 'striking') return 'The sea is rising. Watch where they run.';
     if (sim.fire.burning.size > 0 && ready('rain')) return 'Something is burning. <b>Rain</b> (R) puts it out.';
+    const trial = this.trial();
+    if (trial) return trial;
     const turning = this.turning();
     if (turning) return turning;
     if (m.isNight()) {

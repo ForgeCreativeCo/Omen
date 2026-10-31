@@ -3,10 +3,12 @@
  * and toasts; M4's omen recorder will turn many of them into omens.
  */
 
-export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed';
+export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed' | 'executed';
 
 /** Who speaks in the god's place when it falls silent: one who denies it, or one who claims its voice. */
 export type DissentKind = 'doubter' | 'prophet';
+export type { Crime, Judge, Sentence } from './justice';
+import type { Crime, Judge, Sentence } from './justice';
 export type DissentEndReason = 'converted' | 'recanted' | 'discredited' | 'died' | 'gone';
 
 export type SimEventBody =
@@ -69,6 +71,10 @@ export type SimEventBody =
   /** `hurt`: who was injured, or -1. */
   | { type: 'fight'; a: number; b: number; hurt: number; x: number; z: number }
   | { type: 'killing'; killer: number; victim: number; seen: boolean; x: number; z: number }
+  /** A wrong came to light: `accused` waits for judgment at the fire (`actual` is who really did it). */
+  | { type: 'accused'; caseId: number; crime: Crime; accused: number; victims: number[]; actual: number; judgeAt: number }
+  | { type: 'verdict'; caseId: number; crime: Crime; accused: number; victims: number[]; actual: number; sentence: Sentence; by: Judge }
+  | { type: 'law'; crime: Crime; sentence: Sentence }
   | { type: 'quarrel'; a: number; b: number; x: number; z: number }
   | { type: 'built'; structureId: number; kind: string }
   | { type: 'destroyed'; structureId: number; kind: string };

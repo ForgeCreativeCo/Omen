@@ -477,6 +477,28 @@ export const TUNING = {
     bloodGrudge: 0.9,
   },
 
+  /** Village justice: accusation, the god's window, judgment at the fire, custom and law. */
+  justice: {
+    /** Days between a wrong coming to light and judgment at the fire (the god's window). */
+    windowDays: 1,
+    /** Chance the wronged blame someone for an unseen theft (a killing is always blamed). */
+    suspectChance: 0.3,
+    /** They only accuse someone they already feel at least this badly about. */
+    suspicionBelow: -0.1,
+    /** Lightning, blight or a star this close to the accused is the god's sentence. */
+    godStrikeRadius: 5,
+    shameStanding: 0.2,
+    flogDays: 2,
+    /** The same sentence this many times for a crime becomes written law. */
+    lawAfter: 3,
+    /** Below murder, exile only for someone already found guilty this many times. */
+    habitualAfter: 2,
+    /** A sentence settles the wronged side's grudge this much... */
+    settled: 0.3,
+    /** ...and the punished one's family resents the accusers this much (more for exile, death). */
+    familyResentment: 0.1,
+  },
+
   /** Turning away (neglect): silence, a Doubter or a False Prophet, and schism. */
   dissent: {
     /** Days without a witnessed wonder before they notice the silence. */
@@ -512,7 +534,7 @@ export const TUNING = {
     schismMinLoyal: 3,
     schismMinLoyalShare: 0.2,
     /** Most of the village that can leave in a split. */
-    maxLeaving: 0.4,
+    maxLeaving: 0.35,
     /** Years before anyone new rises after a split (about a generation). */
     restAfterSplitYears: 25,
     /** Smaller villages hold together: too few to break apart. */

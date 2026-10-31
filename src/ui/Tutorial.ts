@@ -114,7 +114,7 @@ const STEPS: Step[] = [
 
 const LAST_SANDBOX: Step = {
   title: 'Now it’s yours',
-  body: 'That’s the loop: act, watch them read it, see what grows. <b>Purposes</b> (bottom left) shows what to aim for next and how, with a tip for the moment. Your other powers: <b>Holy Light</b> (I) makes a place holy, <b>Bless</b> (K) picks a favorite, <b>Blight</b> (X) curses ground, a <b>Falling Star</b> (O) leaves a crater they’ll name, and <b>Dream</b> (N) plants symbols at night. Stay silent too long and someone will speak in your place. Press <b>F3</b> for God’s Eye: the real reasoning behind every belief.',
+  body: 'That’s the loop: act, watch them read it, see what grows. <b>Purposes</b> (bottom left) shows what to aim for next and how, with a tip for the moment. Your other powers: <b>Holy Light</b> (I) makes a place holy, <b>Bless</b> (K) picks a favorite, <b>Blight</b> (X) curses ground, a <b>Falling Star</b> (O) leaves a crater they’ll name, and <b>Dream</b> (N) plants symbols at night. Stay silent too long and someone will speak in your place. When someone is accused of a wrong, you have until the fire to judge them yourself; <b>Life</b> (J) shows who did what. Press <b>F3</b> for God’s Eye: the real reasoning behind every belief.',
 };
 
 const LAST_WARNING: Step = {

@@ -1,6 +1,6 @@
 import type { Sim } from '../sim/Sim';
 import { TUNING } from '../sim/tuning';
-import { describeMemory } from './describe';
+import { CRIME_TEXT, describeMemory, whenJudged } from './describe';
 import type { Action, Villager } from '../sim/villagers/types';
 
 const ACTIVITY: Record<string, string> = {
@@ -150,6 +150,10 @@ export class Inspector {
     const affair = s.affairOf(v);
     if (affair) out.push(`<dt>Secret</dt><dd>meeting ${name(affair.a === v.id ? affair.b : affair.a)}</dd>`);
     if (s.isHurt(v)) out.push('<dt>Hurt</dt><dd>resting from a beating</dd>');
+    const c = sim.justice.pending(v);
+    if (c) out.push(`<dt>Accused</dt><dd>of ${CRIME_TEXT[c.crime]}, judged at ${whenJudged(sim, c)}${c.actual !== v.id ? ' (innocent)' : ''}</dd>`);
+    const guilty = sim.justice.convictions.get(v.id) ?? 0;
+    if (guilty) out.push(`<dt>Record</dt><dd>found guilty ${guilty === 1 ? 'once' : `${guilty} times`}</dd>`);
     return out.join('');
   }
 
