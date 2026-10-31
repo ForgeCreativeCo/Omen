@@ -11,6 +11,8 @@ const LIFE = 5.5;
 
 const QUARREL_A = ['You took my share!', 'Liar!', 'Stay out of my field!', 'Say that again!', 'I saw what you did.'];
 const QUARREL_B = ['Get away from me!', 'You are the liar!', 'Leave it be!', 'Mind your own hut!', 'Prove it!'];
+const FIGHT_A = ['This ends now!', 'You had this coming!', 'For my family!'];
+const BETRAYED = ['How could you?', 'Behind my back?', 'Get out of my house!', 'I trusted you!'];
 const pick = (lines: string[], seed: number) => lines[Math.abs(seed) % lines.length]!;
 
 /** "Fenma's hut", from the people who live there. */
@@ -98,6 +100,17 @@ export class Reactions {
         const b = sim.villagers.byId(e.b);
         if (a?.alive) this.say(a, pick(QUARREL_A, e.a + sim.tick), 'deed');
         if (b?.alive) this.say(b, pick(QUARREL_B, e.b + sim.tick), 'deed');
+      } else if (e.type === 'fight') {
+        const a = sim.villagers.byId(e.a);
+        const b = sim.villagers.byId(e.b);
+        if (a?.alive) this.say(a, pick(FIGHT_A, e.a + sim.tick), 'deed');
+        if (b?.alive) this.say(b, e.hurt >= 0 ? 'Ah! My arm!' : pick(QUARREL_B, e.b + sim.tick), 'deed');
+      } else if (e.type === 'killing') {
+        const k = sim.villagers.byId(e.killer);
+        if (k?.alive && !k.inside) this.say(k, e.seen ? 'What have I done...' : '(says nothing)', 'deed');
+      } else if (e.type === 'affairExposed') {
+        const p = sim.villagers.byId(e.by);
+        if (p?.alive) this.say(p, pick(BETRAYED, e.by + sim.tick), 'deed');
       } else if (e.type === 'couple') {
         const a = sim.villagers.byId(e.a);
         const b = sim.villagers.byId(e.b);

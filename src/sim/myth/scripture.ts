@@ -91,6 +91,8 @@ export const ACTS: Record<string, [string, string, string]> = {
   'activity:eating': ['the people feasted', 'feast', 'feasting'],
   'deed:theft': ['one among them took what was not theirs', 'take what is not ours', 'theft'],
   'deed:fight': ['the people quarreled', 'quarrel', 'quarreling'],
+  'deed:adultery': ['one among them lay with another’s partner', 'lie with another’s partner', 'faithlessness'],
+  'deed:murder': ['one among them took a life', 'take a life', 'killing'],
   'deed:offering': ['the people made offering', 'make offering', 'offering'],
   'event:birth': ['a child was born', 'rejoice at every birth', 'birth'],
   'event:death': ['one of the people died', 'keep watch over the dead', 'death'],

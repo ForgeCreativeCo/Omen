@@ -61,7 +61,16 @@ export class Toasts {
     const who = (id: number) => `<b>${sim.villagers.byId(id)?.name ?? 'Someone'}</b>`;
     switch (e.type) {
       case 'death':
-        return `${who(e.id)} ${CAUSE[e.cause] ?? 'died'}.`;
+        // A killing has its own notice.
+        return e.cause === 'killed' ? null : `${who(e.id)} ${CAUSE[e.cause] ?? 'died'}.`;
+      case 'killing':
+        return e.seen
+          ? `<b>${who(e.killer)} killed ${who(e.victim)}</b> in front of everyone.`
+          : `${who(e.victim)} has been found dead. <small>(You saw: it was ${who(e.killer)}.)</small>`;
+      case 'affairExposed':
+        return `${who(e.by)} found out about ${who(e.a)} and ${who(e.b)}.${e.breakup ? ' They have parted.' : ''}`;
+      case 'feud':
+        return `${who(e.a)} and ${who(e.b)} are now bitter enemies.`;
       case 'birth':
         return `${who(e.id)} was born.`;
       case 'rainStart':

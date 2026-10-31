@@ -289,6 +289,7 @@ export class BeliefEffects {
     this.b.tellRumors(present);
     this.b.spreadAtGathering(present);
     sim.dissent.dusk(present);
+    sim.society.dusk(present);
   }
 
   /** Thefts and quarrels happen; taboos make them rarer and costlier. */
@@ -305,7 +306,7 @@ export class BeliefEffects {
       if (!victims.length) continue;
       const h = this.rng.pick(victims);
       this.b.deeds.add({ key: 'deed:theft', actorId: v.id, victimIds: [...h.residents], x: h.door.x, z: h.door.z, tick: sim.tick });
-      sim.events.push(sim.tick, { type: 'theft', id: v.id, hutId: h.id, victims: [...h.residents], x: h.door.x, z: h.door.z });
+      sim.events.push(sim.tick, { type: 'theft', id: v.id, hutId: h.id, victims: [...h.residents], x: h.door.x, z: h.door.z, known: this.rng.chance(TUNING.society.theftKnownChance) });
       if (theftTaboo > 0) v.standing = Math.max(0, v.standing - 0.25 * theftTaboo);
     }
     if (present.length >= 2 && this.rng.chance(T.fightChancePerDay * present.length * (1 - this.taboo('deed:fight')))) {

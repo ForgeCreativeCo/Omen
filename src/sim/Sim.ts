@@ -4,6 +4,7 @@ import { EventLog, type DeathCause } from './events';
 import { MythSystem } from './myth/Myth';
 import { Milestones } from './milestones';
 import { Dissent } from './dissent';
+import { Society } from './society';
 import { WarningScenario } from './disaster/Warning';
 import { OmenRecorder } from './omens/OmenRecorder';
 import { Miracles, type CastFailure, type Command } from './miracles/Miracles';
@@ -69,6 +70,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly myth: MythSystem;
   readonly milestones: Milestones;
   readonly dissent: Dissent;
+  readonly society: Society;
   /** The Warning's countdown, disaster and verdict (null in sandbox). */
   readonly warning: WarningScenario | null;
   private readonly recorder: OmenRecorder;
@@ -103,6 +105,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.myth = new MythSystem(this, this.rng.fork('myth'));
     this.milestones = new Milestones(this);
     this.dissent = new Dissent(this, this.rng.fork('dissent'));
+    this.society = new Society(this, this.rng.fork('society'));
     this.village.forbidden = (x, z) => this.effects.isCursed(x, z);
     this.village.attraction = () => this.effects.sacredArea();
     this.mode = opts.mode ?? 'sandbox';
@@ -199,6 +202,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.warning?.step();
     this.milestones.step();
     this.dissent.step();
+    this.society.step();
 
     // Late in the evening gathering, people talk: beliefs spread around the fire.
     const duskMark = TUNING.villagers.gatheringEndsAt - 0.04;
@@ -209,6 +213,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.belief.newDay();
       this.effects.dawn();
       this.dissent.dawn();
+      this.society.dawn();
       this.myth.dawn();
       this.warning?.dawn();
       this.village.population = this.villagers.alive.length;

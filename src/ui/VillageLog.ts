@@ -124,7 +124,7 @@ export class VillageLog {
     switch (e.type) {
       case 'theft': {
         const owner = e.victims.map((id) => sim.villagers.byId(id)).find((p) => p && p.lifeStage !== 'child');
-        return this.push(e.tick, 'deeds', `${w(e.id)} stole from ${owner ? `${w(owner.id)}'s` : 'a neighbor’s'} hut.`);
+        return this.push(e.tick, 'deeds', `${w(e.id)} stole from ${owner ? `${w(owner.id)}'s` : 'a neighbor’s'} hut${e.known ? '' : ', unseen'}.`);
       }
       case 'quarrel':
         return this.push(e.tick, 'deeds', `${w(e.a)} and ${w(e.b)} quarreled at the fire.`);
@@ -133,7 +133,17 @@ export class VillageLog {
       case 'birth':
         return this.push(e.tick, 'life', `${w(e.id)} was born${e.parents.length ? ` to ${e.parents.map(w).join(' and ')}` : ''}.`);
       case 'death':
-        return this.push(e.tick, 'life', `${w(e.id)} ${DEATH[e.cause] ?? 'died'}.`);
+        return e.cause === 'killed' ? undefined : this.push(e.tick, 'life', `${w(e.id)} ${DEATH[e.cause] ?? 'died'}.`);
+      case 'killing':
+        return this.push(e.tick, 'deeds', e.seen ? `<b>${w(e.killer)} killed ${w(e.victim)}</b> at the fire.` : `${w(e.victim)} was found dead. Nobody saw ${w(e.killer)} do it.`);
+      case 'fight':
+        return this.push(e.tick, 'deeds', `${w(e.a)} struck ${w(e.b)}${e.hurt >= 0 ? ', and hurt them' : ''}.`);
+      case 'feud':
+        return this.push(e.tick, 'deeds', `${w(e.a)} and ${w(e.b)} are now bitter enemies.`);
+      case 'affair':
+        return this.push(e.tick, 'love', `${w(e.a)} has been meeting ${w(e.b)} in secret.`);
+      case 'affairExposed':
+        return this.push(e.tick, 'love', `${w(e.by)} found out about ${w(e.a)} and ${w(e.b)}.${e.breakup ? ' They parted.' : ''}`);
       case 'exiled':
         return this.push(e.tick, 'deeds', e.left ? `${w(e.id)} left the village.` : `${w(e.id)} was sent away.`);
       case 'ritual': {

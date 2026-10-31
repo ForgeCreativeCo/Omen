@@ -1,4 +1,5 @@
 import type { Sim } from '../sim/Sim';
+import { TUNING } from '../sim/tuning';
 import { describeMemory } from './describe';
 import type { Action, Villager } from '../sim/villagers/types';
 
@@ -92,7 +93,7 @@ export class Inspector {
       ? activity(v, v.action)
       : v.deathCause === 'exiled'
         ? 'gone from the village'
-        : `died ${v.deathCause === 'oldAge' ? 'of old age' : v.deathCause === 'starvation' ? 'of hunger' : `by ${v.deathCause}`}`;
+        : `died ${v.deathCause === 'oldAge' ? 'of old age' : v.deathCause === 'starvation' ? 'of hunger' : v.deathCause === 'killed' ? 'at another’s hand' : `by ${v.deathCause}`}`;
     // Their view of the god, in the shape they imagine it (SPEC §15: "fears the Burning Hand").
     const depiction = sim.belief.beliefs.get(sim.belief.key('DEPICTION', 'god'));
     const image = depiction && (depiction.holders.get(v.id) ?? 0) > 0.05 ? `, ${sim.belief.depictionPhrase(depiction)}` : '';
@@ -122,6 +123,7 @@ export class Inspector {
         ${kids ? `<dt>Children</dt><dd>${kids}</dd>` : ''}
         <dt>Home</dt><dd>${home ? `hut #${home.id}` : 'none'}</dd>
         <dt>The god</dt><dd>${view}</dd>
+        ${this.relations(sim, v, name)}
       </dl>
       <div class="ins-section">Remembers</div>
       ${v.dreams.length ? v.dreams.slice(-3).map((d) => `<div class="ins-dream">Dreamt of ${d.symbols.join(', ')}</div>`).join('') : ''}
@@ -130,6 +132,25 @@ export class Inspector {
       <div class="ins-section">Believes</div>
       ${held.map(({ b, s }) => `<div class="ins-belief"><span>${sim.belief.statement(b)}</span><div><i style="width:${Math.round(s * 100)}%"></i></div></div>`).join('')}
       <div class="ins-empty">${held.length ? '' : 'Nothing yet.'}</div>`;
+  }
+
+  /** Who they love, who they resent, what they hide, and how they are. */
+  private relations(sim: Sim, v: Villager, name: (id: number) => string): string {
+    if (!v.alive) return '';
+    const s = sim.society;
+    const out: string[] = [];
+    const p = v.partnerId >= 0 ? sim.villagers.byId(v.partnerId) : undefined;
+    if (p) {
+      const b = s.bond(v, p);
+      out.push(`<dt>Marriage</dt><dd>${b > 0.5 ? 'loving' : b > 0.2 ? 'steady' : b > -0.1 ? 'cold' : 'bitter'}</dd>`);
+    }
+    const f = s.feelings(v);
+    if (f.fond) out.push(`<dt>Fond of</dt><dd>${name(f.fond.id)}</dd>`);
+    if (f.grudge) out.push(`<dt>${f.grudgeLevel <= TUNING.society.feudAt ? 'Feuds with' : 'Resents'}</dt><dd>${name(f.grudge.id)}</dd>`);
+    const affair = s.affairOf(v);
+    if (affair) out.push(`<dt>Secret</dt><dd>meeting ${name(affair.a === v.id ? affair.b : affair.a)}</dd>`);
+    if (s.isHurt(v)) out.push('<dt>Hurt</dt><dd>resting from a beating</dd>');
+    return out.join('');
   }
 
   /** Doubter, False Prophet, or one who listens to them. */

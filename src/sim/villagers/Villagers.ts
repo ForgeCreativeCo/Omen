@@ -268,7 +268,8 @@ export class Villagers {
     if (gatherTime) consider('gathering', 1.0);
     // 'farm' stands for "work" here; workAction picks the actual job. Older children help forage when food is short.
     const shortOfFood = store.food / Math.max(1, this.alive.length) < WK.forageBelowFoodPerCapita * 0.5;
-    if (workTime && (v.lifeStage !== 'child' || (shortOfFood && v.age >= WK.childForageAge))) consider('farm', 0.8);
+    // The injured rest instead of working.
+    if (workTime && !sim.society.isHurt(v) && (v.lifeStage !== 'child' || (shortOfFood && v.age >= WK.childForageAge))) consider('farm', 0.8);
 
     // Keep doing the same kind of thing rather than re-planning; finish deliveries, escapes and rites.
     const cur = v.action?.kind;
@@ -883,9 +884,24 @@ export class Villagers {
     });
   }
 
-  private related(a: Villager, b: Villager): boolean {
+  related(a: Villager, b: Villager): boolean {
     if (a.parentIds.includes(b.id) || b.parentIds.includes(a.id)) return true;
     return a.parentIds.some((p) => b.parentIds.includes(p));
+  }
+
+  /** Partners part: the one who strayed moves out if there's somewhere to go. */
+  separate(strayed: Villager, other: Villager): void {
+    strayed.partnerId = -1;
+    other.partnerId = -1;
+    const empty = this.sim.village.huts.find((h) => this.sim.village.usableHut(h) && h.residents.length === 0);
+    if (empty) this.moveHome(strayed, empty);
+  }
+
+  /** Two people become a couple (outside the usual matchmaking). */
+  pair(a: Villager, b: Villager): void {
+    a.partnerId = b.id;
+    b.partnerId = a.id;
+    this.sim.events.push(this.sim.tick, { type: 'couple', a: a.id, b: b.id });
   }
 
   private formCouples(): void {

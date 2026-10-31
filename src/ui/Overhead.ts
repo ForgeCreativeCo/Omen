@@ -40,6 +40,7 @@ const TONE: Record<DoingIcon, string> = {
   eat: 'work',
   sleep: 'work',
   fire: 'work',
+  hurt: 'alarm',
 };
 
 /** Labels for the hover card's tags. */
@@ -102,6 +103,9 @@ export class Overhead {
       if (e.type === 'theft') this.recent.set(e.id, { icon: 'theft', until });
       else if (e.type === 'quarrel') for (const id of [e.a, e.b]) this.recent.set(id, { icon: 'quarrel', until });
       else if (e.type === 'couple') for (const id of [e.a, e.b]) this.recent.set(id, { icon: 'love', until });
+      else if (e.type === 'fight') for (const id of [e.a, e.b]) this.recent.set(id, { icon: 'quarrel', until });
+      else if (e.type === 'affairExposed') for (const id of [e.a, e.b, e.by]) this.recent.set(id, { icon: 'quarrel', until });
+      else if (e.type === 'killing') this.recent.set(e.killer, { icon: 'theft', until: until + 10 });
     }
     this.lastSeq = sim.events.lastSeq;
     for (const [id, r] of this.recent) if (r.until < this.clock) this.recent.delete(id);
@@ -115,6 +119,7 @@ export class Overhead {
     if (recent) return recent.icon;
     const a = v.action;
     if (sim.dissent.leader?.id === v.id) return 'dissent';
+    if (sim.society.isHurt(v)) return 'hurt';
     if (a?.kind === 'ritual' && a.phase === 'work') return a.ritual === 'dance' ? 'dance' : 'pray';
     if (a?.kind === 'pilgrimage') return 'pilgrim';
     if (a?.kind === 'flee') return 'flee';

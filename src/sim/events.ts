@@ -3,7 +3,7 @@
  * and toasts; M4's omen recorder will turn many of them into omens.
  */
 
-export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor';
+export type DeathCause = 'oldAge' | 'starvation' | 'fire' | 'lightning' | 'flood' | 'exiled' | 'meteor' | 'killed';
 
 /** Who speaks in the god's place when it falls silent: one who denies it, or one who claims its voice. */
 export type DissentKind = 'doubter' | 'prophet';
@@ -61,7 +61,14 @@ export type SimEventBody =
   | { type: 'birth'; id: number; parents: number[] }
   | { type: 'death'; id: number; cause: DeathCause; x: number; z: number }
   | { type: 'couple'; a: number; b: number }
-  | { type: 'theft'; id: number; hutId: number; victims: number[]; x: number; z: number }
+  /** `known`: the victims learned who did it. */
+  | { type: 'theft'; id: number; hutId: number; victims: number[]; x: number; z: number; known: boolean }
+  | { type: 'affair'; a: number; b: number }
+  | { type: 'affairExposed'; a: number; b: number; by: number; breakup: boolean }
+  | { type: 'feud'; a: number; b: number }
+  /** `hurt`: who was injured, or -1. */
+  | { type: 'fight'; a: number; b: number; hurt: number; x: number; z: number }
+  | { type: 'killing'; killer: number; victim: number; seen: boolean; x: number; z: number }
   | { type: 'quarrel'; a: number; b: number; x: number; z: number }
   | { type: 'built'; structureId: number; kind: string }
   | { type: 'destroyed'; structureId: number; kind: string };

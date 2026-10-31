@@ -436,6 +436,47 @@ export const TUNING = {
     refugeTrust: 0.2,
   },
 
+  /** How people feel about each other: fondness, grudges, affairs, feuds, killing. */
+  society: {
+    /** Feeling between partners, and between kin, before anything happens. */
+    partnerStart: 0.6,
+    kinStart: 0.4,
+    /** Warmth gained from whoever you sit with at the fire. */
+    fondPerEvening: 0.04,
+    /** All feelings drift back toward nothing, this much a day. */
+    bondFadePerDay: 0.006,
+    /** Partners: a shared roof warms, time wears. */
+    homeWarmth: 0.003,
+    partnerStaleness: 0.006,
+    quarrelGrudge: 0.15,
+    theftGrudge: 0.2,
+    /** Share of thefts where the victims learn who did it. */
+    theftKnownChance: 0.5,
+    /** An affair: cold toward one's partner, warm toward someone else. */
+    affairColdBelow: 0.25,
+    affairFondAbove: 0.3,
+    affairChancePerDay: 0.05,
+    affairExposePerDay: 0.06,
+    affairFadePerDay: 0.03,
+    exposureGrudgePartner: 0.5,
+    exposureGrudgeLover: 0.7,
+    exposureStanding: 0.1,
+    breakupChance: 0.5,
+    /** Feeling at or below which two people feud, then come to blows. */
+    feudAt: -0.6,
+    violenceAt: -0.8,
+    feudQuarrelChance: 0.35,
+    fightHurtChance: 0.4,
+    hurtDays: 2,
+    /** Chance a fight between bitter enemies ends in a death. */
+    killChance: 0.015,
+    /** The worst hatred may kill in secret. */
+    ambushAt: -0.9,
+    ambushChancePerDay: 0.0015,
+    /** The victim's family against a known killer. */
+    bloodGrudge: 0.9,
+  },
+
   /** Turning away (neglect): silence, a Doubter or a False Prophet, and schism. */
   dissent: {
     /** Days without a witnessed wonder before they notice the silence. */
