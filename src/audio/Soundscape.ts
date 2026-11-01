@@ -1,6 +1,9 @@
 import type { SimEvent } from '../sim/events';
 import type { Sim } from '../sim/Sim';
 import asteroidUrl from './sounds/asteroid.mp3?url';
+import coughUrl from './sounds/cough.mp3?url';
+import coughGrandpaUrl from './sounds/cough-grandpa.mp3?url';
+import coughManUrl from './sounds/cough-man.mp3?url';
 import explosionUrl from './sounds/explosion.mp3?url';
 import waveUrl from './sounds/ocean-wave.mp3?url';
 
@@ -9,7 +12,8 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * each miracle; and, in the Warning, a low drone that builds as the sea draws near.
  * A few recordings stand in for the synthesized voice once loaded (the tidal wave's
  * crash, the falling star's descent and impact); until then, or if one can't be
- * decoded, the synthesized one plays.
+ * decoded, the synthesized one plays. While the god's sickness is abroad, the sick
+ * cough (recorded only: nothing plays until they load).
  * Reads the sim, never changes it. Starts on the first click or key (browsers
  * don't allow sound before that).
  */
@@ -21,6 +25,9 @@ export class Soundscape {
   private lastSeq = -1;
   private volume = 0.6;
   private birdTimer = 0;
+  private coughTimer = 0;
+  /** Coughs still sounding (no more than two at once). */
+  private coughing = 0;
   /** Real-time stamps of recent one-shots, so 16× doesn't turn into noise. */
   private recent = new Map<string, number>();
   /** Decoded recordings by name, once loaded. */
@@ -61,6 +68,9 @@ export class Soundscape {
     void this.load('wave', waveUrl);
     void this.load('asteroid', asteroidUrl);
     void this.load('explosion', explosionUrl);
+    void this.load('cough1', coughUrl);
+    void this.load('cough2', coughGrandpaUrl);
+    void this.load('cough3', coughManUrl);
   }
 
   private async load(name: string, url: string): Promise<void> {
@@ -72,19 +82,34 @@ export class Soundscape {
     }
   }
 
-  /** Play a loaded recording; its gain node, or null if it isn't loaded (yet). */
-  private sample(name: string, gain: number): GainNode | null {
+  /** Play a loaded recording (optionally pitched, panned, delayed); its gain node, or null if it isn't loaded (yet). */
+  private sample(name: string, gain: number, opts: { rate?: number; pan?: number; at?: number; ended?: () => void } = {}): GainNode | null {
     const buf = this.samples.get(name);
     if (!buf) return null;
     const ctx = this.ctx!;
     const src = ctx.createBufferSource();
     src.buffer = buf;
+    src.playbackRate.value = opts.rate ?? 1;
     const g = ctx.createGain();
     g.gain.value = gain;
-    src.connect(g).connect(this.master!);
-    src.start();
-    src.onended = () => g.disconnect();
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = opts.pan ?? 0;
+    src.connect(g).connect(pan).connect(this.master!);
+    src.start(ctx.currentTime + (opts.at ?? 0));
+    src.onended = () => {
+      pan.disconnect();
+      opts.ended?.();
+    };
     return g;
+  }
+
+  /** One of the sick coughing, somewhere in the village. False if none can play now. */
+  private cough(gain: number, at = 0): boolean {
+    if (this.coughing >= 2) return false;
+    const name = `cough${1 + Math.floor(Math.random() * 3)}`;
+    const g = this.sample(name, gain, { rate: 0.9 + Math.random() * 0.2, pan: Math.random() * 1.4 - 0.7, at, ended: () => this.coughing-- });
+    if (g) this.coughing++;
+    return !!g;
   }
 
   /** A looping filtered-noise layer whose loudness follows the world. */
@@ -161,6 +186,14 @@ export class Soundscape {
     if (this.birdTimer <= 0) {
       this.birdTimer = 0.6 + Math.random() * 2.2;
       if (!night && !raining && cal.season !== 'winter') this.chirp();
+    }
+
+    // The sick cough, more often and a little louder the more of them there are.
+    const sick = sim.plague.sick.size;
+    this.coughTimer -= dt;
+    if (running && sick && this.coughTimer <= 0) {
+      this.coughTimer = Math.max(1.6, (2.5 + Math.random() * 5) / Math.sqrt(sick));
+      this.cough(Math.min(0.45, 0.2 + sick * 0.02));
     }
 
     if (this.lastSeq < 0) this.lastSeq = sim.events.lastSeq;
@@ -241,7 +274,10 @@ export class Soundscape {
         this.rumble(1.5);
         break;
       case 'plague':
-        if (this.ok('plague', 2)) this.wither();
+        if (!this.ok('plague', 2)) break;
+        this.wither();
+        // The first of them already coughing.
+        if (this.cough(0.45, 0.8)) this.coughTimer = 3;
         break;
     }
   }
