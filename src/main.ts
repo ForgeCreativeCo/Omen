@@ -223,6 +223,8 @@ function frame(now: number): void {
   }
   checkOutcome();
   tutorial.update();
+  const look = renderer.orbit.looking;
+  sound.listen(look.x + TUNING.world.sizeX / 2, look.z + TUNING.world.sizeZ / 2, renderer.orbit.zoom);
   sound.update(sim, loop.speedIndex > 0, dt);
   if (sim.calendar.year !== savedYear) {
     savedYear = sim.calendar.year;

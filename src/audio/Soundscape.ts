@@ -2,6 +2,8 @@ import type { SimEvent } from '../sim/events';
 import type { Sim } from '../sim/Sim';
 import asteroidUrl from './sounds/asteroid.mp3?url';
 import fireUrl from './sounds/blazing-fire.mp3?url';
+import hammerUrl from './sounds/hammering.mp3?url';
+import sawUrl from './sounds/sawing.mp3?url';
 import coughUrl from './sounds/cough.mp3?url';
 import coughGrandpaUrl from './sounds/cough-grandpa.mp3?url';
 import coughManUrl from './sounds/cough-man.mp3?url';
@@ -14,7 +16,8 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * A few recordings stand in for the synthesized voice once loaded (the tidal wave's
  * crash, the falling star's descent and impact, the roar of a firestorm for as long
  * as it burns); until then, or if one can't be
- * decoded, the synthesized one plays. While the god's sickness is abroad, the sick
+ * decoded, the synthesized one plays. Building sites near where the camera looks
+ * ring with hammering and sawing (recorded only). While the god's sickness is abroad, the sick
  * cough (recorded only: nothing plays until they load).
  * Reads the sim, never changes it. Starts on the first click or key (browsers
  * don't allow sound before that).
@@ -30,6 +33,11 @@ export class Soundscape {
   private coughTimer = 0;
   /** Coughs still sounding (no more than two at once). */
   private coughing = 0;
+  /** Where the camera looks (world x, z) and how far back it sits: what's near is heard. */
+  private ear = { x: 0, z: 0, zoom: 100 };
+  /** The hammering loop while a building site is in earshot. */
+  private hammer: GainNode | null = null;
+  private sawTimer = 0;
   /** The fire's roar for each firestorm burning now, by its id. */
   private storms = new Map<number, GainNode>();
   /** The source behind each playing recording's gain, so it can be stopped early. */
@@ -45,6 +53,13 @@ export class Soundscape {
     const start = () => this.start();
     window.addEventListener('pointerdown', start, { once: true });
     window.addEventListener('keydown', start, { once: true });
+  }
+
+  /** Where the camera looks (world coordinates) and its distance from there. */
+  listen(x: number, z: number, zoom: number): void {
+    this.ear.x = x;
+    this.ear.z = z;
+    this.ear.zoom = zoom;
   }
 
   setVolume(v: number): void {
@@ -75,6 +90,8 @@ export class Soundscape {
     void this.load('asteroid', asteroidUrl);
     void this.load('explosion', explosionUrl);
     void this.load('fire', fireUrl);
+    void this.load('hammer', hammerUrl);
+    void this.load('saw', sawUrl);
     void this.load('cough1', coughUrl);
     void this.load('cough2', coughGrandpaUrl);
     void this.load('cough3', coughManUrl);
@@ -93,7 +110,7 @@ export class Soundscape {
   private sample(
     name: string,
     gain: number,
-    opts: { rate?: number; pan?: number; at?: number; offset?: number; fadeIn?: number; ended?: () => void } = {},
+    opts: { rate?: number; pan?: number; at?: number; offset?: number; fadeIn?: number; loop?: boolean; ended?: () => void } = {},
   ): GainNode | null {
     const buf = this.samples.get(name);
     if (!buf) return null;
@@ -101,6 +118,7 @@ export class Soundscape {
     const src = ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = opts.rate ?? 1;
+    src.loop = !!opts.loop;
     const g = ctx.createGain();
     const t = ctx.currentTime + (opts.at ?? 0);
     if (opts.fadeIn) {
@@ -117,6 +135,27 @@ export class Soundscape {
       opts.ended?.();
     };
     return g;
+  }
+
+  /**
+   * 0..1: how loud the nearest building site with someone at work on it is, by its
+   * distance from where the camera looks and how far back the camera sits.
+   */
+  private buildingNear(sim: Sim): number {
+    let best = Infinity;
+    for (const v of sim.villagers.alive) {
+      const a = v.action;
+      if (a?.kind !== 'build' || a.phase !== 'work') continue;
+      const d = Math.hypot(v.x - this.ear.x, v.z - this.ear.z);
+      // A grave is dug, not hammered.
+      if (d < best && sim.tribes[v.tribeId]?.village.byId(a.structureId)?.kind !== 'grave') best = d;
+    }
+    if (best === Infinity) return 0;
+    const reach = 25 + this.ear.zoom * 0.3;
+    const place = Math.max(0, 1 - best / reach);
+    // Zoomed out over the island, the work is a faint sound among many.
+    const zoom = Math.min(1, Math.max(0.15, 60 / Math.max(60, this.ear.zoom)));
+    return place * zoom;
   }
 
   /** Let a playing recording die away over about `seconds`, then stop it. */
@@ -226,6 +265,21 @@ export class Soundscape {
       // Somewhere in the recording, so each storm sounds a little different.
       const g = this.sample('fire', 0.45, { offset: Math.random() * Math.max(0, fire.duration - 20), fadeIn: 0.5 });
       if (g) this.storms.set(id, g);
+    }
+
+    // Hammering and sawing from the nearest building site at work, louder the closer the camera.
+    const near = running ? this.buildingNear(sim) : 0;
+    if (near > 0.03) {
+      if (!this.hammer) this.hammer = this.sample('hammer', 0, { loop: true, offset: Math.random() * 8 });
+      this.hammer?.gain.setTargetAtTime(near * 0.3, this.ctx.currentTime, 0.3);
+      this.sawTimer -= dt;
+      if (this.sawTimer <= 0) {
+        this.sawTimer = 2.5 + Math.random() * 4;
+        this.sample('saw', near * 0.35, { rate: 0.92 + Math.random() * 0.16, pan: Math.random() * 1.2 - 0.6 });
+      }
+    } else if (this.hammer) {
+      this.fadeOut(this.hammer, 1);
+      this.hammer = null;
     }
 
     // The sick cough, more often and a little louder the more of them there are.
