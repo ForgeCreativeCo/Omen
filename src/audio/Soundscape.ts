@@ -1,6 +1,7 @@
 import type { SimEvent } from '../sim/events';
 import type { Sim } from '../sim/Sim';
 import asteroidUrl from './sounds/asteroid.mp3?url';
+import buzzUrl from './sounds/buzzing.mp3?url';
 import fireUrl from './sounds/blazing-fire.mp3?url';
 import hammerUrl from './sounds/hammering.mp3?url';
 import lightningUrl from './sounds/lightning.mp3?url';
@@ -16,7 +17,7 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * each miracle; and, in the Warning, a low drone that builds as the sea draws near.
  * A few recordings stand in for the synthesized voice once loaded (the tidal wave's
  * crash, a lightning strike's crack and roll, the falling star's descent and impact, the roar of a firestorm for as long
- * as it burns); until then, or if one can't be
+ * as it burns, a swarm's buzzing while it feeds); until then, or if one can't be
  * decoded, the synthesized one plays. Building sites near where the camera looks
  * ring with hammering and sawing (recorded only). While the god's sickness is abroad, the sick
  * cough (recorded only: nothing plays until they load).
@@ -39,6 +40,8 @@ export class Soundscape {
   /** The hammering loop while a building site is in earshot. */
   private hammer: GainNode | null = null;
   private sawTimer = 0;
+  /** The buzzing of each swarm alive now, by its id. */
+  private swarms = new Map<number, GainNode>();
   /** The fire's roar for each firestorm burning now, by its id. */
   private storms = new Map<number, GainNode>();
   /** The source behind each playing recording's gain, so it can be stopped early. */
@@ -91,6 +94,7 @@ export class Soundscape {
     void this.load('asteroid', asteroidUrl);
     void this.load('explosion', explosionUrl);
     void this.load('fire', fireUrl);
+    void this.load('buzz', buzzUrl);
     void this.load('hammer', hammerUrl);
     void this.load('lightning', lightningUrl);
     void this.load('saw', sawUrl);
@@ -112,7 +116,18 @@ export class Soundscape {
   private sample(
     name: string,
     gain: number,
-    opts: { rate?: number; pan?: number; at?: number; offset?: number; fadeIn?: number; loop?: boolean; ended?: () => void } = {},
+    opts: {
+      rate?: number;
+      pan?: number;
+      at?: number;
+      offset?: number;
+      fadeIn?: number;
+      loop?: boolean;
+      /** Loop only this stretch of the recording (seconds). */
+      loopFrom?: number;
+      loopTo?: number;
+      ended?: () => void;
+    } = {},
   ): GainNode | null {
     const buf = this.samples.get(name);
     if (!buf) return null;
@@ -121,6 +136,8 @@ export class Soundscape {
     src.buffer = buf;
     src.playbackRate.value = opts.rate ?? 1;
     src.loop = !!opts.loop;
+    if (opts.loopFrom !== undefined) src.loopStart = opts.loopFrom;
+    if (opts.loopTo !== undefined) src.loopEnd = opts.loopTo;
     const g = ctx.createGain();
     const t = ctx.currentTime + (opts.at ?? 0);
     if (opts.fadeIn) {
@@ -139,25 +156,28 @@ export class Soundscape {
     return g;
   }
 
+  /** 0..1: how loud something at (x, z) is, by its distance from where the camera looks (heard out to `reach` up close) and how far back the camera sits. */
+  private hearing(x: number, z: number, reach: number): number {
+    const d = Math.hypot(x - this.ear.x, z - this.ear.z);
+    const place = Math.max(0, 1 - d / (reach + this.ear.zoom * 0.3));
+    // Zoomed out over the island, it's a faint sound among many.
+    return place * Math.min(1, Math.max(0.15, 60 / Math.max(60, this.ear.zoom)));
+  }
+
   /**
    * 0..1: how loud the nearest building site with someone at work on it is, by its
    * distance from where the camera looks and how far back the camera sits.
    */
   private buildingNear(sim: Sim): number {
-    let best = Infinity;
+    let best = 0;
     for (const v of sim.villagers.alive) {
       const a = v.action;
       if (a?.kind !== 'build' || a.phase !== 'work') continue;
-      const d = Math.hypot(v.x - this.ear.x, v.z - this.ear.z);
+      const k = this.hearing(v.x, v.z, 25);
       // A grave is dug, not hammered.
-      if (d < best && sim.tribes[v.tribeId]?.village.byId(a.structureId)?.kind !== 'grave') best = d;
+      if (k > best && sim.tribes[v.tribeId]?.village.byId(a.structureId)?.kind !== 'grave') best = k;
     }
-    if (best === Infinity) return 0;
-    const reach = 25 + this.ear.zoom * 0.3;
-    const place = Math.max(0, 1 - best / reach);
-    // Zoomed out over the island, the work is a faint sound among many.
-    const zoom = Math.min(1, Math.max(0.15, 60 / Math.max(60, this.ear.zoom)));
-    return place * zoom;
+    return best;
   }
 
   /** Let a playing recording die away over about `seconds`, then stop it. */
@@ -269,6 +289,22 @@ export class Soundscape {
       if (g) this.storms.set(id, g);
     }
 
+    // A swarm buzzes for as long as it feeds, louder the closer the camera is to it.
+    const alive = new Map(running ? sim.miracles.wrath.swarms.map((w) => [w.id, w] as const) : []);
+    for (const [id, g] of this.swarms) {
+      if (alive.has(id)) continue;
+      this.fadeOut(g, 1.2);
+      this.swarms.delete(id);
+    }
+    for (const [id, w] of alive) {
+      let g = this.swarms.get(id);
+      // The steady middle of the recording, looped (its ends swell in and out).
+      if (!g) g = this.sample('buzz', 0, { loop: true, offset: 1.5, loopFrom: 1.5, loopTo: 7.5 }) ?? undefined;
+      if (!g) continue;
+      this.swarms.set(id, g);
+      g.gain.setTargetAtTime(1.6 * this.hearing(w.x, w.z, 30), this.ctx.currentTime, 0.25);
+    }
+
     // Hammering and sawing from the nearest building site at work, louder the closer the camera.
     const near = running ? this.buildingNear(sim) : 0;
     if (near > 0.03) {
@@ -369,7 +405,8 @@ export class Soundscape {
         if (this.ok('wave', 2)) this.surf();
         break;
       case 'swarm':
-        if (this.ok('swarm', 2)) this.buzz();
+        // The recording, once loaded, plays from update() for as long as the swarm lives.
+        if (!this.samples.has('buzz') && this.ok('swarm', 2)) this.buzz();
         break;
       case 'sacrifice':
         this.drums();
