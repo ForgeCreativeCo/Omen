@@ -62,6 +62,10 @@ export const M = {
   RUIN_STONE: 26,
   /** Left where a Falling Star landed. */
   STAR_STONE: 27,
+  /** Posts around a fenced field (decor: never blocks anyone). */
+  FENCE: 28,
+  /** Ground worn bare where people walk every day. */
+  PATH: 29,
 } as const;
 
 type Props = Partial<Omit<MaterialDef, 'id' | 'name' | 'color'>>;
@@ -126,6 +130,8 @@ export const MATERIALS: readonly MaterialDef[] = [
   def(M.STATUE_GOLD, 'statueGold', 0xf0c64a, { walkable: false }),
   def(M.RUIN_STONE, 'ruinStone', 0x8d9278),
   def(M.STAR_STONE, 'starStone', 0xa8e4ff),
+  def(M.FENCE, 'fence', 0x7a5636, { solid: false, walkable: false, passable: true, decor: true, flammability: 0.4, burnsTo: M.AIR }),
+  def(M.PATH, 'path', 0xa08a68, { fertility: 0.2 }),
 ];
 
 // Catch table/ID drift at load time.

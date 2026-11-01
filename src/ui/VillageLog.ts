@@ -270,7 +270,10 @@ export class VillageLog {
       case 'godNamed':
         return this.push(e.tick, 'faith', `They named the god <b>${e.name}</b>.`);
       case 'built':
+        if (e.variant === 'longhouse') return this.push(e.tick, 'life', 'A longhouse was finished.');
         if (e.kind === 'hut') return this.push(e.tick, 'life', 'A new hut was finished.');
+        if (e.kind === 'storehouse') return this.push(e.tick, 'life', 'A storehouse was finished.');
+        if (e.kind === 'fence') return this.push(e.tick, 'life', 'A field was fenced.');
         if (e.kind === 'grave') return this.push(e.tick, 'life', 'A grave was dug.');
         if (e.kind === 'cairn' || e.kind === 'shrine' || e.kind === 'temple' || e.kind === 'statue') return this.push(e.tick, 'faith', `A ${e.kind} was raised.`);
         return;

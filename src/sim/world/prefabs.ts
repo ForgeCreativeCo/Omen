@@ -11,7 +11,7 @@ import { M, type MaterialId } from './materials';
  * '.' clear to air, ' ' leave untouched.
  */
 
-export type PrefabKind = 'hut' | 'well' | 'firePit' | 'grave' | 'cairn' | 'shrine' | 'temple' | 'statue';
+export type PrefabKind = 'hut' | 'well' | 'firePit' | 'grave' | 'cairn' | 'shrine' | 'temple' | 'statue' | 'storehouse';
 
 export interface PrefabDef {
   kind: PrefabKind;
@@ -80,6 +80,37 @@ export const PREFABS: readonly PrefabDef[] = [
     ],
   },
   {
+    // A prosperous village's big home: more beds under one long roof.
+    kind: 'hut',
+    variant: 'longhouse',
+    yOffset: 0,
+    doorX: 3,
+    layers: [
+      ['WPPPPPW', 'P.....P', 'P.....P', 'P.....P', 'WPP.PPW'],
+      ['WPPPPPW', 'P.....P', 'P.....P', 'P.....P', 'WPP.PPW'],
+      ['WPPPPPW', 'P.....P', 'P.....P', 'P.....P', 'WPPPPPW'],
+      ['TTTTTTT', 'TTTTTTT', 'TTTTTTT', 'TTTTTTT', 'TTTTTTT'],
+      ['.......', 'TTTTTTT', 'TTTTTTT', 'TTTTTTT', '.......'],
+      ['.......', '.......', 'TTTTTTT', '.......', '.......'],
+    ],
+  },
+  {
+    // Stone below to keep the damp and the mice out; the food keeps longer.
+    kind: 'storehouse',
+    variant: 'granary',
+    yOffset: 0,
+    doorX: 2,
+    layers: [
+      ['SSSSS', 'S...S', 'S...S', 'S...S', 'SS.SS'],
+      ['SSSSS', 'S...S', 'S...S', 'S...S', 'SS.SS'],
+      ['WPPPW', 'P...P', 'P...P', 'P...P', 'WPPPW'],
+      ['PPPPP', 'PTTTP', 'PTTTP', 'PTTTP', 'PPPPP'],
+      ['TTTTT', 'TTTTT', 'TTTTT', 'TTTTT', 'TTTTT'],
+      ['.....', '.TTT.', '.TTT.', '.TTT.', '.....'],
+      ['.....', '.....', '..T..', '.....', '.....'],
+    ],
+  },
+  {
     kind: 'firePit',
     variant: 'ring',
     yOffset: 0,
@@ -137,10 +168,12 @@ export const PREFABS: readonly PrefabDef[] = [
   },
 ];
 
-/** Statues are generated (myth/statues.ts), not listed here. */
+/** Statues are generated (myth/statues.ts), not listed here. Longhouses are chosen on purpose, never at random. */
 export function prefabsOf(kind: PrefabKind): PrefabDef[] {
-  return PREFABS.filter((p) => p.kind === kind);
+  return PREFABS.filter((p) => p.kind === kind && p.variant !== 'longhouse');
 }
+
+export const LONGHOUSE = PREFABS.find((p) => p.variant === 'longhouse')!;
 
 /** Footprint size (unrotated). */
 export function prefabSize(p: PrefabDef): { w: number; d: number } {

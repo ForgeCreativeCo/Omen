@@ -66,6 +66,7 @@ const NOT_GROUND = new Set<MaterialId>([
   M.FLOWER_RED,
   M.FLOWER_GOLD,
   M.STAR_STONE,
+  M.FENCE,
 ]);
 
 /**

@@ -45,6 +45,7 @@ In dev builds `window.omen` exposes `{ sim, loop, renderer, beliefs, book, … }
 
 ## What's in the game
 - **The island**: 256×256 voxels. A home valley (village, east hill, ridge, river) with highlands, forested lowlands, badlands and meadows around it, and, in the sandbox, two to four islets in the sea around it. Far-off terrain is drawn coarse.
+- **Growing villages**: homes, fields and a well go up as the people grow, kept close to the fire. With no open ground near, they mark a patch of woods and the woodcutters fell it before anything is built there, so a growing village eats into the forest. A village with wood, stone and food to spare builds for its own sake: a storehouse (food keeps twice as long), fences around its fields, longhouses that sleep nine. Feet wear paths between the huts, fields and fire, and the grass grows back where nobody walks. A people settled far from bare rock walks farther to quarry.
 - **Belief**: every witness reads each omen for themselves (what they blame or credit, blessing or curse), retells it at the fire, and beliefs harden into rites, taboos, holy and cursed places, chosen ones, doctrine and tradition. Speech over heads shows each reading; a seasonal card says what changed.
 - **Myth**: named places, the god's name and statue, legends that compress with each priest, a Holy Book with the truth beside each verse, and laws the village writes for itself.
 - **Society**: fondness and grudges between every pair, affairs (found out or not), feuds, fights, rare killings, thefts and quarrels.
@@ -64,12 +65,13 @@ Next, if wanted:
 2. **Save migration**: carry saves across versions instead of refusing them.
 3. **Boats beyond settling**: raids and trade by sea, and the god sinking a boat as an omen.
 4. **Low-end hardware pass**: measure the island on a weak laptop and a phone now that level of detail is in.
+5. **Cheaper village planning**: each village recomputes buildable ground and walking distance over the whole island once a day (about 30 ms per village on a desktop); limiting it to the village's surroundings would cut most of that.
 
 ## Known gaps
 - **The Warning is single-people by design**: a schism's followers leave the island there, so a breakaway people can't survive the flood by luck. The Warning's island has no islets either.
 - **Raiders rarely win outright** (defenders fight on home ground), so captives are mostly snatched by a party breaking away.
 - **Boats only carry settlers**: no raids, trade or fishing by sea, and the god can't sink one.
-- **Saves don't carry across versions**: each change to the world's shape bumps the save version (now 7) and old saves are refused.
+- **Saves don't carry across versions**: each change to the world's shape bumps the save version (now 8) and old saves are refused.
 - **The audio for the newer powers is synthesized but not tuned by ear.**
 - **Performance is untested on low-end hardware.** Zoomed out over the whole island on one desktop: about 280 draw calls and 410k triangles with level of detail, against 456 and 690k without.
 
@@ -80,7 +82,7 @@ Next, if wanted:
   - `miracles/` miracle definitions (data), Grace and cooldowns (off by default), the miracles, the Hand (`hand.ts`), and the destructive powers that run over time (`wrath.ts`: earthquake, firestorm, tidal wave, swarm); player input arrives as commands recorded in `sim.inputLog`.
   - `omens/` omen recording: witnesses (per people), outcomes, context snapshots (places, deeds, activities).
   - `belief/` the interpretation engine (`interpret.ts`), belief store, priests, rumor and traditions (`BeliefSystem.ts`), behavior effects (`effects.ts`), dreams, and the data catalog of belief types.
-  - `tribe.ts` a people: its village and its own systems, which see the sim through a per-people view. `war.ts` relations, war, raids, captives, conquest, alliances, prayers for victory and peace. `appease.ts` (per people) dread, great offerings, sacrifice, defiance and rivalry. `plague.ts` the god's sickness. `boats.ts` settlers sailing to the islets.
+  - `tribe.ts` a people: its village and its own systems, which see the sim through a per-people view. `war.ts` relations, war, raids, captives, conquest, alliances, prayers for victory and peace. `appease.ts` (per people) dread, great offerings, sacrifice, defiance and rivalry. `plague.ts` the god's sickness. `boats.ts` settlers sailing to the islets. `paths.ts` paths worn by feet.
   - `society.ts` bonds, affairs, feuds, fights and killings. `justice.ts` accusation, the god's window, judgment, custom and law. `dissent.ts` silence, Doubters, False Prophets and schism. `exodus.ts` leaving a ruined home and finding new ground. `milestones.ts` Purposes.
   - `disaster/` the Warning (`Warning.ts`: countdown, faith collapse, verdict) and its disasters behind a `Disaster` interface (`Flood.ts` only).
   - `myth/` memory and myth (`Myth.ts`): named places, legends, statues and ruins, the god's name, and the Holy Book written through the `ScriptureWriter` interface (`scripture.ts`, template grammar; no LLM writer is implemented).

@@ -549,6 +549,11 @@ export class Villagers {
       const a = this.forageJob(v);
       if (a) return a;
     }
+    // Trees marked to clear ground for building come down first, whatever the stores hold.
+    if (village.clearing.size) {
+      const a = this.chopJob(v, true);
+      if (a) return a;
+    }
     // Stone when it's what's missing, wood while below target, otherwise food.
     const { wood, stone } = village.store;
     if (stone < WK.stoneTarget && (stone < 10 || wood >= WK.woodTarget) && village.stoneSpots.length) return this.quarryJob(v);
@@ -559,14 +564,15 @@ export class Villagers {
     return foodPerHead < WK.forageAboveCapitaStops ? this.forageJob(v) : null;
   }
 
-  private nearestTree(v: Villager, reserve: boolean): number {
+  private nearestTree(v: Villager, reserve: boolean, clearing = false): number {
     const trees = this.t(v).village.trees;
+    const marked = this.t(v).village.clearing;
     let best = -1;
     let bd = Infinity;
     const c = this.t(v).village.center;
     for (let i = 0; i < trees.length; i++) {
       const t = trees[i]!;
-      if (!t.alive || (reserve && t.reservedBy !== -1) || this.t(v).effects.isCursed(t.x, t.z)) continue;
+      if (!t.alive || (reserve && t.reservedBy !== -1) || (clearing && !marked.has(t)) || this.t(v).effects.isCursed(t.x, t.z)) continue;
       if (!this.t(v).village.reachable(Math.floor(v.x), Math.floor(v.z), t.x, t.z, true)) continue;
       // Favor trees near both the worker and the village store.
       const d = Math.hypot(t.x - v.x, t.z - v.z) + 0.5 * Math.hypot(t.x - c.x, t.z - c.z);
@@ -578,8 +584,8 @@ export class Villagers {
     return best;
   }
 
-  private chopJob(v: Villager): Action | null {
-    const i = this.nearestTree(v, true);
+  private chopJob(v: Villager, clearing = false): Action | null {
+    const i = this.nearestTree(v, true, clearing);
     if (i < 0) return null;
     const t = this.t(v).village.trees[i]!;
     t.reservedBy = v.id;
@@ -1016,15 +1022,15 @@ export class Villagers {
   /** Give everyone without a usable home a bed: partner's or parent's home first, then any space. */
   private assignHomes(sim: Sim, people: Villager[]): void {
     const village = sim.village;
-    const cap = TUNING.building.hutCapacity;
+    const cap = (h: Structure) => village.bedsIn(h);
     for (const h of village.huts) h.residents = h.residents.filter((id) => this.byId(id)?.alive && this.byId(id)?.homeId === h.id);
     for (const v of people) {
       if (this.home(v)) continue;
       const prefer = [this.byId(v.partnerId), ...v.parentIds.map((p) => this.byId(p))]
         .map((o) => (o ? this.home(o) : undefined))
-        .find((h): h is Structure => !!h && h.residents.length < cap);
+        .find((h): h is Structure => !!h && h.residents.length < cap(h));
       const any = village.huts
-        .filter((h) => village.usableHut(h) && h.residents.length < cap)
+        .filter((h) => village.usableHut(h) && h.residents.length < cap(h))
         .sort((a, b) => a.residents.length - b.residents.length || a.id - b.id)[0];
       const target = prefer ?? any;
       if (target) this.moveHome(v, target);

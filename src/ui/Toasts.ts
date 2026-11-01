@@ -230,13 +230,16 @@ export class Toasts {
       case 'built':
         if (e.kind === 'statue') return `A statue of ${sim.myth.god} stands finished.`;
         if (e.kind === 'shrine' || e.kind === 'temple' || e.kind === 'cairn') return `The people have raised a ${e.kind}.`;
+        if (e.kind === 'storehouse') return 'The people have built a storehouse: their food will keep longer.';
+        if (e.variant === 'longhouse') return 'A longhouse stands: the village has grown prosperous.';
         return null;
       case 'flood':
         return e.phase === 'strike' ? '<b>The sea is rising.</b>' : e.phase === 'peak' ? 'The water has stopped rising.' : null;
       case 'ruined':
         return 'The old statue is left to weather.';
       case 'destroyed':
-        return `A ${e.kind === 'hut' ? 'hut' : e.kind} was destroyed.`;
+        // A fence knocked flat isn't news.
+        return e.kind === 'fence' ? null : `A ${e.kind} was destroyed.`;
       default:
         return null;
     }

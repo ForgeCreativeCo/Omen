@@ -4,13 +4,14 @@ import { TUNING } from '../tuning';
 import { CROP_STAGES, M, material } from '../world/materials';
 import type { NavGrid } from '../world/nav';
 import { NEIGHBORS8 } from '../world/nav';
-import { prefabsOf, type PrefabDef, type PrefabKind } from '../world/prefabs';
+import { LONGHOUSE, prefabsOf, type PrefabDef, type PrefabKind } from '../world/prefabs';
 import {
   firstDamagedStep,
   integrity,
   planSteps,
   rotatedSize,
   rotationToward,
+  type BuildStep,
   type FieldTile,
   type Structure,
   type StructureKind,
@@ -97,13 +98,32 @@ export class Village {
       for (let dx = -R; dx <= R; dx++) if (dx * dx + dz * dz <= R * R) this.ring.push([dx, dz]);
     this.ring.sort((a, b) => a[0] * a[0] + a[1] * a[1] - (b[0] * b[0] + b[1] * b[1]) || a[1] - b[1] || a[0] - b[0]);
 
+    this.findStone();
+  }
+
+  /**
+   * Bare stone to quarry, nearest the fire first. A people settled among meadows
+   * or forest walks farther for it rather than going without.
+   */
+  private findStone(): void {
+    const c = this.center;
+    this.stoneSpots.length = 0;
+    const take = (x: number, z: number) => {
+      const h = this.nav.at(x, z);
+      if (h >= 0 && this.world.get(x, h, z) === M.STONE && this.regionAt(x, z) === this.centerRegion) this.stoneSpots.push({ x, z });
+    };
     for (const [dx, dz] of this.ring) {
-      const x = site.x + dx;
-      const z = site.z + dz;
-      const h = nav.at(x, z);
-      if (h >= 0 && world.get(x, h, z) === M.STONE) this.stoneSpots.push({ x, z });
-      if (this.stoneSpots.length >= 40) break;
+      take(c.x + dx, c.z + dz);
+      if (this.stoneSpots.length >= 40) return;
     }
+    // Farther out, ring by ring.
+    for (let r = B.maxRadius + 1; r <= B.stoneSearchRadius && this.stoneSpots.length < 10; r++)
+      for (let k = -r; k < r; k++) {
+        take(c.x + k, c.z - r);
+        take(c.x + r, c.z + k);
+        take(c.x - k, c.z + r);
+        take(c.x - r, c.z - k);
+      }
   }
 
   byId(id: number): Structure | undefined {
@@ -128,11 +148,32 @@ export class Village {
     return s.kind === 'hut' && s.complete && !s.destroyed && !s.abandoned && !this.forbidden(s.x0 + s.w / 2, s.z0 + s.d / 2);
   }
 
+  /** Beds in one home: a longhouse sleeps more. */
+  bedsIn(h: Structure): number {
+    return h.variant === 'longhouse' ? B.surplus.longhouseBeds : B.hutCapacity;
+  }
+
   /** Beds in usable huts, or in every hut including ones being built or repaired. */
   bedCapacity(includePlanned = false): number {
-    const huts = this.huts;
-    return (includePlanned ? huts.length : huts.filter((h) => this.usableHut(h)).length) * B.hutCapacity;
+    let n = 0;
+    for (const h of this.huts) if (includePlanned || this.usableHut(h)) n += this.bedsIn(h);
+    return n;
   }
+
+  /** The village's storehouse, if it has one standing. */
+  get storehouse(): Structure | undefined {
+    return this.structures.find((s) => s.kind === 'storehouse' && s.complete && !s.destroyed && !s.abandoned);
+  }
+
+  /** Stores running deep: wood, stone and food to spare. They build beyond what they need. */
+  get prosperous(): boolean {
+    const S = B.surplus;
+    const pop = Math.max(1, this.population);
+    return this.store.wood >= S.wood && this.store.stone >= S.stone && this.store.food / pop >= S.food;
+  }
+
+  /** Trees marked for felling to make room for a home or a field. */
+  readonly clearing = new Set<Tree>();
 
   regionAt(x: number, z: number): number {
     return this.nav.inBounds(x, z) ? (this.region[x + z * this.world.sizeX] as number) : 0;
@@ -373,14 +414,15 @@ export class Village {
     return null;
   }
 
-  placeField(host: VillageHost, instant: boolean): Structure | null {
+  /** `compact`: only within the village's present radius (no reaching for far-off ground). */
+  placeField(host: VillageHost, instant: boolean, compact = false): Structure | null {
     const n = FARM.fieldSize;
     // Prefer spots near water (irrigated); fall back to anything.
     const nearWater = (x0: number, z0: number) => this.waterNear(x0 + n / 2, z0 + n / 2, FARM.riverReach + n / 2);
     const site =
       this.findSite(this.center.x, this.center.z, n, n, this.maxRadius, 2, nearWater) ??
       this.findSite(this.center.x, this.center.z, n, n, this.maxRadius, 2) ??
-      this.findSite(this.center.x, this.center.z, n, n, B.maxRadius, 2);
+      (compact ? null : this.findSite(this.center.x, this.center.z, n, n, B.maxRadius, 2));
     if (!site) return null;
     const s = this.newStructure('field', 'plot', host.tick);
     s.x0 = site.x0;
@@ -437,7 +479,7 @@ export class Village {
 
   /** Cost of a build step in stores; null if free. */
   stepCost(mat: number): 'wood' | 'stone' | null {
-    if (mat === M.PLANK || mat === M.THATCH || mat === M.WOOD) return 'wood';
+    if (mat === M.PLANK || mat === M.THATCH || mat === M.WOOD || mat === M.FENCE) return 'wood';
     if (mat === M.STONE || mat === M.SHRINE_STONE || mat === M.MARKER_STONE || mat >= M.STATUE_FIRE || mat === M.STATUE_STONE) return 'stone';
     return null;
   }
@@ -707,8 +749,105 @@ export class Village {
 
   /** Daily: surplus food beyond a reserve per person spoils. */
   spoil(): void {
-    const free = WORK.spoilFreePerCapita * Math.max(1, this.population);
+    const free = WORK.spoilFreePerCapita * Math.max(1, this.population) * (this.storehouse ? B.surplus.storehouseKeeps : 1);
     if (this.store.food > free) this.store.food -= (this.store.food - free) * WORK.spoilagePerDay;
+  }
+
+  /**
+   * No clear ground for a w×d footprint within `R`: find the nearest spot that would
+   * do once its trees were down, and mark those trees for the woodcutters. One
+   * clearing at a time; the planner tries the site search again each day until it's done.
+   */
+  planClearing(w: number, d: number, R: number = B.maxRadius): boolean {
+    for (const t of this.clearing) if (!this.treeAlive(t)) this.clearing.delete(t);
+    if (this.clearing.size) return true;
+    const W = this.world.sizeX;
+    const c = this.center;
+    // Trunks near the village, by cell.
+    const trunks = new Map<number, Tree>();
+    const near: Tree[] = [];
+    for (const t of this.trees) {
+      if (!t.alive || Math.abs(t.x - c.x) > R + 6 || Math.abs(t.z - c.z) > R + 6) continue;
+      trunks.set(t.x + t.z * W, t);
+      near.push(t);
+    }
+    if (!near.length) return false;
+    const region = this.centerRegion;
+    for (const [dx, dz] of this.ring) {
+      if (dx * dx + dz * dz > R * R) break;
+      const x0 = c.x + dx - (w >> 1);
+      const z0 = c.z + dz - (d >> 1);
+      let ok = true;
+      let wooded = false;
+      let hMin = Infinity;
+      let hMax = -Infinity;
+      for (let z = z0 - 1; z <= z0 + d && ok; z++)
+        for (let x = x0 - 1; x <= x0 + w && ok; x++) {
+          if (this.occupied(x, z)) ok = false;
+          else if (x >= x0 && x < x0 + w && z >= z0 && z < z0 + d) {
+            const k = x + z * W;
+            const tree = trunks.get(k);
+            const h = tree ? tree.y - 1 : this.nav.at(x, z);
+            if (tree) wooded = true;
+            else if (!((this.buildMask[k] as number) & MASK_OK) || this.regionAt(x, z) !== region) ok = false;
+            else if (!((this.buildMask[k] as number) & MASK_CLEAR6)) wooded = true;
+            hMin = Math.min(hMin, h);
+            hMax = Math.max(hMax, h);
+            if (hMax - hMin > 1) ok = false;
+          }
+        }
+      if (!ok || !wooded) continue;
+      const wd = this.walkDist[x0 + (w >> 1) + (z0 + (d >> 1)) * W] as number;
+      if (wd < 0 || wd > Math.hypot(dx, dz) * 1.5 + 6) continue;
+      // Every tree whose crown reaches over the footprint comes down.
+      const fell = near.filter((t) => t.x >= x0 - 3 && t.x < x0 + w + 3 && t.z >= z0 - 3 && t.z < z0 + d + 3);
+      if (!fell.length || fell.length > B.clearMaxTrees) continue;
+      for (const t of fell) this.clearing.add(t);
+      return true;
+    }
+    return false;
+  }
+
+  /** A fence of posts around a field, with a gap toward the fire. */
+  placeFence(host: VillageHost, f: Structure): Structure | null {
+    const s = { x0: f.x0 - 1, z0: f.z0 - 1, w: f.w + 2, d: f.d + 2 };
+    const steps: BuildStep[] = [];
+    // The gate: the middle of the side facing the fire.
+    const mx = f.x0 + (f.w >> 1);
+    const mz = f.z0 + (f.d >> 1);
+    const ddx = this.center.x - mx;
+    const ddz = this.center.z - mz;
+    const gate =
+      Math.abs(ddx) > Math.abs(ddz) ? { x: ddx > 0 ? s.x0 + s.w - 1 : s.x0, z: mz } : { x: mx, z: ddz > 0 ? s.z0 + s.d - 1 : s.z0 };
+    for (let z = s.z0; z < s.z0 + s.d; z++)
+      for (let x = s.x0; x < s.x0 + s.w; x++) {
+        if (x !== s.x0 && x !== s.x0 + s.w - 1 && z !== s.z0 && z !== s.z0 + s.d - 1) continue;
+        if (Math.abs(x - gate.x) + Math.abs(z - gate.z) <= 1) continue;
+        if (this.occupied(x, z)) continue;
+        const h = this.nav.at(x, z);
+        if (h < 0 || this.world.get(x, h + 1, z) !== M.AIR) continue;
+        steps.push({ x, y: h + 1, z, mat: M.FENCE });
+      }
+    if (steps.length < 8) return null;
+    const fence = this.newStructure('fence', 'posts', host.tick);
+    Object.assign(fence, s, { baseY: f.baseY, steps, door: { x: gate.x, z: gate.z } });
+    this.structures.push(fence);
+    for (const p of steps) this.occupancy[p.x + p.z * this.world.sizeX] = fence.id;
+    f.fenceId = fence.id;
+    return fence;
+  }
+
+  /**
+   * Place a building close by; failing that, mark nearby woods for clearing (and
+   * wait for the felling); failing that, look farther out.
+   */
+  private grow(near: () => Structure | null, far: () => Structure | null, w: number, d: number): Structure | null {
+    return near() ?? (this.planClearing(w, d, this.maxRadius + 4) ? null : far());
+  }
+
+  /** Days to wait before looking again: one while trees are coming down, else a few. */
+  private retryDays(w: number, d: number): number {
+    return this.planClearing(w, d) ? 1 : SITE_RETRY_DAYS;
   }
 
   /** Daily: decide what to build next. */
@@ -725,7 +864,9 @@ export class Village {
     // After a move, everyone pitches in: several homes go up at once.
     const parallel = this.rebuilding ? 3 : pop > 40 ? 2 : 1;
     if (this.bedCapacity(true) >= pop) this.rebuilding = false;
-    if (this.bedCapacity(true) < pop + B.spareBeds && hutsBuilding < parallel && host.tick >= this.retryHutAt) {
+    const rich = this.prosperous;
+    const spare = B.spareBeds + (rich ? B.surplus.extraBeds : 0);
+    if (this.bedCapacity(true) < pop + spare && hutsBuilding < parallel && host.tick >= this.retryHutAt) {
       // New homes lean toward a sacred place, as far as belief pulls (SPEC §9).
       // (Only a holy place close by: one left behind in a move is too far to lean toward.)
       const pull = this.attraction();
@@ -733,13 +874,27 @@ export class Village {
       const k = pull && near ? Math.min(0.7, pull.strength) : 0;
       const hx = Math.round(this.center.x + ((pull?.x ?? 0) - this.center.x) * k);
       const hz = Math.round(this.center.z + ((pull?.z ?? 0) - this.center.z) * k);
-      if (!this.placePrefab(host, 'hut', hx, hz, false)) this.retryHutAt = host.tick + SITE_RETRY_DAYS * TICKS_PER_DAY;
+      const long = rich && pop >= B.surplus.longhouseAt;
+      const place = (r?: number) => (long ? this.placeDef(host, LONGHOUSE, hx, hz, false, r) : this.placePrefab(host, 'hut', hx, hz, false, r));
+      const { w, d } = long ? { w: 7, d: 5 } : { w: 5, d: 5 };
+      // Close by if there's room; if not, they clear the woods close by before reaching for far-off ground.
+      if (!this.grow(() => place(this.maxRadius), () => place(), w, d)) this.retryHutAt = host.tick + this.retryDays(w, d) * TICKS_PER_DAY;
     }
     const fields = this.fields;
     const fieldTarget = Math.ceil(pop * FARM.fieldsPerPerson) + 1;
     const fieldsInProgress = fields.filter((f) => !f.complete).length;
     if (fields.length < fieldTarget && fieldsInProgress < 2 && host.tick >= this.retryFieldAt) {
-      if (!this.placeField(host, false)) this.retryFieldAt = host.tick + SITE_RETRY_DAYS * TICKS_PER_DAY;
+      const n = FARM.fieldSize;
+      if (!this.grow(() => this.placeField(host, false, true), () => this.placeField(host, false), n, n)) this.retryFieldAt = host.tick + this.retryDays(n, n) * TICKS_PER_DAY;
+    }
+    // With the stores full and nothing else going up, they build for its own sake.
+    if (rich && !sites.length) {
+      if (pop >= B.surplus.storehouseAt && !this.structures.some((s) => s.kind === 'storehouse' && !s.abandoned)) {
+        this.placePrefab(host, 'storehouse', this.center.x, this.center.z, false);
+      } else {
+        const bare = fields.find((f) => f.complete && f.fenceId === undefined);
+        if (bare && !this.placeFence(host, bare)) bare.fenceId = -1;
+      }
     }
     if (pop >= B.wellAtPopulation && !this.well) {
       this.placePrefab(host, 'well', this.center.x, this.center.z, false);
@@ -757,7 +912,7 @@ export class Village {
   relocate(host: VillageHost, site: Point3): void {
     const W = this.world.sizeX;
     for (const s of this.structures) {
-      if (s.abandoned || (s.kind !== 'hut' && s.kind !== 'field' && s.kind !== 'well' && s.kind !== 'firePit')) continue;
+      if (s.abandoned || (s.kind !== 'hut' && s.kind !== 'field' && s.kind !== 'well' && s.kind !== 'firePit' && s.kind !== 'storehouse' && s.kind !== 'fence')) continue;
       s.abandoned = true;
       s.residents = [];
       for (const t of s.tiles) t.reservedBy = -1;
@@ -772,15 +927,10 @@ export class Village {
     this.center.y = site.y;
     this.graveyard = null;
     this.store.food *= 1 - WORK.relocateLoss;
-    this.stoneSpots.length = 0;
-    for (const [dx, dz] of this.ring) {
-      const x = site.x + dx;
-      const z = site.z + dz;
-      const h = this.nav.at(x, z);
-      if (h >= 0 && this.world.get(x, h, z) === M.STONE) this.stoneSpots.push({ x, z });
-      if (this.stoneSpots.length >= 40) break;
-    }
+    this.region = this.nav.regions();
+    this.findStone();
     this.clearLand();
+    this.clearing.clear();
     this.retryHutAt = this.retryFieldAt = 0;
     this.rebuilding = true;
     this.region = this.nav.regions();

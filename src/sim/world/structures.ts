@@ -3,7 +3,7 @@ import { M } from './materials';
 import { LEGEND, prefabSize, type PrefabDef } from './prefabs';
 import type { VoxelWorld } from './VoxelWorld';
 
-export type StructureKind = 'hut' | 'field' | 'well' | 'firePit' | 'grave' | 'cairn' | 'shrine' | 'temple' | 'statue';
+export type StructureKind = 'hut' | 'field' | 'well' | 'firePit' | 'grave' | 'cairn' | 'shrine' | 'temple' | 'statue' | 'storehouse' | 'fence';
 
 export interface BuildStep {
   x: number;
@@ -57,6 +57,8 @@ export interface Structure {
   residents: number[];
   /** Fields only. */
   tiles: FieldTile[];
+  /** Fields only: the fence around it, once there is one. */
+  fenceId?: number;
   moisture: number;
   nearWater: boolean;
 }

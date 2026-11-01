@@ -8,6 +8,7 @@ import { Society } from './society';
 import { War } from './war';
 import { Plague } from './plague';
 import { Boats } from './boats';
+import { Paths } from './paths';
 import type { Justice } from './justice';
 import type { Exodus } from './exodus';
 import type { Appeasement } from './appease';
@@ -80,6 +81,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly plague: Plague;
   /** Settlers sailing for the islets. */
   readonly boats: Boats;
+  /** Paths worn by feet. */
+  readonly paths: Paths;
   /** The island's trees, shared by every village. */
   readonly trees: Tree[];
   /** Shared counters (mutated through any people's view, so kept in one object). */
@@ -114,6 +117,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.war = new War(this, this.rng.fork('war'));
     this.plague = new Plague(this, this.rng.fork('plague'));
     this.boats = new Boats(this, this.rng.fork('boats'));
+    this.paths = new Paths(this);
     this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
@@ -345,6 +349,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.war.step();
     this.plague.step();
     this.boats.step();
+    this.paths.step();
     for (const t of this.tribes) {
       t.justice.step();
       t.exodus.step();
@@ -366,6 +371,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.war.dawn();
       this.plague.dawn();
       this.boats.dawn();
+      this.paths.dawn();
       for (const t of this.tribes) t.myth.dawn();
       this.warning?.dawn();
       for (const t of this.tribes) {
@@ -395,7 +401,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.events.push(this.tick, { type: 'fireStarted', x, y, z });
   }
   emitBuilt(s: Structure): void {
-    this.events.push(this.tick, { type: 'built', structureId: s.id, kind: s.kind });
+    this.events.push(this.tick, { type: 'built', structureId: s.id, kind: s.kind, ...(s.variant === 'longhouse' ? { variant: s.variant } : {}) });
   }
   emitDestroyed(s: Structure): void {
     this.events.push(this.tick, { type: 'destroyed', structureId: s.id, kind: s.kind });

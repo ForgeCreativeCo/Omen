@@ -97,11 +97,16 @@ describe('Deeper war', () => {
     const s = new Sim({ seed: 'prayer', tribes: 2 });
     s.war.relations.set('0:1', -0.95);
     s.war.dawn();
+    // Mid-morning, when the enemy is out at work and not all at the fire.
+    for (let i = 0; i < TICKS_PER_DAY * 0.3; i++) s.step();
     s.war.prayers.set(0, { against: 1, until: s.tick + TICKS_PER_DAY * 3, answered: 'none' });
     const love = s.tribes[0]!.members.reduce((n, v) => n + v.faith.love, 0);
-    // Strike the enemy's village.
-    const c = s.tribes[1]!.village.center;
-    s.enqueue({ type: 'cast', miracle: 'meteor', x: c.x, z: c.z });
+    // Strike some of the enemy, not all: enough must live to know it was the god.
+    const enemy = s.tribes[1]!.members;
+    const near = (p: { x: number; z: number }) => enemy.filter((o) => Math.hypot(o.x - p.x, o.z - p.z) <= TUNING.miracles.meteor.killRadius + 2).length;
+    const at = [...enemy].filter((p) => near(p) >= 2 && near(p) <= enemy.length - 4).sort((a, b) => near(b) - near(a))[0]!;
+    expect(at).toBeDefined();
+    s.enqueue({ type: 'cast', miracle: 'meteor', x: Math.round(at.x), z: Math.round(at.z) });
     days(s, 1);
     const e = events(s, 'prayerAnswered').at(-1);
     expect(e).toMatchObject({ tribe: 0, against: 1, answered: true });

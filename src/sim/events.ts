@@ -145,7 +145,7 @@ export type SimEventBody =
   | { type: 'verdict'; caseId: number; crime: Crime; accused: number; victims: number[]; actual: number; sentence: Sentence; by: Judge }
   | { type: 'law'; crime: Crime; sentence: Sentence }
   | { type: 'quarrel'; a: number; b: number; x: number; z: number }
-  | { type: 'built'; structureId: number; kind: string }
+  | { type: 'built'; structureId: number; kind: string; variant?: string }
   | { type: 'destroyed'; structureId: number; kind: string };
 
 /** `tribe`: the people whose systems raised it (absent for the shared world: weather, miracles). */

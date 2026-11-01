@@ -195,6 +195,20 @@ export const TUNING = {
     fieldsPerPerson: 1 / 4,
   },
 
+  /** Paths worn by feet. */
+  paths: {
+    /** Walkers leave a mark this often (ticks). */
+    everyTicks: 5,
+    /** Grass wears through where the marks stand this deep at dawn. */
+    wearAt: 12,
+    /** Worn cells looked over each day for grass coming back (a cycle takes about this many days). */
+    regrowDays: 30,
+    /** A path with less footfall than this when looked at grows back to grass. */
+    regrowBelow: 2,
+    /** Share of the marks that fades each day. */
+    fadePerDay: 0.25,
+  },
+
   building: {
     hutCapacity: 5,
     /** Plan a new hut when free beds drop below this. */
@@ -205,6 +219,24 @@ export const TUNING = {
     maxRadius: 40,
     /** A damaged structure below this fraction of correct blocks counts as destroyed. */
     destroyedBelow: 0.6,
+    /** When no ground is clear for a home or field, they mark the nearest wooded spot for felling (at most this many trees). */
+    clearMaxTrees: 14,
+    /** With no bare stone near, they look this far for some to quarry. */
+    stoneSearchRadius: 90,
+    /** Building beyond need, once the stores run deep. */
+    surplus: {
+      wood: 110,
+      stone: 30,
+      /** Stored food per person. */
+      food: 8,
+      /** Extra beds they keep spare. */
+      extraBeds: 5,
+      storehouseAt: 14,
+      longhouseAt: 20,
+      longhouseBeds: 9,
+      /** A storehouse multiplies the food that keeps without spoiling. */
+      storehouseKeeps: 2,
+    },
     /** Unstarted construction sites are dropped after this many days without progress. */
     abandonAfterDays: 8,
   },
