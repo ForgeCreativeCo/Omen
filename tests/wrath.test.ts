@@ -102,6 +102,20 @@ describe('Tidal wave', () => {
     until(s, () => s.miracles.wrath.waves.length === 0);
     expect(s.miracles.wrath.waves).toHaveLength(0);
   });
+
+  it('reaches the village however far the sea is, and floods it', () => {
+    const s = sim();
+    const c = s.village.center;
+    cast(s, { type: 'cast', miracle: 'wave', x: c.x, z: c.z });
+    expect(s.lastFailures).toEqual([]);
+    const wave = s.miracles.wrath.waves[0]!;
+    until(s, () => ended(s, 'waveEnd'));
+    // Water stands where the god pointed, over the village's ground.
+    let wet = 0;
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) if (s.world.get(c.x + dx, wave.crest, c.z + dz) === M.WATER || s.world.get(c.x + dx, wave.crest - 1, c.z + dz) === M.WATER) wet++;
+    expect(wet).toBeGreaterThan(5);
+    expect(wave.carried.length + wave.crops + wave.wrecked.length).toBeGreaterThan(0);
+  });
 });
 
 describe('Swarm', () => {

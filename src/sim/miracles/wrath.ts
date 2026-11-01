@@ -58,12 +58,16 @@ export interface Wave {
   dx: number;
   dz: number;
   length: number;
+  /** How far from the sea the god pointed, and the water level the crest holds until there. */
+  aim: number;
+  crest: number;
   /** How far the front has come. */
   front: number;
   /** Voxel keys turned to water, to drain afterwards. */
   placed: number[];
-  /** Tick it starts to drain (-1 while still running). */
+  /** Tick it starts to drain (-1 while still running), and blocks it sinks by per tick once draining. */
   drainAt: number;
+  drainPer: number;
   wrecked: number[];
   crops: number;
   carried: number[];
@@ -376,6 +380,10 @@ export class Wrath {
     const shore = this.shore(tx, tz);
     if (!shore) return false;
     const d = Math.max(1, Math.hypot(tx - shore.x, tz - shore.z));
+    // However far it has to come, it stands over the ground where the god pointed.
+    const ground = this.sim.world.topY(Math.round(tx), Math.round(tz), NOT_GROUND);
+    const sea = TUNING.terrain.seaLevel;
+    const crest = Math.min(sea + W.maxRise, Math.max(sea + W.height, ground + W.depth));
     const wave: Wave = {
       id: this.nextId++,
       ox: shore.x,
@@ -383,9 +391,12 @@ export class Wrath {
       dx: (tx - shore.x) / d,
       dz: (tz - shore.z) / d,
       length: d + W.overrun,
+      aim: d,
+      crest,
       front: 0,
       placed: [],
       drainAt: -1,
+      drainPer: 0,
       wrecked: [],
       crops: 0,
       carried: [],
@@ -402,8 +413,13 @@ export class Wrath {
     const sea = TUNING.terrain.seaLevel;
     if (wv.drainAt >= 0) {
       if (sim.tick < wv.drainAt) return;
-      // The sea draws back, a slice at a time.
-      for (const k of wv.placed.splice(0, 600)) {
+      // The sea draws back: the level sinks, top layer first.
+      if (!wv.drainPer) {
+        const y = (k: number) => sim.fire.unkey(k)[1];
+        wv.placed.sort((a, b) => y(b) - y(a));
+        wv.drainPer = Math.max(1, Math.ceil(wv.placed.length / W.drainTicks));
+      }
+      for (const k of wv.placed.splice(0, wv.drainPer)) {
         const [x, y, z] = sim.fire.unkey(k);
         if (w.get(x, y, z) === M.WATER) w.set(x, y, z, M.AIR);
       }
@@ -416,7 +432,8 @@ export class Wrath {
     const pz = wv.dx;
     const done = new Set<number>();
     for (let s = from; s <= wv.front; s += 0.5) {
-      const crest = sea + W.height - W.fallPerVoxel * s;
+      // Level to the point the god chose, then spending itself past it.
+      const crest = s <= wv.aim ? wv.crest : wv.crest - ((s - wv.aim) / W.overrun) * (wv.crest - sea);
       if (crest <= sea + 0.5) continue;
       for (let k = -W.width / 2; k <= W.width / 2; k += 0.5) {
         // The wave's edges are lower than its middle.

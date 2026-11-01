@@ -374,15 +374,18 @@ export const TUNING = {
       cooldownDays: 3,
       /** Width of the wave front, voxels. */
       width: 20,
-      /** How far past the aim point it runs on, and how far from the sea it may start. */
-      overrun: 6,
-      searchRadius: 70,
-      /** Height above the sea the crest stands at the shore; it loses this much per voxel inland. */
+      /** How far past the aim point it runs on (falling away), and how far from the sea it may start. */
+      overrun: 12,
+      searchRadius: 120,
+      /** The crest stands at least this far above the sea, and this deep over the ground where the god points, but never more than maxRise above the sea. */
       height: 6,
-      fallPerVoxel: 0.08,
+      depth: 3,
+      maxRise: 16,
       /** Voxels the front moves per tick, and ticks the water stays before draining. */
       speed: 1.5,
-      holdTicks: 30,
+      holdTicks: 50,
+      /** Ticks the water takes to sink away. */
+      drainTicks: 40,
       /** Chance per structure block under the crest that it's torn away. */
       wreck: 0.4,
       /** People caught are carried along and may drown. */

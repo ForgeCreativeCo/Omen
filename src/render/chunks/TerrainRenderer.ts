@@ -51,6 +51,8 @@ export class TerrainRenderer {
   private nextWorker = 0;
   /** Columns dispatched for re-meshing in the most recent update (for the stats readout). */
   lastRemeshed = 0;
+  /** Where the next scan for stale columns starts, so a burst of edits in one place can't starve the rest. */
+  private scan = 0;
 
   constructor(
     private readonly world: VoxelWorld,
@@ -90,20 +92,23 @@ export class TerrainRenderer {
     if (camera) this.updateLod(camera);
     let budget = TUNING.world.remeshBudgetPerFrame;
     this.lastRemeshed = 0;
-    for (let cz = 0; cz < this.world.chunksZ && budget > 0; cz++)
-      for (let cx = 0; cx < this.world.chunksX && budget > 0; cx++) {
-        const key = cx + cz * this.world.chunksX;
-        const entry = this.columns[key]!;
-        const v = this.world.columnVersion(cx, cz);
-        // One job per column at a time; a newer edit is picked up after it lands.
-        if (entry.version === v || entry.pending !== -1) continue;
-        entry.pending = v;
-        const req: MeshRequest = { key, version: v, column: copyColumn(this.world, cx, cz) };
-        const worker = this.workers[this.nextWorker++ % this.workers.length]!;
-        worker.postMessage(req, { transfer: [req.column.vox.buffer as ArrayBuffer] });
-        budget--;
-        this.lastRemeshed++;
-      }
+    const n = this.columns.length;
+    for (let i = 0; i < n && budget > 0; i++) {
+      const key = (this.scan + i) % n;
+      const cx = key % this.world.chunksX;
+      const cz = Math.floor(key / this.world.chunksX);
+      const entry = this.columns[key]!;
+      const v = this.world.columnVersion(cx, cz);
+      // One job per column at a time; a newer edit is picked up after it lands.
+      if (entry.version === v || entry.pending !== -1) continue;
+      entry.pending = v;
+      const req: MeshRequest = { key, version: v, column: copyColumn(this.world, cx, cz) };
+      const worker = this.workers[this.nextWorker++ % this.workers.length]!;
+      worker.postMessage(req, { transfer: [req.column.vox.buffer as ArrayBuffer] });
+      budget--;
+      this.lastRemeshed++;
+      this.scan = (key + 1) % n;
+    }
   }
 
   /** Sum of the covered columns' versions (changes whenever any of them does). */
