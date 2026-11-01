@@ -196,6 +196,43 @@ export const TUNING = {
     fieldsPerPerson: 1 / 4,
   },
 
+  /** People asking the god for things. */
+  prayers: {
+    /** Each dawn, a people in need raises a prayer with this chance. */
+    dailyChance: 0.5,
+    maxPerPeople: 2,
+    maxOpen: 6,
+    /** Days before a people asks for the same thing again. */
+    againDays: { rain: 3, harvest: 3, heal: 1, child: 4, vengeance: 3, guidance: 10, mercy: 3 } as Record<'rain' | 'harvest' | 'heal' | 'child' | 'vengeance' | 'guidance' | 'mercy', number>,
+    /** Days each kind of prayer stays open. */
+    days: { rain: 2, harvest: 3, heal: 2, child: 4, vengeance: 3, guidance: 4, mercy: 2 } as Record<'rain' | 'harvest' | 'heal' | 'child' | 'vengeance' | 'guidance' | 'mercy', number>,
+    /** Rain prayers: fields drier than this (half of them, or a drought). */
+    dryBelow: 0.15,
+    /** Food prayers: less food than this per person. */
+    hungryBelow: 3,
+    /** A couple asks for a child on this share of the days they could. */
+    childChance: 0.35,
+    /** Vengeance prayers within this many days of a raid. */
+    vengeanceDays: 3,
+    /** Mercy prayers within this many days of a disaster, or at this dread. */
+    mercyDays: 2,
+    mercyDread: 0.5,
+    /** Rain, Holy Light near a village answers (voxels from its fire). */
+    villageReach: 30,
+    /** Answered: the asker, their family, and everyone else, fonder of the god. */
+    askerLove: 0.25,
+    familyLove: 0.12,
+    peopleLove: 0.03,
+    dreadEased: 0.1,
+    /** When the world answers instead, they thank the god this much as much. */
+    luckShare: 0.5,
+    /** Unheard: the asker (and half as much their family) less fond. */
+    unheardLove: 0.06,
+    /** Defied (harmed instead): the asker afraid and less fond. */
+    defiedFear: 0.25,
+    defiedLove: 0.2,
+  },
+
   /** Believers leaving to found a daughter people on hallowed ground. */
   branching: {
     /** A people this large may send believers away (and only then). */

@@ -32,6 +32,15 @@ export class Plague {
     return this.sick.has(v.id);
   }
 
+  /** Healed by the god's touch: well at once, and never sick of it again. */
+  cure(v: Villager): void {
+    if (!this.sick.delete(v.id)) return;
+    this.onset.delete(v.id);
+    this.immune.add(v.id);
+    this.sim.society.hurt.delete(v.id);
+    this.sim.events.push(this.sim.tick, { type: 'recovered', id: v.id });
+  }
+
   /** The god's cast: everyone close to the point falls sick (at least the nearest soul). */
   outbreak(x: number, z: number): VillagerId[] {
     const sim = this.sim;

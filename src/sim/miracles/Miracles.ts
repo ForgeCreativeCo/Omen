@@ -636,6 +636,8 @@ export class Miracles {
     v.needs.hunger = 0;
     v.needs.energy = 1;
     v.needs.safety = 1;
+    // The touch heals the sick.
+    sim.plague.cure(v);
     v.faith.love = Math.min(1, v.faith.love + B.love);
     v.faith.fear = Math.min(v.faith.fear, 1 - v.faith.love);
     for (const o of sim.villagers.alive) {

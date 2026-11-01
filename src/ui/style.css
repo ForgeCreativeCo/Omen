@@ -2688,3 +2688,226 @@ body.reduce-motion *::after {
   color: #f0a080;
   border-color: rgba(240, 160, 128, 0.5) !important;
 }
+
+/* ---- Prayers: bubbles over those praying, and the list of open prayers */
+.prayer-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.prayer-bubble {
+  --pc: #f5d78a;
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 3px 10px 3px 3px;
+  border-radius: 14px;
+  background: rgba(40, 32, 26, 0.82);
+  border: 1px solid color-mix(in srgb, var(--pc) 60%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--pc) 35%, transparent);
+  color: var(--hud-fg);
+  font-size: 12px;
+  line-height: 1.25;
+  font-style: italic;
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform;
+  animation: prayer-glow 2.4s ease-in-out infinite;
+}
+
+.prayer-bubble.far {
+  padding: 3px;
+}
+
+.prayer-bubble.far span {
+  display: none;
+}
+
+.pb-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--pc);
+  font-style: normal;
+  /* The ring empties as the time runs out. */
+  background:
+    radial-gradient(closest-side, rgba(40, 32, 26, 1) 78%, transparent 80%),
+    conic-gradient(var(--pc) var(--p, 100%), rgba(243, 233, 216, 0.15) 0);
+}
+
+@keyframes prayer-glow {
+  50% {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--pc) 55%, transparent);
+  }
+}
+
+.reduce-motion .prayer-bubble {
+  animation: none;
+}
+
+.k-rain { --pc: #8ec8ff; }
+.k-harvest { --pc: #b6e07a; }
+.k-heal { --pc: #ffe7a0; }
+.k-child { --pc: #f6a8c8; }
+.k-vengeance { --pc: #ff8a70; }
+.k-guidance { --pc: #f5d78a; }
+.k-mercy { --pc: #c8b8ff; }
+
+.prayers-panel {
+  left: 12px;
+  top: calc(var(--hud-top, 64px) + 8px);
+  width: 270px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - var(--hud-top, 64px) - 330px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.pr-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: var(--hud-accent);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pr-head span:first-child {
+  flex: 1;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.pr-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--hud-accent);
+  color: #2a2018;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  text-align: center;
+}
+
+.pr-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.pr-list li {
+  --pc: #f5d78a;
+  display: flex;
+  gap: 8px;
+  padding: 6px 4px;
+  border-top: 1px solid rgba(243, 233, 216, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pr-list li:hover {
+  background: rgba(243, 233, 216, 0.07);
+}
+
+.pr-list li.done {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.pr-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--pc);
+  border: 1px solid color-mix(in srgb, var(--pc) 55%, transparent);
+}
+
+.pr-list li > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.pr-list small {
+  opacity: 0.7;
+}
+
+.pr-list q {
+  display: block;
+  font-style: italic;
+  color: var(--pc);
+}
+
+.pr-how {
+  display: block;
+  margin-top: 2px;
+}
+
+.pr-bar {
+  display: block;
+  height: 2px;
+  margin-top: 4px;
+  background: rgba(243, 233, 216, 0.12);
+  border-radius: 1px;
+}
+
+.pr-bar b {
+  display: block;
+  height: 100%;
+  background: var(--pc);
+  border-radius: 1px;
+}
+
+.pr-end {
+  display: block;
+  margin-top: 2px;
+  font-weight: bold;
+  opacity: 1 !important;
+}
+
+.pr-end.answered,
+.pr-end.luck {
+  color: #b6e07a;
+}
+
+.pr-end.unheard,
+.pr-end.lost {
+  color: #c9bba6;
+}
+
+.pr-end.defied {
+  color: #ff8a70;
+}
+
+.pr-note {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .prayers-panel {
+    top: auto;
+    bottom: 170px;
+    max-height: 40vh;
+  }
+}

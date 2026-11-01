@@ -304,6 +304,10 @@ export class VillageLog {
         return this.push(e.tick, 'deeds', e.outcome === 'split' ? `The village split: ${w(e.leaderId)} led ${e.ids.length - 1} away.` : `The faithful drove ${w(e.leaderId)} out.`);
       case 'blessing':
         return this.push(e.tick, 'faith', `${w(e.villagerId)} was touched by the god.`);
+      case 'prayer':
+        return this.push(e.tick, 'faith', `${w(e.asker)} prayed ${({ rain: 'for rain', harvest: 'for food', heal: `for ${w(e.for)} to be healed`, child: 'for a child', vengeance: 'for vengeance', guidance: 'for a new land', mercy: 'for mercy' } as Record<string, string>)[e.kind]}.`);
+      case 'prayerEnd':
+        return this.push(e.tick, 'faith', e.end === 'answered' || e.end === 'luck' ? `${w(e.asker)}'s prayer was answered.` : e.end === 'defied' ? `${w(e.asker)} prayed, and the god struck.` : `${w(e.asker)}'s prayer went unanswered.`);
       case 'blessPlace':
         return this.push(e.tick, 'faith', e.kind === 'field' ? 'The god blessed a field.' : `The god blessed ${e.residents.length ? `the home of ${e.residents.map((id) => w(id)).join(', ')}` : 'an empty home'}.`);
       default:

@@ -203,6 +203,26 @@ export class Toasts {
         return `${who(e.villagerId)} stirs in their sleep.`;
       case 'blessing':
         return `${who(e.villagerId)} glows.`;
+      case 'prayer': {
+        const t = sim.tribes[e.tribe ?? 0];
+        const of = sim.tribes.length > 1 && t ? ` of ${t.name}` : '';
+        const what: Record<string, string> = {
+          rain: 'for rain',
+          harvest: 'for food',
+          heal: `for ${who(e.for)} to be healed`,
+          child: 'for a child',
+          vengeance: `for vengeance on ${sim.tribes[e.against]?.name ?? 'their enemies'}`,
+          guidance: 'for a new land to live in',
+          mercy: 'for mercy',
+        };
+        return `${who(e.asker)}${of} prays ${what[e.kind]}.`;
+      }
+      case 'prayerEnd':
+        if (e.end === 'answered') return `You answered ${who(e.asker)}'s prayer.`;
+        if (e.end === 'luck') return `${who(e.asker)}'s prayer came true. They thank you for it.`;
+        if (e.end === 'defied') return `${who(e.asker)} prayed, and you struck them.`;
+        if (e.end === 'lost') return `${who(e.asker)}'s prayer came too late.`;
+        return `No answer came to ${who(e.asker)}.`;
       case 'blessPlace':
         return e.kind === 'field' ? 'Light settles on a field.' : e.residents.length ? `Light settles on the home of ${e.residents.slice(0, 2).map((id) => who(id)).join(' and ')}${e.residents.length > 2 ? ' and theirs' : ''}.` : 'Light settles on an empty home.';
       case 'meteorFall':

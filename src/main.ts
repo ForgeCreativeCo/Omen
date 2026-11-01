@@ -17,6 +17,7 @@ import { GoalsPanel } from './ui/GoalsPanel';
 import { Reactions } from './ui/Reactions';
 import { SeasonReport } from './ui/SeasonReport';
 import { Overhead } from './ui/Overhead';
+import { PrayersView } from './ui/PrayersView';
 import { VillageLog } from './ui/VillageLog';
 import { PeopleFocus } from './ui/PeopleFocus';
 import { TUNING } from './sim/tuning';
@@ -65,6 +66,8 @@ const reactions = chosen ? new Reactions(hudRoot, renderer) : null;
 const report = chosen ? new SeasonReport(hudRoot, focus, () => showBeliefs(true)) : null;
 // Who is doing what: marks over heads, a card on hover, and the day's happenings.
 const overhead = chosen ? new Overhead(hudRoot, renderer) : null;
+// Who is asking the god for what: bubbles over them, and the list.
+const prayers = chosen ? new PrayersView(hudRoot, sim, renderer, (id) => miracles.arm(id)) : null;
 const life = chosen
   ? new VillageLog(hudRoot, sim, (id) => {
       const v = sim.villagers.byId(id);
@@ -216,6 +219,10 @@ function frame(now: number): void {
   }
   reactions?.update(sim, dt);
   overhead?.update(sim, dt);
+  if (prayers) {
+    prayers.covered = inspector.villagerId >= 0 || tutorial.running;
+    prayers.update(dt);
+  }
   life?.update(dt);
   if (report) {
     report.covered = tutorial.running || !beliefs.el.hidden || !!life?.open || book.open || end !== null;

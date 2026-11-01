@@ -10,6 +10,7 @@ import { Plague } from './plague';
 import { Boats } from './boats';
 import { Paths } from './paths';
 import { Branching } from './branching';
+import { Prayers } from './prayers';
 import type { Justice } from './justice';
 import type { Exodus } from './exodus';
 import type { Appeasement } from './appease';
@@ -86,6 +87,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly paths: Paths;
   /** Hallowed ground, and believers leaving to found daughter peoples there. */
   readonly branching: Branching;
+  /** People asking the god for things. */
+  readonly prayers: Prayers;
   /** The island's trees, shared by every village. */
   readonly trees: Tree[];
   /** Shared counters (mutated through any people's view, so kept in one object). */
@@ -122,6 +125,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.boats = new Boats(this, this.rng.fork('boats'));
     this.paths = new Paths(this);
     this.branching = new Branching(this, this.rng.fork('branching'));
+    this.prayers = new Prayers(this, this.rng.fork('prayers'));
     this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
@@ -354,6 +358,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.plague.step();
     this.boats.step();
     this.branching.step();
+    this.prayers.step();
     this.paths.step();
     for (const t of this.tribes) {
       t.justice.step();
@@ -377,6 +382,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.plague.dawn();
       this.boats.dawn();
       this.branching.dawn();
+      this.prayers.dawn();
       this.paths.dawn();
       for (const t of this.tribes) t.myth.dawn();
       this.warning?.dawn();

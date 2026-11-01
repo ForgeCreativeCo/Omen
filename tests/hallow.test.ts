@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Sim, type GameMode } from '../src/sim/Sim';
 import { TICKS_PER_DAY } from '../src/sim/time';
 import { TUNING } from '../src/sim/tuning';
@@ -31,6 +31,11 @@ const hallow = (s: Sim, p: { x: number; z: number }) => {
 };
 
 describe('Hallow', { timeout: 120_000 }, () => {
+  // These test the branching rules alone: a month of prayers left unanswered makes the devout less so.
+  const chance = TUNING.prayers.dailyChance;
+  beforeAll(() => ((TUNING.prayers as { dailyChance: number }).dailyChance = 0));
+  afterAll(() => ((TUNING.prayers as { dailyChance: number }).dailyChance = chance));
+
   it('glows for days; those who see it name the place and hold it holy', () => {
     const { s, spot } = setup(45);
     hallow(s, spot);

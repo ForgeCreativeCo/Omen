@@ -516,6 +516,14 @@ export class Soundscape {
       case 'hallow':
         if (this.ok('choir', 2)) this.choir();
         break;
+      case 'prayer':
+        if (this.ok('prayer', 2)) this.chime(0.75, 0.16);
+        break;
+      case 'prayerEnd':
+        if (e.end === 'answered' || e.end === 'luck') {
+          if (this.ok('prayerEnd', 1)) this.chime(1.3, 0.07);
+        } else if (e.end === 'defied' && this.ok('prayerEnd', 1)) this.rumble(0.8);
+        break;
       case 'blessing':
       case 'blessPlace':
         if (this.ok('bless', 0.6)) this.chime(0.6);

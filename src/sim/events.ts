@@ -10,6 +10,7 @@ export type DissentKind = 'doubter' | 'prophet';
 export type { Crime, Judge, Sentence } from './justice';
 import type { HandWhat } from './miracles/hand';
 import type { ExodusReason } from './exodus';
+import type { PrayerEnd, PrayerKind } from './prayers';
 import type { Crime, Judge, Sentence } from './justice';
 export type DissentEndReason = 'converted' | 'recanted' | 'discredited' | 'died' | 'gone';
 
@@ -99,6 +100,8 @@ export type SimEventBody =
   /** A new people: `from` is the tribe they broke away from. */
   | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles' | 'settlers' | 'hallowed'; leaderId: number; x: number; z: number }
   /** Believers set out from their people for hallowed ground, to found a people there. */
+  | { type: 'prayer'; id: number; kind: PrayerKind; asker: number; for: number; against: number; until: number }
+  | { type: 'prayerEnd'; id: number; kind: PrayerKind; asker: number; for: number; against: number; end: PrayerEnd }
   | { type: 'calling'; tribe: number; ids: number[]; x: number; z: number; place: string }
   /** The party came to nothing (too few left, or the ground was lost). */
   | { type: 'callingEnd'; tribe: number; ids: number[] }
