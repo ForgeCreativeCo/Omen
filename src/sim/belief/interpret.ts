@@ -36,6 +36,7 @@ export const BASE_VALENCE: Record<OmenKind, number> = {
   blessing: 0.5,
   blight: -0.5,
   meteor: -0.25,
+  cataclysm: -0.9,
   quake: -0.4,
   firestorm: -0.55,
   wave: -0.45,

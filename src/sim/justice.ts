@@ -10,7 +10,7 @@ const T = TUNING.justice;
 /** Deaths that, landing on the accused, read as the god's own sentence. */
 const GODS_DEATHS = new Set<string>(['lightning', 'meteor', 'firestorm', 'quake', 'plague']);
 /** Omens that count as the god striking at the accused when they land on or beside them. */
-const GODS_SENTENCE = new Set<string>(['lightning', 'blight', 'meteor', 'firestorm', 'quake', 'plague']);
+const GODS_SENTENCE = new Set<string>(['lightning', 'blight', 'meteor', 'cataclysm', 'firestorm', 'quake', 'plague']);
 
 export type Crime = 'theft' | 'assault' | 'adultery' | 'murder';
 export type Sentence = 'forgiven' | 'shamed' | 'labor' | 'flogged' | 'exiled' | 'executed';

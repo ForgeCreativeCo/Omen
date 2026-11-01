@@ -2,10 +2,10 @@ import { TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
 
 /** The miracles (SPEC §6, plus the later powers), as data: UI and casting both read from here. */
-export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'hallow' | 'bless' | 'blight' | 'meteor' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm' | 'hand';
+export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'hallow' | 'bless' | 'blight' | 'meteor' | 'cataclysm' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm' | 'hand';
 
 /** Miracles cast by tapping a point on the ground. */
-export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'hallow' | 'blight' | 'meteor' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm';
+export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'hallow' | 'blight' | 'meteor' | 'cataclysm' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm';
 
 export type Targeting =
   /** Tap a point on the ground. */
@@ -200,6 +200,18 @@ export const MIRACLES: readonly MiracleDef[] = [
     radius: MT.swarm.radius,
     nightOnly: false,
     key: '5',
+    wrath: true,
+  },
+  {
+    id: 'cataclysm',
+    name: 'Extinction',
+    blurb: 'An asteroid, seen coming for a few moments. Where it lands nothing lives: everyone near is killed and every building flattened. A village under it is gone.',
+    targeting: 'point',
+    cost: MT.cataclysm.cost,
+    cooldownTicks: MT.cataclysm.cooldownDays * TICKS_PER_DAY,
+    radius: MT.cataclysm.killRadius,
+    nightOnly: false,
+    key: '7',
     wrath: true,
   },
   {

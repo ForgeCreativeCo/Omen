@@ -258,8 +258,10 @@ export class OmenRecorder {
         });
         break;
       }
-      case 'meteor': {
-        const r = TUNING.miracles.meteor;
+      case 'meteor':
+      case 'cataclysm': {
+        const big = e.type === 'cataclysm';
+        const r = big ? TUNING.miracles.cataclysm : TUNING.miracles.meteor;
         const shaken = sim.villagers.alive.filter((v) => Math.hypot(v.x - (e.x + 0.5), v.z - (e.z + 0.5)) <= r.fearRadius).map((v) => v.id);
         const outcomes: Outcome[] = [
           ...e.killed.map((id): Outcome => ({ type: 'died', entity: `person:${id}`, people: [id] })),
@@ -267,12 +269,12 @@ export class OmenRecorder {
             const h = sim.structureById(id);
             return h && h.kind === 'hut' ? [{ type: 'hutDamaged', entity: `structure:${id}`, people: [...h.residents] }] : [];
           }),
-          { type: 'landLowered', amount: 20 },
+          { type: 'landLowered', amount: big ? 60 : 20 },
         ];
         if (e.fire) outcomes.push({ type: 'fireStarted' });
         // A falling star crosses the whole sky: anyone awake and outdoors sees it.
         this.record({
-          kind: 'meteor',
+          kind: big ? 'cataclysm' : 'meteor',
           isDivine: true,
           position: { x: e.x, y: e.y, z: e.z },
           radius: r.craterRadius + 1,

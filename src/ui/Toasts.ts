@@ -38,6 +38,8 @@ export class Toasts {
   private readonly el: HTMLElement;
   /** -1 until the first update: start from now (a loaded game doesn't replay its past). */
   private lastSeq = -1;
+  /** Deaths from one falling star counted so far (tick, count): past a few, its summary speaks for them. */
+  private starDeaths = { tick: -1, n: 0 };
   private recent: number[] = [];
 
   constructor(root: HTMLElement) {
@@ -74,7 +76,13 @@ export class Toasts {
     switch (e.type) {
       case 'death':
         // A killing has its own notice.
-        return e.cause === 'killed' || e.cause === 'executed' ? null : `${who(e.id)} ${CAUSE[e.cause] ?? 'died'}.`;
+        if (e.cause === 'killed' || e.cause === 'executed') return null;
+        // A falling sky kills by the dozen: name a few, the rest are in its own notice.
+        if (e.cause === 'meteor') {
+          if (this.starDeaths.tick !== e.tick) this.starDeaths = { tick: e.tick, n: 0 };
+          if (++this.starDeaths.n > 3) return null;
+        }
+        return `${who(e.id)} ${CAUSE[e.cause] ?? 'died'}.`;
       case 'killing':
         return e.seen
           ? `<b>${who(e.killer)} killed ${who(e.victim)}</b> in front of everyone.`
@@ -196,7 +204,13 @@ export class Toasts {
       case 'blessing':
         return `${who(e.villagerId)} glows.`;
       case 'meteorFall':
-        return 'A star is falling.';
+        return e.big ? '<b>The sky is falling.</b>' : 'A star is falling.';
+      case 'cataclysm': {
+        const gone = e.villages.map((id) => sim.tribes[id]?.name).filter(Boolean);
+        return gone.length
+          ? `<b>The sky fell on ${gone.join(' and ')}.</b> ${e.killed.length} dead; nothing stands where their village was.`
+          : `<b>The sky fell.</b> ${e.killed.length ? `${e.killed.length} dead.` : 'Nobody lived there.'}`;
+      }
       case 'quake':
         return '<b>The earth shakes.</b>';
       case 'quakeEnd':

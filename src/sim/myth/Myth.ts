@@ -74,6 +74,7 @@ const FAMILY: Partial<Record<OmenKind, string>> = {
   blessing: 'blessing',
   blight: 'blight',
   meteor: 'meteor',
+  cataclysm: 'meteor',
   quake: 'quake',
   firestorm: 'firestorm',
   wave: 'wave',
@@ -93,6 +94,7 @@ const TRUE_NAME: Record<OmenKind, string> = {
   blessing: 'your Blessing',
   blight: 'your Blight',
   meteor: 'your Falling Star',
+  cataclysm: 'your Extinction',
   quake: 'your Earthquake',
   firestorm: 'your Firestorm',
   wave: 'your Tidal Wave',
@@ -385,7 +387,7 @@ export class MythSystem {
       return;
     }
     else if (o.kind === 'blight') reason = 'blight';
-    else if (o.kind === 'meteor') reason = 'star';
+    else if (o.kind === 'meteor' || o.kind === 'cataclysm') reason = 'star';
     else if (o.kind === 'quake') reason = 'quake';
     else if (o.kind === 'firestorm') reason = 'lightning';
     else if (o.kind === 'wave') reason = 'wave';
@@ -398,7 +400,7 @@ export class MythSystem {
     if (!reason) return;
 
     // A fallen star always makes a place: the crater, with the stone in it.
-    if (o.kind === 'meteor') {
+    if (o.kind === 'meteor' || o.kind === 'cataclysm') {
       if (pl.siteAt(o.position.x, o.position.z)) return;
       const site = pl.addSite(o.position.x, o.position.z, Math.max(3, o.radius));
       this.give(site.key, reason, f, this.rng.pick(SITE_NOUN.crater));

@@ -59,6 +59,8 @@ export interface FallingStar {
   x: number;
   z: number;
   impactTick: number;
+  /** The extinction asteroid, not a falling star. */
+  big?: boolean;
 }
 
 /** Ground column top for reshaping: the highest terrain voxel, ignoring water, plants and decor. */
@@ -97,6 +99,7 @@ export class Miracles {
     bless: 0,
     blight: 0,
     meteor: 0,
+    cataclysm: 0,
     quake: 0,
     firestorm: 0,
     wave: 0,
@@ -205,7 +208,7 @@ export class Miracles {
       const f = this.falling[i]!;
       if (sim.tick < f.impactTick) continue;
       this.falling.splice(i, 1);
-      this.impact(f.x, f.z);
+      this.impact(f.x, f.z, !!f.big);
     }
   }
 
@@ -229,6 +232,7 @@ export class Miracles {
           else if (cmd.miracle === 'wave') this.wrath.wave(cmd.x, cmd.z);
           else if (cmd.miracle === 'plague') this.sim.plague.outbreak(cmd.x, cmd.z);
           else if (cmd.miracle === 'swarm') this.wrath.swarm(cmd.x, cmd.z);
+          else if (cmd.miracle === 'cataclysm') this.meteor(cmd.x, cmd.z, true);
           else this.meteor(cmd.x, cmd.z);
         }
         break;
@@ -497,19 +501,23 @@ export class Miracles {
     sim.events.push(sim.tick, { type: 'blight', x: cx, z: cz, radius: B.radius, crops });
   }
 
-  /** A star starts to fall; it lands a few ticks later. */
-  private meteor(x: number, z: number): void {
+  /** A star (or the extinction asteroid) starts to fall; it lands a few ticks later. */
+  private meteor(x: number, z: number, big = false): void {
     const sim = this.sim;
-    const impactTick = sim.tick + MT.meteor.fallTicks;
-    this.falling.push({ x, z, impactTick });
-    sim.events.push(sim.tick, { type: 'meteorFall', x, z, impactTick });
+    const impactTick = sim.tick + (big ? MT.cataclysm : MT.meteor).fallTicks;
+    this.falling.push({ x, z, impactTick, ...(big ? { big } : {}) });
+    sim.events.push(sim.tick, { type: 'meteorFall', x, z, impactTick, ...(big ? { big } : {}) });
   }
 
-  /** The star lands: a crater with star-stone at its heart, wrecked buildings, fire. */
-  private impact(cx: number, cz: number): void {
+  /**
+   * The star lands: a crater with star-stone at its heart, wrecked buildings, fire.
+   * The extinction asteroid is the same, writ large: everyone near dies and every
+   * building near is flattened.
+   */
+  private impact(cx: number, cz: number, big = false): void {
     const sim = this.sim;
     const w = sim.world;
-    const S = MT.meteor;
+    const S = big ? { ...MT.cataclysm, wreckChance: 1 } : MT.meteor;
     const sea = TUNING.terrain.seaLevel;
     const ix = Math.max(2, Math.min(w.sizeX - 3, Math.round(cx)));
     const iz = Math.max(2, Math.min(w.sizeZ - 3, Math.round(cz)));
@@ -592,7 +600,11 @@ export class Miracles {
         lit++;
       }
     }
-    sim.events.push(sim.tick, { type: 'meteor', x: ix, y: top, z: iz, killed, wrecked: [...wrecked], fire });
+    if (big) {
+      // The villages it fell on: their fires were within the blast.
+      const villages = sim.tribes.filter((t) => Math.hypot(t.village.center.x - ix, t.village.center.z - iz) <= S.blastRadius).map((t) => t.id);
+      sim.events.push(sim.tick, { type: 'cataclysm', x: ix, y: top, z: iz, killed, wrecked: [...wrecked], fire, villages });
+    } else sim.events.push(sim.tick, { type: 'meteor', x: ix, y: top, z: iz, killed, wrecked: [...wrecked], fire });
     if (fire) sim.emitFireStarted(ix, top, iz);
   }
 

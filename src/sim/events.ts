@@ -38,8 +38,10 @@ export type SimEventBody =
   | { type: 'hallow'; id: number; x: number; z: number; radius: number }
   | { type: 'blessing'; villagerId: number; x: number; z: number }
   | { type: 'blight'; x: number; z: number; radius: number; crops: number }
-  | { type: 'meteorFall'; x: number; z: number; impactTick: number }
+  | { type: 'meteorFall'; x: number; z: number; impactTick: number; big?: boolean }
   | { type: 'meteor'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean }
+  /** The extinction asteroid landed; `villages` are the peoples whose fire was within its blast. */
+  | { type: 'cataclysm'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean; villages: number[] }
   /** The ground shakes (start, for effects) and stops (with what it did). */
   | { type: 'quake'; id: number; x: number; z: number; radius: number; durationTicks: number; cracks: number }
   | { type: 'quakeEnd'; id: number; x: number; z: number; radius: number; wrecked: number[]; killed: number[]; trees: number }

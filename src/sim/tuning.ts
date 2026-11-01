@@ -407,6 +407,23 @@ export const TUNING = {
       /** Fires started around the rim. */
       fires: 18,
     },
+    /** Extinction: an asteroid that ends whatever it lands on. A village under it is gone. */
+    cataclysm: {
+      cost: 150,
+      cooldownDays: 30,
+      /** It's seen coming for a while. */
+      fallTicks: 40,
+      craterRadius: 16,
+      depth: 11,
+      /** Everyone this close dies. */
+      killRadius: 45,
+      /** Buildings this close are flattened (all of the blast, more near the crater). */
+      blastRadius: 40,
+      blastWreckChance: 0.9,
+      /** Everyone this close is shaken. */
+      fearRadius: 140,
+      fires: 60,
+    },
     /** Earthquake: the ground shakes over an area, cracks open and topples huts. */
     quake: {
       cost: 45,

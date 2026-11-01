@@ -370,6 +370,21 @@ export class MiracleFx {
         this.flash = 1;
         break;
       }
+      case 'cataclysm': {
+        const y = e.y + 1;
+        const S = TUNING.miracles.cataclysm;
+        this.burst(e.x + 0.5 + ox, y, e.z + 0.5 + oz, 1200, 34, [0xffe2a0, 0xff9a4a, 0xffffff, 0xff6a2a], 3.5, -6);
+        for (let i = 0; i < 900; i++) {
+          const a = this.rng.range(0, Math.PI * 2);
+          const r = this.rng.range(0, S.killRadius);
+          const x = Math.round(e.x + Math.cos(a) * r);
+          const z = Math.round(e.z + Math.sin(a) * r);
+          this.dustAt(x + 0.5 + ox, sim.world.topY(x, z) + 1, z + 0.5 + oz);
+        }
+        this.shake = Math.max(this.shake, 5);
+        this.flash = 1;
+        break;
+      }
       case 'quake':
         for (let i = 0; i < 240; i++) {
           const a = this.rng.range(0, Math.PI * 2);
@@ -572,16 +587,24 @@ export class MiracleFx {
     const star = sim.miracles.falling[0];
     this.starHead.visible = this.starGlow.visible = !!star;
     if (star) {
-      const total = TUNING.miracles.meteor.fallTicks;
+      // The extinction asteroid: bigger, from higher, slower, and burning harder.
+      const big = !!star.big;
+      const total = (big ? TUNING.miracles.cataclysm : TUNING.miracles.meteor).fallTicks;
       const k = Math.max(0, Math.min(1, 1 - (star.impactTick - sim.tick - alpha) / total));
       const gy = sim.world.topY(Math.floor(star.x), Math.floor(star.z)) + 1;
-      const fx = star.x + ox + 45 * (1 - k);
-      const fy = gy + 80 * (1 - k);
-      const fz = star.z + oz - 25 * (1 - k);
+      const reach = big ? 2.2 : 1;
+      const fx = star.x + ox + 45 * reach * (1 - k);
+      const fy = gy + 80 * reach * (1 - k);
+      const fz = star.z + oz - 25 * reach * (1 - k);
       this.starHead.position.set(fx, fy, fz);
+      this.starHead.scale.setScalar(big ? 6 : 1);
       this.starGlow.position.set(fx, fy, fz);
-      for (let i = 0; i < 6; i++)
-        this.spark(fx + this.rng.jitter(0.6), fy + this.rng.jitter(0.6), fz + this.rng.jitter(0.6), this.rng.jitter(0.5), this.rng.jitter(0.5), this.rng.jitter(0.5), this.rng.pick([0xffc27a, 0xff8a3a, 0xfff0c8]), this.rng.range(0.4, 1.1), 0);
+      this.starGlow.scale.setScalar(big ? 30 : 7);
+      const spread = big ? 3.5 : 0.6;
+      for (let i = 0; i < (big ? 30 : 6); i++)
+        this.spark(fx + this.rng.jitter(spread), fy + this.rng.jitter(spread), fz + this.rng.jitter(spread), this.rng.jitter(0.5), this.rng.jitter(0.5), this.rng.jitter(0.5), this.rng.pick([0xffc27a, 0xff8a3a, 0xfff0c8]), this.rng.range(0.4, 1.1) * (big ? 2 : 1), 0);
+      // The sky reddens as it comes.
+      if (big) this.flash = Math.max(this.flash, 0.15 * k);
     }
 
     // ---- clouds (smoothly follow the sim's cloud positions; fade in/out)

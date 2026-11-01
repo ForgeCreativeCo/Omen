@@ -169,3 +169,44 @@ describe('Plague', () => {
     expect(s.plague.sick.size).toBe(0);
   });
 });
+
+describe('Extinction', () => {
+  it('ends the village it falls on and leaves the others standing', () => {
+    const s = new Sim({ seed: 'wrath', tribes: 3 });
+    for (let i = 0; i < TICKS_PER_DAY * 3; i++) s.step();
+    morning(s);
+    s.miracles.unlimited = true;
+    const doomed = s.tribes[0]!;
+    const c = doomed.village.center;
+    const C = MT.cataclysm;
+    const intact = (st: ReturnType<typeof s.village.byId>) => st!.steps.filter((p) => p.mat !== M.AIR && s.world.get(p.x, p.y, p.z) === p.mat).length;
+    const others = s.tribes.slice(1).filter((t) => Math.hypot(t.village.center.x - c.x, t.village.center.z - c.z) > C.killRadius + 20);
+    expect(others.length).toBeGreaterThan(0);
+    const othersBefore = others.map((t) => t.members.length);
+    const near = doomed.members.filter((v) => Math.hypot(v.x - c.x, v.z - c.z) <= C.killRadius).map((v) => v.id);
+    expect(near.length).toBeGreaterThan(5);
+    cast(s, { type: 'cast', miracle: 'cataclysm', x: c.x, z: c.z });
+    expect(s.lastFailures).toEqual([]);
+    expect(s.miracles.falling[0]?.big).toBe(true);
+    // It's seen coming for a while before it lands.
+    for (let i = 0; i < C.fallTicks - 2; i++) s.step();
+    expect(ended(s, 'cataclysm')).toBe(false);
+    until(s, () => ended(s, 'cataclysm'), 10);
+    const e = s.events.all().find((x) => x.type === 'cataclysm');
+    expect(e && e.type === 'cataclysm' && e.villages).toContain(0);
+    // Everyone of theirs who was home is dead; nothing of the village stands.
+    for (const id of near) expect(s.villagers.byId(id)?.alive).toBe(false);
+    const huts = doomed.village.structures.filter((st) => st.kind === 'hut' && !st.abandoned);
+    const standing = huts.reduce((n, h) => n + intact(h), 0);
+    const total = huts.reduce((n, h) => n + h.steps.filter((p) => p.mat !== M.AIR).length, 0);
+    expect(standing).toBeLessThan(total * 0.2);
+    // The other peoples, far off, lost nobody to it.
+    others.forEach((t, i) => expect(t.members.length).toBeGreaterThanOrEqual(othersBefore[i]! - 1));
+    // The whole island saw the sky fall.
+    s.step();
+    expect(others.some((t) => t.belief.omens.some((o) => o.kind === 'cataclysm'))).toBe(true);
+    // And life goes on for the rest.
+    for (let i = 0; i < TICKS_PER_DAY * 5; i++) s.step();
+    expect(others.every((t) => t.members.length > 0)).toBe(true);
+  });
+});

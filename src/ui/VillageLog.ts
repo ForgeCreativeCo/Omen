@@ -184,6 +184,10 @@ export class VillageLog {
         return this.push(e.tick, 'faith', e.answered ? `They believe the god answered: it struck ${sim.tribes[e.against]?.name ?? 'the enemy'}.` : 'They prayed for victory, and the god struck them instead.');
       case 'absorbed':
         return this.push(e.tick, 'life', `The last of ${sim.tribes[e.from]?.name ?? 'a people'} (${e.ids.map(w).join(', ')}) went to live with ${sim.tribes[e.into]?.name ?? 'a people'}.`);
+      case 'cataclysm': {
+        const gone = e.villages.map((id) => sim.tribes[id]?.name).filter(Boolean);
+        return this.push(e.tick, 'life', `<b>The sky fell</b>${gone.length ? ` on ${gone.join(' and ')}` : ''}: ${e.killed.length} dead.`);
+      }
       case 'calling':
         return this.push(e.tick, 'faith', `${e.ids.map(w).join(', ')} set out for ${sim.tribes[e.tribe]?.myth.places.name(e.place) ?? 'the hallowed ground'}, to live there.`);
       case 'callingEnd':

@@ -524,7 +524,8 @@ export class Soundscape {
         break;
       case 'meteorFall':
         if (!this.ok('meteorFall', 1)) break;
-        this.falling = this.sample('asteroid', 0.8);
+        // The extinction asteroid: the same rush, deeper and slower.
+        this.falling = e.big ? this.sample('asteroid', 1, { rate: 0.55 }) : this.sample('asteroid', 0.8);
         if (!this.falling) this.whoosh();
         break;
       case 'handGrab':
@@ -541,6 +542,14 @@ export class Soundscape {
           this.thunder(1);
           this.rumble(3);
         }
+        break;
+      case 'cataclysm':
+        if (this.falling) this.fadeOut(this.falling, 0.3);
+        this.falling = null;
+        // The blast, slowed into a roar, with the ground's rumble under it.
+        if (!this.sample('explosion', 1, { rate: 0.6 })) this.thunder(1);
+        this.rumble(6);
+        this.rumble(4);
         break;
       case 'milestone':
         if (this.ok('milestone', 2)) this.chime(1, 0.6);

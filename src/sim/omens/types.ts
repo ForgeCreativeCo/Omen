@@ -12,6 +12,7 @@ export type OmenKind =
   | 'blessing'
   | 'blight'
   | 'meteor'
+  | 'cataclysm'
   | 'quake'
   | 'firestorm'
   | 'wave'

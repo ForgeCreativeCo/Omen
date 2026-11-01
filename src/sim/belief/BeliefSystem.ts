@@ -97,6 +97,7 @@ const RESPONSE_WORD: Record<string, string> = {
   blessing: 'a blessing',
   blight: 'a withering',
   meteor: 'a falling star',
+  cataclysm: 'the falling sky',
   quake: 'the earth shaking',
   firestorm: 'fire like rain',
   wave: 'the sea',

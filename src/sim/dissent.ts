@@ -148,7 +148,7 @@ export class Dissent {
     }
     // A prophet struck at, in front of everyone, is shown up.
     const near = v && Math.hypot(v.x - o.position.x, v.z - o.position.z) <= T.discreditRadius;
-    if ((o.kind === 'lightning' || o.kind === 'meteor' || o.kind === 'firestorm' || o.kind === 'quake') && near) {
+    if ((o.kind === 'lightning' || o.kind === 'meteor' || o.kind === 'cataclysm' || o.kind === 'firestorm' || o.kind === 'quake') && near) {
       this.end('discredited');
       return;
     }
