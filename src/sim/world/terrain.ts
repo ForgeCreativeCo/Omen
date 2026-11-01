@@ -82,7 +82,7 @@ const angleDist = (a: number, b: number) => {
  * a ridge along one side (north, south or west), forests, beaches and an
  * underside that tapers into the sky.
  */
-export function generateIsland(rng: Rng): Island {
+export function generateIsland(rng: Rng, opts: { islets?: boolean } = {}): Island {
   const { sizeX, sizeY, sizeZ, chunkSize } = TUNING.world;
   const world = new VoxelWorld(sizeX, sizeY, sizeZ, chunkSize);
   const rand = () => rng.next();
@@ -419,7 +419,7 @@ export function generateIsland(rng: Rng): Island {
       fillColumn(x, z, Math.max(2, Math.round(seabedAt(r, landRadius(ang)))), M.SAND);
     }
   const islets: Islet[] = [];
-  const wantIslets = isletRng.int(T.isletCount[0]!, T.isletCount[1]!);
+  const wantIslets = opts.islets === false ? 0 : isletRng.int(T.isletCount[0]!, T.isletCount[1]!);
   for (let tries = 0; tries < 160 && islets.length < wantIslets; tries++) {
     const ang = isletRng.range(0, Math.PI * 2);
     const r0 = isletRng.range(T.isletRadius[0]!, T.isletRadius[1]!);

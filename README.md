@@ -44,7 +44,7 @@ Your miracles have no cooldowns and no cost (a switch in `src/sim/tuning.ts` bri
 In dev builds `window.omen` exposes `{ sim, loop, renderer, beliefs, book, … }` for poking at state from the console.
 
 ## What's in the game
-- **The island**: 256×256 voxels. A home valley (village, east hill, ridge, river) with highlands, forested lowlands, badlands and meadows around it, and two to four islets in the sea around it. Far-off terrain is drawn coarse.
+- **The island**: 256×256 voxels. A home valley (village, east hill, ridge, river) with highlands, forested lowlands, badlands and meadows around it, and, in the sandbox, two to four islets in the sea around it. Far-off terrain is drawn coarse.
 - **Belief**: every witness reads each omen for themselves (what they blame or credit, blessing or curse), retells it at the fire, and beliefs harden into rites, taboos, holy and cursed places, chosen ones, doctrine and tradition. Speech over heads shows each reading; a seasonal card says what changed.
 - **Myth**: named places, the god's name and statue, legends that compress with each priest, a Holy Book with the truth beside each verse, and laws the village writes for itself.
 - **Society**: fondness and grudges between every pair, affairs (found out or not), feuds, fights, rare killings, thefts and quarrels.
@@ -66,7 +66,7 @@ Next, if wanted:
 4. **Low-end hardware pass**: measure the island on a weak laptop and a phone now that level of detail is in.
 
 ## Known gaps
-- **The Warning is single-people by design**: a schism's followers leave the island there, so a breakaway people can't survive the flood by luck. Settlers don't sail in the Warning either.
+- **The Warning is single-people by design**: a schism's followers leave the island there, so a breakaway people can't survive the flood by luck. The Warning's island has no islets either.
 - **Raiders rarely win outright** (defenders fight on home ground), so captives are mostly snatched by a party breaking away.
 - **Boats only carry settlers**: no raids, trade or fishing by sea, and the god can't sink one.
 - **Saves don't carry across versions**: each change to the world's shape bumps the save version (now 7) and old saves are refused.

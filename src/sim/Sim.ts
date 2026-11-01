@@ -100,7 +100,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   constructor(opts: SimOptions) {
     this.rng = new Rng(opts.seed);
     this.seed = this.rng.seed;
-    this.island = generateIsland(this.rng.fork('terrain'));
+    // The Warning is one people on one island: no islets to settle or to scatter the story.
+    this.island = generateIsland(this.rng.fork('terrain'), { islets: opts.mode !== 'warning' });
     this.nav = new NavGrid(this.island.world);
     this.weather = new Weather(this.rng.fork('weather'));
     this.fire = new Fire(this.island.world, this.rng.fork('fire'));
