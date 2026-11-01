@@ -11,6 +11,7 @@ import { Boats } from './boats';
 import { Paths } from './paths';
 import { Branching } from './branching';
 import { Prayers } from './prayers';
+import { Messiah } from './messiah';
 import type { Justice } from './justice';
 import type { Exodus } from './exodus';
 import type { Appeasement } from './appease';
@@ -89,6 +90,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly branching: Branching;
   /** People asking the god for things. */
   readonly prayers: Prayers;
+  /** The god's anointed, alive or lately dead. */
+  readonly messiah: Messiah;
   /** The island's trees, shared by every village. */
   readonly trees: Tree[];
   /** Shared counters (mutated through any people's view, so kept in one object). */
@@ -126,6 +129,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.paths = new Paths(this);
     this.branching = new Branching(this, this.rng.fork('branching'));
     this.prayers = new Prayers(this, this.rng.fork('prayers'));
+    this.messiah = new Messiah(this, this.rng.fork('messiah'));
     this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
@@ -359,6 +363,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.boats.step();
     this.branching.step();
     this.prayers.step();
+    this.messiah.step();
     this.paths.step();
     for (const t of this.tribes) {
       t.justice.step();
@@ -367,7 +372,10 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
 
     // Late in the evening gathering, people talk: beliefs spread around the fire.
     const duskMark = TUNING.villagers.gatheringEndsAt - 0.04;
-    if (prevFrac < duskMark && this.cal.dayFraction >= duskMark) for (const t of this.tribes) t.effects.dusk();
+    if (prevFrac < duskMark && this.cal.dayFraction >= duskMark) {
+      for (const t of this.tribes) t.effects.dusk();
+      this.messiah.dusk();
+    }
 
     if (newDay) {
       this.villagers.newDay();
@@ -383,6 +391,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.boats.dawn();
       this.branching.dawn();
       this.prayers.dawn();
+      this.messiah.dawn();
       this.paths.dawn();
       for (const t of this.tribes) t.myth.dawn();
       this.warning?.dawn();

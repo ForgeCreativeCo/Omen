@@ -59,6 +59,18 @@ const LAW_SENTENCE: Record<Sentence, string> = {
   executed: 'shall give their own life',
 };
 
+/** A wonder, as a verse tells it (follows "and …"). */
+const WONDER_PAST: Record<string, string> = {
+  rain: 'the rain fell',
+  bloom: 'the fields bloomed',
+  light: 'light came down from heaven',
+  hallow: 'the ground shone',
+  blessing: 'the sick were made whole',
+  blessField: 'the grain grew heavy',
+  blessHome: 'a house was blessed',
+  hand: 'the hand of heaven came down',
+};
+
 /** Omen kinds grouped the way stories group them. Dreams aren't legends. */
 const FAMILY: Partial<Record<OmenKind, string>> = {
   rain: 'rain',
@@ -272,6 +284,30 @@ export class MythSystem {
           omenIds: [],
           drift: [],
         });
+        break;
+      }
+      case 'anointed':
+      case 'messiahDied':
+      case 'messiahRisen':
+      case 'messiahCredited':
+      case 'messiahPreachedAbroad': {
+        const person = this.sim.villagers.byId(e.id)?.name ?? 'the chosen one';
+        if (e.type === 'anointed') {
+          this.addVerse('messiah', 'anointed', { person }, { truth: [`You named ${person} your messiah.`], omenIds: [], drift: [] });
+        } else if (e.type === 'messiahCredited') {
+          // The first few wonders become scripture; after that it is simply what they do.
+          if (this.sim.messiah.credits > 3) break;
+          this.addVerse('messiah', 'called', { person, wonder: WONDER_PAST[e.kind] ?? 'a wonder came' }, { truth: [`You worked a wonder near ${person}; ${person} did nothing.`], omenIds: [e.omenId], drift: [] });
+        } else if (e.type === 'messiahPreachedAbroad') {
+          if (!e.came) break;
+          const other = this.sim.tribes[e.to]?.name ?? 'another people';
+          this.addVerse('messiah', 'preached', { person, other, n: String(e.came) }, { truth: [`${person} preached to ${other}, and ${e.came} came over.`], omenIds: [], drift: [] });
+        } else if (e.type === 'messiahDied') {
+          const truth = e.death === 'saint' ? `${person} died of ${e.cause === 'oldAge' ? 'old age' : e.cause}.` : e.death === 'martyr' ? `${person} was killed by another person.` : `Something you did killed ${person}.`;
+          this.addVerse('messiah', e.death, { person }, { truth: [truth], omenIds: [], drift: [] });
+        } else {
+          this.addVerse('messiah', 'risen', { person }, { truth: [`You raised ${person} from the dead with the Hand.`], omenIds: [], drift: [] });
+        }
         break;
       }
       case 'law':

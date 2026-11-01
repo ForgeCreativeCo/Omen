@@ -49,6 +49,9 @@ export class Inspector {
   villagerId = -1;
   private timer = 0;
 
+  /** Anoint this person (set by the game). */
+  onAnoint: ((id: number) => void) | null = null;
+
   constructor(root: HTMLElement, private readonly onClose: () => void) {
     this.el = document.createElement('div');
     this.el.className = 'hud-panel inspector';
@@ -59,6 +62,10 @@ export class Inspector {
       if (t.dataset.close !== undefined) this.close();
       const goto = t.dataset.villager;
       if (goto) this.villagerId = Number(goto);
+      if (t.dataset.anoint !== undefined) {
+        this.onAnoint?.(this.villagerId);
+        this.timer = 1;
+      }
     });
   }
 
@@ -116,7 +123,8 @@ export class Inspector {
       <button class="ins-close" data-close aria-label="Close">×</button>
       <h2>${v.name}</h2>
       <div class="ins-sub">${Math.floor(v.age)} years · ${cap(v.role)}${sim.tribes.length > 1 ? ` · ${cap((sim.tribes[v.tribeId] ?? sim.tribe).name)}` : ''}${v.alive ? '' : ' · †'}</div>
-      <div class="ins-traits">${v.traits.map((t) => `<span>${TRAIT_LABEL[t]}</span>`).join('')}${this.dissentTag(sim, v)}${sim.appease.isDefier(v) ? '<span class="ins-defiant">Defies the god</span>' : ''}</div>
+      <div class="ins-traits">${v.traits.map((t) => `<span>${TRAIT_LABEL[t]}</span>`).join('')}${this.dissentTag(sim, v)}${sim.appease.isDefier(v) ? '<span class="ins-defiant">Defies the god</span>' : ''}${sim.messiah.is(v) ? '<span class="ins-messiah">Messiah</span>' : sim.messiah.past.some((p) => p.id === v.id) ? `<span class="ins-messiah">${v.alive ? 'Once messiah' : 'Messiah, †'}</span>` : ''}</div>
+      ${sim.messiah.canAnoint(v.id) ? '<button class="ins-anoint" data-anoint>Anoint as messiah</button>' : ''}
       <div class="ins-now">${cap(status)}${sim.plague.isSick(v) ? ' <span class="ins-sick">· sick</span>' : sim.plague.immune.has(v.id) ? ' · lived through the sickness' : ''}</div>
       ${v.alive ? bar('Hunger', v.needs.hunger, true) + bar('Energy', v.needs.energy) + bar('Safety', v.needs.safety) : ''}
       <dl>

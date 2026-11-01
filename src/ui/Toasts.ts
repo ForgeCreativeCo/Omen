@@ -203,6 +203,24 @@ export class Toasts {
         return `${who(e.villagerId)} stirs in their sleep.`;
       case 'blessing':
         return `${who(e.villagerId)} glows.`;
+      case 'anointed':
+        return `<b>You have anointed ${who(e.id)}.</b> A pillar of light came down on them, and ${e.witnesses.length} saw it.`;
+      case 'messiahCredited':
+        return `They say ${who(e.id)} did it.`;
+      case 'messiahJourney':
+        return `${who(e.id)} sets out to preach to ${sim.tribes[e.to]?.name ?? 'another people'}.`;
+      case 'messiahPreachedAbroad':
+        return e.came ? `${who(e.id)} preached to ${sim.tribes[e.to]?.name ?? 'another people'}, and <b>${e.came}</b> came away with them.` : `${who(e.id)} preached to ${sim.tribes[e.to]?.name ?? 'another people'}. None followed.`;
+      case 'messiahDied':
+        return e.death === 'saint'
+          ? `<b>${who(e.id)} is dead.</b> Where they lie is holy now. For three days, the Hand can still raise them.`
+          : e.death === 'martyr'
+            ? `<b>${who(e.id)} has been killed.</b> A martyr. For three days, the Hand can still raise them.`
+            : `<b>You struck down ${who(e.id)}.</b> Some say you called them home; some, that you abandoned them. For three days, the Hand can still raise them.`;
+      case 'messiahBuried':
+        return `${who(e.id)} has been buried.`;
+      case 'messiahRisen':
+        return `<b>${who(e.id)} has risen.</b> ${e.witnesses} saw it${e.came ? `, and ${e.came} of other peoples came to them` : ''}.`;
       case 'prayer': {
         const t = sim.tribes[e.tribe ?? 0];
         const of = sim.tribes.length > 1 && t ? ` of ${t.name}` : '';

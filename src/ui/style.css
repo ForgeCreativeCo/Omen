@@ -2684,6 +2684,24 @@ body.reduce-motion *::after {
   color: #b8c87a;
 }
 
+.ins-messiah {
+  color: #ffe28a;
+  border-color: rgba(255, 226, 138, 0.6) !important;
+}
+
+.ins-anoint {
+  display: block;
+  margin: 6px 0 2px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: #2a2018;
+  background: #ffe28a;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
 .ins-defiant {
   color: #f0a080;
   border-color: rgba(240, 160, 128, 0.5) !important;

@@ -67,6 +67,9 @@ const report = chosen ? new SeasonReport(hudRoot, focus, () => showBeliefs(true)
 // Who is doing what: marks over heads, a card on hover, and the day's happenings.
 const overhead = chosen ? new Overhead(hudRoot, renderer) : null;
 // Who is asking the god for what: bubbles over them, and the list.
+inspector.onAnoint = (id) => {
+  sim.enqueue({ type: 'anoint', villagerId: id });
+};
 const prayers = chosen ? new PrayersView(hudRoot, sim, renderer, (id) => miracles.arm(id)) : null;
 const life = chosen
   ? new VillageLog(hudRoot, sim, (id) => {

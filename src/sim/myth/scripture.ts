@@ -24,7 +24,9 @@ export type VerseKind =
   /** The people left their home for new ground. */
   | 'exodus'
   /** How they answered a cruel god: sacrifice, defiance, and what they said of their neighbors. */
-  | 'wrath';
+  | 'wrath'
+  /** The god's anointed: their naming, their wonders, their preaching, their death, and their rising. */
+  | 'messiah';
 
 export interface VerseRequest {
   kind: VerseKind;
@@ -305,6 +307,36 @@ const T: Record<VerseKind, Table> = {
     scorn: [
       'And {god} struck {other}, for they had angered {god}. Therefore the people gave more, lest they be next.',
       'The people saw what {god} did to {other}, and said: they have angered {god}; let it not be us.',
+    ],
+  },
+  messiah: {
+    anointed: [
+      'And {god} came down in a pillar of light upon {person}, and said: this one is mine.',
+      'In {season} the sky opened over {person}, and the people knew that {god} had chosen.',
+    ],
+    called: [
+      'And {person} lifted their hands, and {god} answered: {wonder}.',
+      '{Person} spoke, and {wonder}. Who but the chosen of {god} could do this?',
+    ],
+    preached: [
+      'And {person} went to {other} and spoke of {god}, and {n} rose up and followed.',
+      '{Person} walked among {other}, and {n} left their fires to come with them.',
+    ],
+    saint: [
+      '{Person} lay down at last, full of days, and where {person} lies is holy.',
+      'And {person} slept, and {god} took the breath gently. Go softly where {person} lies.',
+    ],
+    martyr: [
+      'They killed {person}, the chosen of {god}, and the blood cried out from the ground.',
+      'And {person} was struck down by those who feared the truth, and did not curse them.',
+    ],
+    takenHome: [
+      'And {god} reached down and took {person} up, and some wept, and some rejoiced.',
+      '{God} called {person} home in fire. Whether in love or in anger, the people could not agree.',
+    ],
+    risen: [
+      'On the third day, {god} lifted {person} from the earth, and {person} lived. Remember this.',
+      'And {person} was dead, and {god} took {person} up in its hand, and {person} breathed again.',
     ],
   },
   law: {

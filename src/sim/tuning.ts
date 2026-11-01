@@ -196,6 +196,57 @@ export const TUNING = {
     fieldsPerPerson: 1 / 4,
   },
 
+  /** The messiah: one the god names as its own. */
+  messiah: {
+    /** Anointing: the pillar of light and the faith of those who see it. */
+    witnessRange: 45,
+    anointHold: 0.6,
+    /** Wonders this close to the messiah, their people credit to them. */
+    creditRange: 14,
+    creditHold: 0.12,
+    /** …and love the god this much less for each. */
+    creditDrain: 0.03,
+    /** Preaching at the evening fire. */
+    preachRange: 14,
+    /** Beliefs they hold this strongly, they preach. */
+    preachHeld: 0.3,
+    preachRate: 0.04,
+    preachLove: 0.02,
+    /** A Doubter's or False Prophet's followers drift back by this share each evening. */
+    pullAway: 0.25,
+    /** A Doubter sitting at the messiah's fire comes round with this chance. */
+    convertDoubter: 0.25,
+    /** Journeys to preach to another people. */
+    firstJourneyDays: 3,
+    journeyEveryDays: 5,
+    journeyChance: 0.5,
+    journeyDays: 4,
+    arriveWithin: 8,
+    preachTicks: 60,
+    /** Each listener abroad comes away with them with this chance (scaled by how the peoples get on). */
+    convertChance: 0.12,
+    /** Among a people at war with theirs, they're killed on arrival with this chance. */
+    enemyKills: 0.5,
+    /** Rivals: the priest resents them; those who hate them (bond at or below hateAt) or defy the god may kill them. */
+    priestResent: 0.04,
+    hateAt: -0.5,
+    plotChance: 0.03,
+    /** Death: how long the body lies (the Hand can raise it), and how each death is taken. */
+    bodyDays: 3,
+    saintHold: 0.4,
+    martyrLove: 0.15,
+    martyrShame: 0.3,
+    martyrConverts: 3,
+    splitAt: 0.5,
+    takenLove: 0.1,
+    abandonedLove: 0.2,
+    /** Risen. */
+    risenHold: 0.9,
+    risenLove: 0.4,
+    risenConverts: 6,
+    risenYears: 20,
+  },
+
   /** People asking the god for things. */
   prayers: {
     /** Each dawn, a people in need raises a prayer with this chance. */

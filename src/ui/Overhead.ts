@@ -50,6 +50,7 @@ export function villagerTags(sim: Sim, v: Villager): string[] {
   const tags: string[] = [];
   const t = sim.tribes[v.tribeId] ?? sim.tribe;
   if (sim.tribes.length > 1) tags.push(t.name.replace(/^the /, ''));
+  if (sim.messiah.is(v)) tags.push('Messiah');
   if (v.id === t.belief.priestId) tags.push('Priest');
   if (t.belief.chosenIds().has(v.id)) tags.push('Chosen');
   if (t.effects.outcastIds().has(v.id)) tags.push('Outcast');

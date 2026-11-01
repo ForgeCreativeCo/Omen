@@ -180,6 +180,12 @@ export class MiracleController {
     if (def.targeting === 'hand') return true;
     if (def.targeting === 'person') {
       const id = this.view.pickVillager(this.sim, clientX, clientY);
+      if (this.armed === 'anoint') {
+        if (id < 0) this.toast('target');
+        else this.send({ type: 'anoint', villagerId: id }, 'anoint');
+        if (id >= 0) this.disarm();
+        return true;
+      }
       if (id >= 0) {
         this.send({ type: 'bless', villagerId: id }, 'bless');
         return true;
@@ -245,7 +251,10 @@ export class MiracleController {
     const z = v ? v.z : hit!.z + 0.5;
     const R = TUNING.miracles.hand.reach;
     const tree = !v && this.sim.village.trees.some((t) => this.sim.village.treeAlive(t) && Math.hypot(t.x + 0.5 - x, t.z + 0.5 - z) <= R);
-    const target: GrabTarget = v ? { what: 'villager', id: v.id } : tree ? { what: 'tree' } : { what: 'earth' };
+    // The messiah's body, lying where they fell: take it up and they rise.
+    const body = this.sim.messiah.body;
+    const onBody = !!body && !!hit && Math.hypot(body.x - (hit.x + 0.5), body.z - (hit.z + 0.5)) <= R + 1;
+    const target: GrabTarget = onBody ? { what: 'body' } : v ? { what: 'villager', id: v.id } : tree ? { what: 'tree' } : { what: 'earth' };
     this.send({ type: 'grab', target, x, z }, 'hand');
     this.grabbing = true;
     this.samples = [{ t: performance.now(), x, z }];
@@ -403,7 +412,7 @@ export class MiracleController {
       b.classList.toggle('dim', def.nightOnly && !m.isNight());
       (b.querySelector('.m-cool') as HTMLElement).style.setProperty('--p', `${(1 - ready) * 100}%`);
     }
-    if (this.armed && this.armed !== 'dream' && this.armed !== 'bless' && this.armed !== 'hand') {
+    if (this.armed && this.armed !== 'dream' && this.armed !== 'bless' && this.armed !== 'anoint' && this.armed !== 'hand') {
       const fail = m.check(this.armed);
       this.view.miracleFx.setReticle(this.hover, miracleDef(this.armed).radius, !fail || fail === 'interval');
     } else {

@@ -304,6 +304,16 @@ export class VillageLog {
         return this.push(e.tick, 'deeds', e.outcome === 'split' ? `The village split: ${w(e.leaderId)} led ${e.ids.length - 1} away.` : `The faithful drove ${w(e.leaderId)} out.`);
       case 'blessing':
         return this.push(e.tick, 'faith', `${w(e.villagerId)} was touched by the god.`);
+      case 'anointed':
+        return this.push(e.tick, 'faith', `The god anointed ${w(e.id)}.`);
+      case 'messiahCredited':
+        return this.push(e.tick, 'faith', `The people said ${w(e.id)} worked a wonder.`);
+      case 'messiahPreachedAbroad':
+        return this.push(e.tick, 'faith', `${w(e.id)} preached to ${this.sim.tribes[e.to]?.name ?? 'another people'}${e.came ? `; ${e.came} came away with them` : ''}.`);
+      case 'messiahDied':
+        return this.push(e.tick, 'faith', `${w(e.id)}, the messiah, died: ${e.death === 'saint' ? 'a saint' : e.death === 'martyr' ? 'a martyr' : 'taken home by the god'}.`);
+      case 'messiahRisen':
+        return this.push(e.tick, 'faith', `${w(e.id)} rose from the dead.`);
       case 'prayer':
         return this.push(e.tick, 'faith', `${w(e.asker)} prayed ${({ rain: 'for rain', harvest: 'for food', heal: `for ${w(e.for)} to be healed`, child: 'for a child', vengeance: 'for vengeance', guidance: 'for a new land', mercy: 'for mercy' } as Record<string, string>)[e.kind]}.`);
       case 'prayerEnd':

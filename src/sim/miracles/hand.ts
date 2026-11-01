@@ -10,7 +10,7 @@ const H = TUNING.miracles.hand;
 /** What the hand can take hold of. */
 export type HandWhat = 'villager' | 'tree' | 'earth';
 
-export type GrabTarget = { what: 'villager'; id: VillagerId } | { what: 'tree' } | { what: 'earth' };
+export type GrabTarget = { what: 'villager'; id: VillagerId } | { what: 'tree' } | { what: 'earth' } | { what: 'body' };
 
 export interface Held {
   what: HandWhat;
@@ -64,7 +64,15 @@ export class Hand {
     const sim = this.sim;
     this.tx = x;
     this.tz = z;
-    if (target.what === 'villager') {
+    if (target.what === 'body') {
+      // The messiah's body: taken up, they rise in the hand.
+      const b = sim.messiah.body;
+      if (!b || Math.hypot(b.x - x, b.z - z) > H.reach + 1) return false;
+      const v = sim.messiah.raise();
+      if (!v) return false;
+      sim.villagers.lift(v);
+      this.held = { what: 'villager', id: v.id, voxels: [], x: v.x, y: v.y, z: v.z };
+    } else if (target.what === 'villager') {
       const v = sim.villagers.byId(target.id);
       if (!v?.alive || v.inside || this.holds(v)) return false;
       sim.villagers.lift(v);

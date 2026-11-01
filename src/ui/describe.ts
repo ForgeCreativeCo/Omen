@@ -3,6 +3,7 @@ import type { Omen, OmenKind, OmenMemoryRecord } from '../sim/omens/types';
 import type { Case } from '../sim/justice';
 import type { Sim } from '../sim/Sim';
 import { calendarAt, formatCalendar } from '../sim/time';
+import { TUNING } from '../sim/tuning';
 
 const KIND_TEXT: Record<OmenKind, string> = {
   rain: 'Rain fell from a single cloud',
@@ -147,6 +148,11 @@ export function reactionLine(sim: Sim, v: { id: number }, m: OmenMemoryRecord, o
   const bad = m.valence < -0.15;
   const seed = v.id * 7 + o.tick;
   if (o.kind === 'blessing' && o.outcomes.some((x) => x.entity === `person:${v.id}`)) return pick(['I feel warm all through!', 'The god touched me!', 'I am not afraid anymore.'], seed);
+  // A wonder beside the messiah is the messiah's.
+  const mes = sim.messiah.living;
+  const me = sim.villagers.byId(v.id);
+  if (mes && good && o.isDivine && me?.tribeId === mes.tribeId && me !== mes && Math.hypot(o.position.x - mes.x, o.position.z - mes.z) <= TUNING.messiah.creditRange + o.radius)
+    return pick([`${mes.name} called it down!`, `Did you see ${mes.name}?`, `${mes.name} is the chosen one!`, `It was ${mes.name}!`], seed);
   if (o.kind === 'blessHome' && o.outcomes.some((x) => x.entity?.startsWith('structure:') && sim.structureById(Number(x.entity.slice(10)))?.residents.includes(v.id))) return pick(['Our home is blessed!', 'The god chose our house!', 'We will sleep safe now.'], seed);
   if (o.kind === 'blessField' && good) return pick(['That field is the god\'s now.', 'The grain will be heavy this year!', 'Look how it shines!'], seed);
   if (!m.cause) {

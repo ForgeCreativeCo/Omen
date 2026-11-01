@@ -87,6 +87,12 @@ export class MiracleFx {
   /** Hallowed ground: a low glow over the area, and a faint column above it to be seen from afar. */
   private readonly hallowed = new Map<number, Beam>();
   private readonly beamGeo = new THREE.CylinderGeometry(1, 1, 1, 28, 1, true);
+  /** The messiah's halo, and the pillars that come down when they're anointed or rise. */
+  private readonly halo: THREE.Mesh;
+  /** The messiah's body, shrouded in light, and a faint column over it to be found from afar. */
+  private readonly shroud: THREE.Mesh;
+  private bodyBeam: THREE.Mesh | null = null;
+  private readonly pillars: { outer: THREE.Mesh; inner: THREE.Mesh; x: number; z: number; age: number; life: number; follow: number }[] = [];
   private readonly starHead: THREE.Mesh;
   private readonly starGlow: THREE.Sprite;
 
@@ -103,6 +109,20 @@ export class MiracleFx {
     private readonly offsetX: number,
     private readonly offsetZ: number,
   ) {
+    this.halo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.42, 0.07, 8, 28),
+      new THREE.MeshBasicMaterial({ color: 0xffe28a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    this.halo.rotation.x = Math.PI / 2;
+    this.halo.visible = false;
+    this.halo.frustumCulled = false;
+    this.group.add(this.halo);
+    this.shroud = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.3, 1.5),
+      new THREE.MeshBasicMaterial({ color: 0xfff6dc, transparent: true, opacity: 0.95 }),
+    );
+    this.shroud.visible = false;
+    this.group.add(this.shroud);
     const pts = (pos: Float32Array, col: Float32Array, size: number, additive: boolean) => {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
@@ -325,6 +345,15 @@ export class MiracleFx {
         this.burst(e.x + ox, y + 1.2, e.z + oz, 40, 2.2, [0xffe7a0, 0xfff7da], 1.2, -0.8);
         break;
       }
+      case 'anointed':
+      case 'messiahRisen': {
+        const risen = e.type === 'messiahRisen';
+        const y = sim.world.topY(Math.floor(e.x), Math.floor(e.z)) + 1;
+        this.pillars.push({ outer: this.beamMesh(0xffe2a0, 0.3), inner: this.beamMesh(0xffffff, 0.6), x: e.x, z: e.z, age: 0, life: risen ? 5 : 3.5, follow: e.id });
+        this.burst(e.x + ox, y + 1.5, e.z + oz, risen ? 260 : 120, risen ? 5 : 3, [0xfff2c2, 0xffd66e, 0xffffff], 2, -0.6);
+        if (risen) this.flash = Math.max(this.flash, 0.5);
+        break;
+      }
       case 'blessPlace': {
         // Light settles over the whole field or roof.
         const y = sim.world.topY(Math.floor(e.x), Math.floor(e.z)) + (e.kind === 'hut' ? 2 : 1);
@@ -492,6 +521,61 @@ export class MiracleFx {
         const r = this.rng.range(0, 2);
         this.spark(bm.x + ox + Math.cos(a) * r, ground, bm.z + oz + Math.sin(a) * r, 0, this.rng.range(2, 5), 0, this.rng.pick([0xfff2c2, 0xffd98a]), this.rng.range(1.5, 3), 0);
       }
+    }
+
+    // ---- the messiah: a halo over their head; their body glowing where it lies; the pillars
+    const mv = sim.messiah.living;
+    this.halo.visible = !!mv && !mv.inside;
+    if (mv && !mv.inside) {
+      this.halo.position.set(mv.x + ox, mv.y + 2.15 + Math.sin(time * 2) * 0.05, mv.z + oz);
+      if (this.rng.chance(Math.min(1, dt * 4))) this.spark(mv.x + ox + this.rng.jitter(0.4), mv.y + 2.1, mv.z + oz + this.rng.jitter(0.4), 0, this.rng.range(0.3, 0.8), 0, 0xfff0b0, 1.2, 0);
+    }
+    const body = sim.messiah.body;
+    this.shroud.visible = !!body;
+    if (body && !this.bodyBeam) this.bodyBeam = this.beamMesh(0xfff2c2, 0.12);
+    if (!body && this.bodyBeam) {
+      this.group.remove(this.bodyBeam);
+      (this.bodyBeam.material as THREE.Material).dispose();
+      this.bodyBeam = null;
+    }
+    if (body) {
+      const gy = sim.world.topY(Math.floor(body.x), Math.floor(body.z)) + 1;
+      this.shroud.position.set(body.x + ox, gy + 0.15, body.z + oz);
+      (this.shroud.material as THREE.MeshBasicMaterial).opacity = 0.75 + Math.sin(time * 2.5) * 0.2;
+      this.bodyBeam!.position.set(body.x + ox, gy + 20, body.z + oz);
+      this.bodyBeam!.scale.set(0.9, 40, 0.9);
+      (this.bodyBeam!.material as THREE.MeshBasicMaterial).opacity = 0.1 + Math.sin(time * 2.5) * 0.04;
+    }
+    if (body && this.rng.chance(Math.min(1, dt * 14))) {
+      const y = sim.world.topY(Math.floor(body.x), Math.floor(body.z)) + 1;
+      this.spark(body.x + ox + this.rng.jitter(0.7), y + 0.2, body.z + oz + this.rng.jitter(0.4), 0, this.rng.range(0.6, 1.6), 0, this.rng.pick([0xfff2c2, 0xffffff, 0xffd66e]), this.rng.range(1.5, 2.5), 0);
+    }
+    for (let i = this.pillars.length - 1; i >= 0; i--) {
+      const p = this.pillars[i]!;
+      p.age += dt;
+      const k = p.age < 0.4 ? p.age / 0.4 : Math.max(0, 1 - (p.age - 0.4) / (p.life - 0.4));
+      if (k <= 0 && p.age > 0.4) {
+        for (const m of [p.outer, p.inner]) {
+          this.group.remove(m);
+          (m.material as THREE.Material).dispose();
+        }
+        this.pillars.splice(i, 1);
+        continue;
+      }
+      // The light stays on them as they move.
+      const fv = sim.villagers.byId(p.follow);
+      if (fv?.alive) {
+        p.x = fv.x;
+        p.z = fv.z;
+      }
+      const ground = sim.world.topY(Math.floor(p.x), Math.floor(p.z)) + 1;
+      const h = 90;
+      p.outer.position.set(p.x + ox, ground + h / 2, p.z + oz);
+      p.outer.scale.set(1.6, h, 1.6);
+      (p.outer.material as THREE.MeshBasicMaterial).opacity = 0.3 * k;
+      p.inner.position.copy(p.outer.position);
+      p.inner.scale.set(0.6, h, 0.6);
+      (p.inner.material as THREE.MeshBasicMaterial).opacity = 0.6 * k;
     }
 
     // ---- blessed fields and homes: gold motes drifting up off them while the blessing lasts

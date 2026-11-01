@@ -23,6 +23,7 @@ export type Command =
   | { type: 'moveCloud'; cloudId: number; x: number; z: number }
   | { type: 'dream'; villagerId: number; symbols: DreamSymbol[] }
   | { type: 'bless'; villagerId: number }
+  | { type: 'anoint'; villagerId: number }
   /** Bless a field or a home: whatever building stands at (x, z). */
   | { type: 'blessPlace'; x: number; z: number }
   | { type: 'grab'; target: GrabTarget; x: number; z: number }
@@ -100,6 +101,7 @@ export class Miracles {
     light: 0,
     hallow: 0,
     bless: 0,
+    anoint: 0,
     blight: 0,
     meteor: 0,
     cataclysm: 0,
@@ -272,6 +274,13 @@ export class Miracles {
         if (!fail) {
           this.spend('bless');
           this.bless(cmd.villagerId);
+        }
+        break;
+      case 'anoint':
+        fail = this.check('anoint') ?? (this.sim.messiah.canAnoint(cmd.villagerId) ? null : 'target');
+        if (!fail) {
+          this.spend('anoint');
+          this.sim.messiah.anoint(cmd.villagerId);
         }
         break;
       case 'blessPlace':

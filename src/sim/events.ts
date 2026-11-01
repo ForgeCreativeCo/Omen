@@ -11,6 +11,7 @@ export type { Crime, Judge, Sentence } from './justice';
 import type { HandWhat } from './miracles/hand';
 import type { ExodusReason } from './exodus';
 import type { PrayerEnd, PrayerKind } from './prayers';
+import type { MessiahDeath } from './messiah';
 import type { Crime, Judge, Sentence } from './justice';
 export type DissentEndReason = 'converted' | 'recanted' | 'discredited' | 'died' | 'gone';
 
@@ -100,6 +101,14 @@ export type SimEventBody =
   /** A new people: `from` is the tribe they broke away from. */
   | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles' | 'settlers' | 'hallowed'; leaderId: number; x: number; z: number }
   /** Believers set out from their people for hallowed ground, to found a people there. */
+  | { type: 'anointed'; id: number; x: number; z: number; witnesses: number[] }
+  | { type: 'messiahCredited'; id: number; kind: string; omenId: string }
+  | { type: 'preached'; id: number; heard: number; won: number }
+  | { type: 'messiahJourney'; id: number; to: number; x: number; z: number }
+  | { type: 'messiahPreachedAbroad'; id: number; to: number; heard: number; came: number }
+  | { type: 'messiahDied'; id: number; death: MessiahDeath; cause: DeathCause; x: number; z: number; killerTribe: number }
+  | { type: 'messiahBuried'; id: number }
+  | { type: 'messiahRisen'; id: number; x: number; z: number; witnesses: number; came: number }
   | { type: 'prayer'; id: number; kind: PrayerKind; asker: number; for: number; against: number; until: number }
   | { type: 'prayerEnd'; id: number; kind: PrayerKind; asker: number; for: number; against: number; end: PrayerEnd }
   | { type: 'calling'; tribe: number; ids: number[]; x: number; z: number; place: string }
