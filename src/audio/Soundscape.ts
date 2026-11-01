@@ -3,6 +3,7 @@ import type { Sim } from '../sim/Sim';
 import asteroidUrl from './sounds/asteroid.mp3?url';
 import fireUrl from './sounds/blazing-fire.mp3?url';
 import hammerUrl from './sounds/hammering.mp3?url';
+import lightningUrl from './sounds/lightning.mp3?url';
 import sawUrl from './sounds/sawing.mp3?url';
 import coughUrl from './sounds/cough.mp3?url';
 import coughGrandpaUrl from './sounds/cough-grandpa.mp3?url';
@@ -14,7 +15,7 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * Sound (SPEC §17), synthesized with WebAudio: wind, sea and birds by time of day; rain; murmuring at the evening fire; drums for rituals; a voice for
  * each miracle; and, in the Warning, a low drone that builds as the sea draws near.
  * A few recordings stand in for the synthesized voice once loaded (the tidal wave's
- * crash, the falling star's descent and impact, the roar of a firestorm for as long
+ * crash, a lightning strike's crack and roll, the falling star's descent and impact, the roar of a firestorm for as long
  * as it burns); until then, or if one can't be
  * decoded, the synthesized one plays. Building sites near where the camera looks
  * ring with hammering and sawing (recorded only). While the god's sickness is abroad, the sick
@@ -91,6 +92,7 @@ export class Soundscape {
     void this.load('explosion', explosionUrl);
     void this.load('fire', fireUrl);
     void this.load('hammer', hammerUrl);
+    void this.load('lightning', lightningUrl);
     void this.load('saw', sawUrl);
     void this.load('cough1', coughUrl);
     void this.load('cough2', coughGrandpaUrl);
@@ -297,9 +299,14 @@ export class Soundscape {
 
   private onEvent(e: SimEvent): void {
     switch (e.type) {
-      case 'lightning':
-        if (this.ok('thunder', 0.4)) this.thunder(e.divine ? 1 : 0.8);
+      case 'lightning': {
+        if (!this.ok('thunder', 0.4)) break;
+        // Thunder carries: a far strike is quieter, never silent. The god's own is louder than a storm's.
+        const d = Math.hypot(e.x - this.ear.x, e.z - this.ear.z);
+        const k = (0.35 + 0.65 * Math.max(0, 1 - d / (60 + this.ear.zoom * 0.4))) * (e.divine ? 1 : 0.75);
+        if (!this.sample('lightning', 0.8 * k, { rate: 0.94 + Math.random() * 0.12 })) this.thunder(e.divine ? 1 : 0.8);
         break;
+      }
       case 'bloom':
         if (this.ok('bloom', 0.5)) this.chime();
         break;
