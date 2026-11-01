@@ -664,7 +664,7 @@ export const TUNING = {
     captivesMax: 2,
     captiveChance: 0.6,
     /** A beaten party's odds of snatching someone anyway, relative to a winning one's. */
-    snatchShare: 0.4,
+    snatchShare: 0.15,
     /** Captives become one of their captors after this long; at peace, newer ones go home. */
     captiveYears: 2,
     /** Conquest: a people with this few fighters left, against an enemy this many times stronger, is beaten. */

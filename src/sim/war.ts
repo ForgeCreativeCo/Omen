@@ -251,7 +251,8 @@ export class War {
       .sort((a, b) => a.age - b.age);
     const taken: Villager[] = [];
     for (const v of near) {
-      if (taken.length >= T.captivesMax) break;
+      // A beaten party breaking away grabs one at most.
+      if (taken.length >= (odds < 1 ? 1 : T.captivesMax)) break;
       if (v.age < 4 || !this.rng.chance(T.captiveChance * odds)) continue;
       taken.push(v);
     }

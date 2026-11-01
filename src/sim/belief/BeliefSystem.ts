@@ -697,7 +697,8 @@ export class BeliefSystem {
     for (const b of this.beliefs.values()) {
       if (b.isTradition || !b.witnesses.length || b.type === 'DEPICTION' || b.type === 'TEMPERAMENT') continue;
       if (b.strength < T.behaviorThreshold || tick - b.bornTick < TICKS_PER_YEAR) continue;
-      if (b.witnesses.some((id) => this.sim.villagers.byId(id)?.alive)) continue;
+      // Witnesses who left for another people (settlers, captives, exiles) don't keep it first-hand here.
+      if (b.witnesses.some((id) => { const w = this.sim.villagers.byId(id); return !!w?.alive && w.tribeId === this.sim.tribe.id; })) continue;
       b.isTradition = true;
       this.sim.events.push(tick, { type: 'tradition', beliefId: b.id });
     }
