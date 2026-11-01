@@ -4,8 +4,10 @@ import asteroidUrl from './sounds/asteroid.mp3?url';
 import buzzUrl from './sounds/buzzing.mp3?url';
 import fireUrl from './sounds/blazing-fire.mp3?url';
 import hammerUrl from './sounds/hammering.mp3?url';
+import hornUrl from './sounds/horn.mp3?url';
 import lightningUrl from './sounds/lightning.mp3?url';
 import sawUrl from './sounds/sawing.mp3?url';
+import swordsUrl from './sounds/sword-fight.mp3?url';
 import coughUrl from './sounds/cough.mp3?url';
 import coughGrandpaUrl from './sounds/cough-grandpa.mp3?url';
 import coughManUrl from './sounds/cough-man.mp3?url';
@@ -21,7 +23,9 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * crash, a lightning strike's crack and roll, the cracking ground of an earthquake, the falling star's descent and impact, the roar of a firestorm for as long
  * as it burns, a swarm's buzzing while it feeds); until then, or if one can't be
  * decoded, the synthesized one plays. Building sites near where the camera looks
- * ring with hammering and sawing, and people praying there chant (recorded only). While the god's sickness is abroad, the sick
+ * ring with hammering and sawing, people praying there chant, and a raid fighting
+ * there clashes; a war horn sounds when war comes and when a war party sets out
+ * (recorded only). While the god's sickness is abroad, the sick
  * cough (recorded only: nothing plays until they load).
  * Reads the sim, never changes it. Starts on the first click or key (browsers
  * don't allow sound before that).
@@ -44,6 +48,9 @@ export class Soundscape {
   /** The chant while people pray within earshot. */
   private chant: GainNode | null = null;
   private sawTimer = 0;
+  private swordTimer = 0;
+  /** Sword clashes still sounding (no more than two at once). */
+  private clashing = 0;
   /** The cracking of each earthquake shaking now, by its id. */
   private quakes = new Map<number, GainNode>();
   /** The buzzing of each swarm alive now, by its id. */
@@ -103,6 +110,8 @@ export class Soundscape {
     void this.load('buzz', buzzUrl);
     void this.load('quake', quakeUrl);
     void this.load('prayer', prayerUrl);
+    void this.load('horn', hornUrl);
+    void this.load('swords', swordsUrl);
     void this.load('hammer', hammerUrl);
     void this.load('lightning', lightningUrl);
     void this.load('saw', sawUrl);
@@ -343,6 +352,19 @@ export class Soundscape {
       g.gain.setTargetAtTime(1.6 * this.hearing(w.x, w.z, 30), this.ctx.currentTime, 0.25);
     }
 
+    // A raid fighting at the enemy's fire: clash after clash, louder the closer the camera.
+    let battle = 0;
+    if (running) for (const r of sim.war.raids) {
+      const at = r.phase === 'fight' ? sim.tribes[r.to]?.village.center : undefined;
+      if (at) battle = Math.max(battle, this.hearing(at.x, at.z, 40));
+    }
+    this.swordTimer -= dt;
+    if (battle > 0.03 && this.swordTimer <= 0 && this.clashing < 2) {
+      this.swordTimer = 2 + Math.random() * 1.5;
+      const g = this.sample('swords', 0.5 * battle, { rate: 0.9 + Math.random() * 0.2, pan: Math.random() * 1.2 - 0.6, ended: () => this.clashing-- });
+      if (g) this.clashing++;
+    }
+
     // People praying near where the camera looks chant to the god, a little louder the more of them.
     const prayer = running ? this.prayingNear(sim) : 0;
     if (prayer > 0.03) {
@@ -377,11 +399,11 @@ export class Soundscape {
     }
 
     if (this.lastSeq < 0) this.lastSeq = sim.events.lastSeq;
-    if (running) for (const e of sim.events.since(this.lastSeq)) this.onEvent(e);
+    if (running) for (const e of sim.events.since(this.lastSeq)) this.onEvent(e, sim);
     this.lastSeq = sim.events.lastSeq;
   }
 
-  private onEvent(e: SimEvent): void {
+  private onEvent(e: SimEvent, sim: Sim): void {
     switch (e.type) {
       case 'lightning': {
         if (!this.ok('thunder', 0.4)) break;
@@ -403,6 +425,17 @@ export class Soundscape {
       case 'miracleRain':
         if (this.ok('swell', 1)) this.swell();
         break;
+      case 'war':
+        // War is declared: the horn, at full voice.
+        if (this.ok('horn', 4)) this.sample('horn', 0.6);
+        break;
+      case 'raid': {
+        // A war party sets out from its fire. A horn carries: a far one is quieter, never silent.
+        const home = sim.tribes[e.from]?.village.center;
+        const k = home ? 0.4 + 0.6 * this.hearing(home.x, home.z, 60) : 1;
+        if (this.ok('horn', 4)) this.sample('horn', 0.6 * k);
+        break;
+      }
       case 'ritual':
         // Prayer has its chant (once loaded); drums are for the other rites.
         if (e.activity === 'pray' && this.samples.has('prayer')) break;
