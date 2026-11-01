@@ -4,6 +4,7 @@ import asteroidUrl from './sounds/asteroid.mp3?url';
 import babyUrl from './sounds/baby-crying.mp3?url';
 import buzzUrl from './sounds/buzzing.mp3?url';
 import danceUrl from './sounds/dance.mp3?url';
+import panicUrl from './sounds/crowd-panic.mp3?url';
 import fireUrl from './sounds/blazing-fire.mp3?url';
 import hammerUrl from './sounds/hammering.mp3?url';
 import hornUrl from './sounds/horn.mp3?url';
@@ -27,12 +28,19 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * decoded, the synthesized one plays. Building sites near where the camera looks
  * ring with hammering and sawing, people praying there chant, people dancing there
  * have a tune, and a raid fighting
- * there clashes; a war horn sounds when war comes and when a war party sets out,
- * and a newborn cries (recorded only). While the god's sickness is abroad, the sick
+ * there clashes, and a crowd fleeing there cries out in panic; a war horn sounds
+ * when war comes and when a war party sets out, and a newborn cries (recorded only). While the god's sickness is abroad, the sick
  * cough (recorded only: nothing plays until they load).
  * Reads the sim, never changes it. Starts on the first click or key (browsers
  * don't allow sound before that).
  */
+/** The stretches of the crowd-panic recording that hold cries (seconds); silences lie between them. */
+const PANIC_STRETCHES: readonly [number, number][] = [
+  [0.2, 10.5],
+  [13.2, 21.8],
+  [24.2, 34.2],
+];
+
 export class Soundscape {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -52,6 +60,8 @@ export class Soundscape {
   private chant: GainNode | null = null;
   /** The dance tune while people dance within earshot (played through, then again). */
   private tune: GainNode | null = null;
+  /** The cries of a fleeing crowd within earshot. */
+  private panic: GainNode | null = null;
   private sawTimer = 0;
   private swordTimer = 0;
   /** Sword clashes still sounding (no more than two at once). */
@@ -117,6 +127,7 @@ export class Soundscape {
     void this.load('prayer', prayerUrl);
     void this.load('dance', danceUrl);
     void this.load('baby', babyUrl);
+    void this.load('panic', panicUrl);
     void this.load('horn', hornUrl);
     void this.load('swords', swordsUrl);
     void this.load('hammer', hammerUrl);
@@ -202,6 +213,20 @@ export class Soundscape {
       if (k > best && sim.tribes[v.tribeId]?.village.byId(a.structureId)?.kind !== 'grave') best = k;
     }
     return best;
+  }
+
+  /** 0..1: how loud the cries of the people fleeing near where the camera looks are; nothing for fewer than three. */
+  private fleeingNear(sim: Sim): number {
+    let best = 0;
+    let n = 0;
+    for (const v of sim.villagers.alive) {
+      if (v.action?.kind !== 'flee' || v.inside) continue;
+      const k = this.hearing(v.x, v.z, 35);
+      if (k <= 0) continue;
+      n++;
+      best = Math.max(best, k);
+    }
+    return n < 3 ? 0 : best * Math.min(1, 0.3 + n * 0.08);
   }
 
   /** 0..1: how loud a rite ('pray' at a rite or on holy ground, 'dance') near where the camera looks is, louder the more take part. */
@@ -380,6 +405,20 @@ export class Soundscape {
     } else if (this.chant) {
       this.fadeOut(this.chant, 2.5);
       this.chant = null;
+    }
+
+    // A crowd fleeing near where the camera looks (three or more): its cries, louder the more of them.
+    const fear = running ? this.fleeingNear(sim) : 0;
+    if (fear > 0.03) {
+      if (!this.panic) {
+        // One of the recording's three stretches of panic, looped (they're parted by silences).
+        const [from, to] = PANIC_STRETCHES[Math.floor(Math.random() * PANIC_STRETCHES.length)]!;
+        this.panic = this.sample('panic', 0, { loop: true, offset: from, loopFrom: from, loopTo: to });
+      }
+      this.panic?.gain.setTargetAtTime(fear * 0.8, this.ctx.currentTime, 0.25);
+    } else if (this.panic) {
+      this.fadeOut(this.panic, 2);
+      this.panic = null;
     }
 
     // People dancing near where the camera looks: their tune, through to its end and then again while they dance on.
