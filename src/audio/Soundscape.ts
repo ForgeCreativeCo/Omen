@@ -1,6 +1,7 @@
 import type { SimEvent } from '../sim/events';
 import type { Sim } from '../sim/Sim';
 import asteroidUrl from './sounds/asteroid.mp3?url';
+import fireUrl from './sounds/blazing-fire.mp3?url';
 import coughUrl from './sounds/cough.mp3?url';
 import coughGrandpaUrl from './sounds/cough-grandpa.mp3?url';
 import coughManUrl from './sounds/cough-man.mp3?url';
@@ -11,7 +12,8 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * Sound (SPEC §17), synthesized with WebAudio: wind, sea and birds by time of day; rain; murmuring at the evening fire; drums for rituals; a voice for
  * each miracle; and, in the Warning, a low drone that builds as the sea draws near.
  * A few recordings stand in for the synthesized voice once loaded (the tidal wave's
- * crash, the falling star's descent and impact); until then, or if one can't be
+ * crash, the falling star's descent and impact, the roar of a firestorm for as long
+ * as it burns); until then, or if one can't be
  * decoded, the synthesized one plays. While the god's sickness is abroad, the sick
  * cough (recorded only: nothing plays until they load).
  * Reads the sim, never changes it. Starts on the first click or key (browsers
@@ -28,6 +30,10 @@ export class Soundscape {
   private coughTimer = 0;
   /** Coughs still sounding (no more than two at once). */
   private coughing = 0;
+  /** The fire's roar for each firestorm burning now, by its id. */
+  private storms = new Map<number, GainNode>();
+  /** The source behind each playing recording's gain, so it can be stopped early. */
+  private sources = new WeakMap<GainNode, AudioBufferSourceNode>();
   /** Real-time stamps of recent one-shots, so 16× doesn't turn into noise. */
   private recent = new Map<string, number>();
   /** Decoded recordings by name, once loaded. */
@@ -68,6 +74,7 @@ export class Soundscape {
     void this.load('wave', waveUrl);
     void this.load('asteroid', asteroidUrl);
     void this.load('explosion', explosionUrl);
+    void this.load('fire', fireUrl);
     void this.load('cough1', coughUrl);
     void this.load('cough2', coughGrandpaUrl);
     void this.load('cough3', coughManUrl);
@@ -83,7 +90,11 @@ export class Soundscape {
   }
 
   /** Play a loaded recording (optionally pitched, panned, delayed); its gain node, or null if it isn't loaded (yet). */
-  private sample(name: string, gain: number, opts: { rate?: number; pan?: number; at?: number; ended?: () => void } = {}): GainNode | null {
+  private sample(
+    name: string,
+    gain: number,
+    opts: { rate?: number; pan?: number; at?: number; offset?: number; fadeIn?: number; ended?: () => void } = {},
+  ): GainNode | null {
     const buf = this.samples.get(name);
     if (!buf) return null;
     const ctx = this.ctx!;
@@ -91,16 +102,30 @@ export class Soundscape {
     src.buffer = buf;
     src.playbackRate.value = opts.rate ?? 1;
     const g = ctx.createGain();
-    g.gain.value = gain;
+    const t = ctx.currentTime + (opts.at ?? 0);
+    if (opts.fadeIn) {
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(gain, t + opts.fadeIn);
+    } else g.gain.value = gain;
     const pan = ctx.createStereoPanner();
     pan.pan.value = opts.pan ?? 0;
     src.connect(g).connect(pan).connect(this.master!);
-    src.start(ctx.currentTime + (opts.at ?? 0));
+    src.start(t, opts.offset ?? 0);
+    this.sources.set(g, src);
     src.onended = () => {
       pan.disconnect();
       opts.ended?.();
     };
     return g;
+  }
+
+  /** Let a playing recording die away over about `seconds`, then stop it. */
+  private fadeOut(g: GainNode, seconds: number): void {
+    const now = this.ctx!.currentTime;
+    g.gain.cancelScheduledValues(now);
+    g.gain.setValueAtTime(g.gain.value, now);
+    g.gain.setTargetAtTime(0, now, seconds / 4);
+    this.sources.get(g)?.stop(now + seconds);
   }
 
   /** One of the sick coughing, somewhere in the village. False if none can play now. */
@@ -188,6 +213,21 @@ export class Soundscape {
       if (!night && !raining && cal.season !== 'winter') this.chirp();
     }
 
+    // A firestorm roars for as long as it burns (and falls quiet while the game is paused).
+    const burning = new Set(running ? sim.miracles.wrath.firestorms.map((f) => f.id) : []);
+    for (const [id, g] of this.storms) {
+      if (burning.has(id)) continue;
+      this.fadeOut(g, 1.5);
+      this.storms.delete(id);
+    }
+    const fire = this.samples.get('fire');
+    for (const id of burning) {
+      if (this.storms.has(id) || !fire) continue;
+      // Somewhere in the recording, so each storm sounds a little different.
+      const g = this.sample('fire', 0.45, { offset: Math.random() * Math.max(0, fire.duration - 20), fadeIn: 0.5 });
+      if (g) this.storms.set(id, g);
+    }
+
     // The sick cough, more often and a little louder the more of them there are.
     const sick = sim.plague.sick.size;
     this.coughTimer -= dt;
@@ -246,7 +286,7 @@ export class Soundscape {
         break;
       case 'meteor':
         // The descent gives way to the blast.
-        if (this.falling) this.falling.gain.setTargetAtTime(0, this.ctx!.currentTime, 0.08);
+        if (this.falling) this.fadeOut(this.falling, 0.3);
         this.falling = null;
         if (!this.sample('explosion', 0.65)) {
           this.thunder(1);
@@ -261,7 +301,8 @@ export class Soundscape {
         this.rumble(2.5);
         break;
       case 'firestorm':
-        if (this.ok('firestorm', 2)) this.roar();
+        // The recording, once loaded, plays from update() for as long as the storm burns.
+        if (!this.samples.has('fire') && this.ok('firestorm', 2)) this.roar();
         break;
       case 'wave':
         if (this.ok('wave', 2)) this.surf();
