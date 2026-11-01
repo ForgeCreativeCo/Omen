@@ -70,6 +70,7 @@ const FAMILY: Partial<Record<OmenKind, string>> = {
   bloom: 'bloom',
   drought: 'drought',
   light: 'light',
+  hallow: 'light',
   blessing: 'blessing',
   blight: 'blight',
   meteor: 'meteor',
@@ -88,6 +89,7 @@ const TRUE_NAME: Record<OmenKind, string> = {
   bloom: 'your Bloom',
   dream: 'your Dream',
   light: 'your Holy Light',
+  hallow: 'your Hallow',
   blessing: 'your Blessing',
   blight: 'your Blight',
   meteor: 'your Falling Star',
@@ -377,6 +379,11 @@ export class MythSystem {
     else if (o.kind === 'rain') reason = 'rain';
     else if (o.kind === 'bloom') reason = 'bloom';
     else if (o.kind === 'light') reason = 'sacred';
+    else if (o.kind === 'hallow') {
+      // The god marked out this ground: it's a place now, with a name.
+      this.hallowedSite(o.position.x, o.position.z, Math.max(4, o.radius));
+      return;
+    }
     else if (o.kind === 'blight') reason = 'blight';
     else if (o.kind === 'meteor') reason = 'star';
     else if (o.kind === 'quake') reason = 'quake';
@@ -415,6 +422,16 @@ export class MythSystem {
     const n = (pl.notable.get(key) ?? 0) + (f.deaths ? 2 : 1);
     pl.notable.set(key, n);
     if (n >= T.placeOmens) this.give(key, reason, f);
+  }
+
+  /** The place where the god marked out ground, named on first sight (its key). */
+  hallowedSite(x: number, z: number, r: number): string {
+    const pl = this.places;
+    const had = pl.siteAt(x, z);
+    if (had) return had.key;
+    const site = pl.addSite(x, z, r);
+    this.give(site.key, 'sacred', null, this.rng.pick(SITE_NOUN.hallowed));
+    return site.key;
   }
 
   private placeDistance(o: Omen, key: string): number {

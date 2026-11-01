@@ -115,6 +115,13 @@ export class Toasts {
       }
       case 'absorbed':
         return `The last of ${sim.tribes[e.from]?.name ?? 'a people'} have gone to live with ${sim.tribes[e.into]?.name ?? 'a people'}.`;
+      case 'calling': {
+        const t = sim.tribes[e.tribe];
+        const place = t?.myth.places.name(e.place) ?? 'the ground the god marked out';
+        return `${e.ids.length} of ${t?.name ?? 'a people'} are leaving for <b>${place}</b>, the ground the god marked out, to live there.`;
+      }
+      case 'callingEnd':
+        return `The believers of ${sim.tribes[e.tribe]?.name ?? 'a people'} turned back: too few were left to settle the hallowed ground.`;
       case 'voyage':
         return `${e.ids.length} of ${sim.tribes[e.tribe]?.name ?? 'a people'} are going down to the shore, to sail for an island.`;
       case 'setSail':
@@ -122,6 +129,11 @@ export class Toasts {
       case 'tribeFounded': {
         const from = sim.tribes[e.from];
         if (e.reason === 'settlers') return `<b>A new people:</b> ${e.name}, sailed from ${from?.name ?? 'the main island'}, have settled an island off the coast.`;
+        if (e.reason === 'hallowed') {
+          const place = sim.tribes[e.id]?.myth.places.siteAt(e.x, e.z);
+          const name = place ? sim.tribes[e.id]?.myth.places.name(place.key) : undefined;
+          return `<b>A new people:</b> ${e.name}, kin of ${from?.name ?? 'their people'}, have settled ${name ?? 'the hallowed ground'}${e.leaderId >= 0 ? `, led by ${who(e.leaderId)}` : ''}.`;
+        }
         return `<b>A new people:</b> ${e.name}${e.leaderId >= 0 ? `, led by ${who(e.leaderId)},` : ''} broke away from ${from?.name ?? 'their people'} and settled in ${REGION_TEXT[sim.island.region[e.x + e.z * sim.world.sizeX] ?? 0] ?? 'new country'}.`;
       }
       case 'exodus':

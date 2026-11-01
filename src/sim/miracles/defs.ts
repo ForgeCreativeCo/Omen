@@ -2,10 +2,10 @@ import { TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
 
 /** The miracles (SPEC §6, plus the later powers), as data: UI and casting both read from here. */
-export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'bless' | 'blight' | 'meteor' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm' | 'hand';
+export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'hallow' | 'bless' | 'blight' | 'meteor' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm' | 'hand';
 
 /** Miracles cast by tapping a point on the ground. */
-export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'blight' | 'meteor' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm';
+export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'hallow' | 'blight' | 'meteor' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm';
 
 export type Targeting =
   /** Tap a point on the ground. */
@@ -97,6 +97,17 @@ export const MIRACLES: readonly MiracleDef[] = [
     radius: MT.light.radius,
     nightOnly: false,
     key: 'I',
+  },
+  {
+    id: 'hallow',
+    name: 'Hallow',
+    blurb: 'Ground you mark out glows for two days. Those who see it may hold it holy; if it lies away from home and their village is crowded, some may go to live there and found a people of their own.',
+    targeting: 'point',
+    cost: MT.hallow.cost,
+    cooldownTicks: MT.hallow.cooldownDays * TICKS_PER_DAY,
+    radius: MT.hallow.radius,
+    nightOnly: false,
+    key: '6',
   },
   {
     id: 'bless',

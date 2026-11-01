@@ -68,7 +68,7 @@ export function placeNoun(key: string): string {
 }
 
 /** Nouns for new places made by Shape Earth. */
-export const SITE_NOUN = { raised: ['Mound', 'Tor', 'Knoll'], lowered: ['Crater', 'Hollow', 'Pit'], flooded: ['Crater', 'Pool', 'Mere'], crater: ['Crater', 'Star-Pit', 'Hollow'] };
+export const SITE_NOUN = { raised: ['Mound', 'Tor', 'Knoll'], lowered: ['Crater', 'Hollow', 'Pit'], flooded: ['Crater', 'Pool', 'Mere'], crater: ['Crater', 'Star-Pit', 'Hollow'], hallowed: ['Ground', 'Land', 'Glade'] };
 
 /**
  * The names the people use for places (SPEC §11: "the land remembers"). A name,
@@ -106,6 +106,15 @@ export class PlaceNames {
     const s = { key: `place:site:${this.nextSite++}`, x, z, r };
     this.sites.push(s);
     return s;
+  }
+
+  /** Take on a place another people named (a daughter people keeps the name of where it settled). */
+  adopt(site: NamedSite, name: string | undefined): void {
+    if (!this.site(site.key)) this.sites.push({ ...site });
+    if (name && !this.names.has(site.key)) this.names.set(site.key, name);
+    // Keep new keys clear of the adopted one.
+    const n = Number(site.key.split(':')[2]);
+    if (n >= this.nextSite) this.nextSite = n + 1;
   }
 
   /** The new site at (x, z), if any. */

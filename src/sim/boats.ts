@@ -28,6 +28,8 @@ export interface Boat {
   heading: number;
   /** Ticks left before the gathering gives up waiting for stragglers. */
   left: number;
+  /** Bound for ground the god hallowed (its place key): they found a daughter people there. */
+  hallowed?: string;
 }
 
 /**
@@ -95,7 +97,7 @@ export class Boats {
   }
 
   /** Choose settlers and an islet, and send them to the shore. */
-  send(t: Tribe, islet?: number): Boat | null {
+  send(t: Tribe, islet?: number, chosen?: Villager[], hallowed?: string): Boat | null {
     const sim = this.sim;
     const c = t.village.center;
     const free = this.emptyIslets();
@@ -107,7 +109,7 @@ export class Boats {
     if (!route) return null;
     // A young couple or two with their children, and whoever else is restless.
     const busy = (v: Villager) => sim.war.engaged(v) || v.id === t.belief.priestId || v.action?.kind === 'exile';
-    const couples = t.members.filter((v) => v.lifeStage === 'adult' && v.partnerId >= 0 && v.sex === 'f' && !busy(v)).sort((a, b) => a.age - b.age);
+    const couples = chosen ? [] : t.members.filter((v) => v.lifeStage === 'adult' && v.partnerId >= 0 && v.sex === 'f' && !busy(v)).sort((a, b) => a.age - b.age);
     const party: Villager[] = [];
     for (const a of couples) {
       if (party.length >= T.settlers) break;
@@ -116,12 +118,13 @@ export class Boats {
       party.push(a, b);
       for (const k of a.childIds.map((id) => sim.villagers.byId(id))) if (k?.alive && k.lifeStage === 'child' && k.tribeId === t.id) party.push(k);
     }
-    for (const v of this.rng.shuffle(t.members.filter((v) => v.lifeStage === 'adult' && !busy(v) && !party.includes(v)))) {
+    if (chosen) party.push(...chosen);
+    else for (const v of this.rng.shuffle(t.members.filter((v) => v.lifeStage === 'adult' && !busy(v) && !party.includes(v)))) {
       if (party.length >= T.settlers) break;
       party.push(v);
     }
     if (party.filter((v) => v.lifeStage !== 'child').length < 2) return null;
-    const boat: Boat = { id: this.nextId++, tribe: t.id, members: party.map((v) => v.id), phase: 'gather', ...route, islet: target, x: route.launch.x, z: route.launch.z, heading: 0, left: TICKS_PER_DAY * 2 };
+    const boat: Boat = { id: this.nextId++, tribe: t.id, members: party.map((v) => v.id), phase: 'gather', ...route, islet: target, x: route.launch.x, z: route.launch.z, heading: 0, left: TICKS_PER_DAY * 2, ...(hallowed ? { hallowed } : {}) };
     this.boats.push(boat);
     this.lastSent.set(t.id, sim.tick);
     for (const v of party) sim.villagers.order(v, 'pilgrimage', boat.shore.x, boat.shore.z, TICKS_PER_DAY * 2);
@@ -257,7 +260,8 @@ export class Boats {
     let site = { x: l.x, y: sim.nav.at(l.x, l.z), z: l.z };
     if (site.y < 0) site = { x: crew[0] ? Math.floor(crew[0].x) : l.x, y: sim.nav.at(Math.floor(crew[0]?.x ?? l.x), Math.floor(crew[0]?.z ?? l.z)), z: crew[0] ? Math.floor(crew[0].z) : l.z };
     const leader = crew.find((v) => v.lifeStage === 'adult');
-    const t = sim.foundTribe(crew, site, { reason: 'settlers', leaderId: leader?.id });
+    const home = sim.tribes[b.tribe];
+    const t = b.hallowed && home ? sim.branching.settle(home, crew, b.hallowed, site) : sim.foundTribe(crew, site, { reason: 'settlers', leaderId: leader?.id });
     this.colonies.set(b.islet, { tribe: t.id, tick: sim.tick });
     // They brought provisions to last until the first harvest.
     const from = sim.tribes[b.tribe];

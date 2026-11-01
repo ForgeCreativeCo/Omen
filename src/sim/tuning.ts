@@ -196,6 +196,33 @@ export const TUNING = {
     fieldsPerPerson: 1 / 4,
   },
 
+  /** Believers leaving to found a daughter people on hallowed ground. */
+  branching: {
+    /** A people this large may send believers away (and only then). */
+    crowdedAt: 18,
+    /** The village-wide strength of the holy-place belief it takes. */
+    beliefAt: 0.22,
+    /** Believers it takes (personal strength at least `holdAt`) before any go. */
+    believers: 5,
+    holdAt: 0.3,
+    /** Hallowed ground nearer the fire than this is just a holy place nearby, not a reason to leave. */
+    minDistance: 32,
+    /** Nor do they settle on top of another village. */
+    clearOfVillages: 24,
+    /** People in the party, at most. */
+    party: 10,
+    /** Days they talk it over, once all that holds, before they go. */
+    deliberateDays: 2,
+    /** Years a people waits after sending one party. */
+    restYears: 3,
+    /** Days the walk may take before the stragglers are left behind. */
+    walkDays: 3,
+    /** Peoples on the island at once, at most. */
+    maxPeoples: 6,
+    /** How the daughter people feels toward the one it left. */
+    startFondness: 0.45,
+  },
+
   /** Paths worn by feet. */
   paths: {
     /** Walkers leave a mark this often (ticks). */
@@ -346,6 +373,17 @@ export const TUNING = {
     },
     /** Holy Light: a pillar of light, harmless and seen from far off. */
     light: { cost: 22, cooldown: 40, radius: 3, durationTicks: 120, range: 60 },
+    /** Hallow: ground the god marks out glows for days; those who see it may hold it holy, and in time some go to live there. */
+    hallow: {
+      cost: 40,
+      cooldownDays: 3,
+      radius: 5,
+      durationDays: 2,
+      /** Seen from this far (the glow rises like a pillar). */
+      range: 75,
+      /** Belief planted in a witness each day they see it (more for the devout, less for skeptics). */
+      sightStrength: 0.22,
+    },
     /** Bless: one villager restored; people close by see the glow and feel it a little. */
     bless: { cost: 15, cooldown: 25, witnessRadius: 2, love: 0.25, onlookerLove: 0.04, onlookerRadius: 8 },
     /** Blight: crops wither and grass dies back. */

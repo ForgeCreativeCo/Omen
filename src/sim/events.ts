@@ -35,6 +35,7 @@ export type SimEventBody =
   | { type: 'bloom'; x: number; z: number; radius: number; crops: number; flowers: number }
   | { type: 'dream'; villagerId: number; symbols: string[] }
   | { type: 'holyLight'; beamId: number; x: number; z: number; radius: number }
+  | { type: 'hallow'; id: number; x: number; z: number; radius: number }
   | { type: 'blessing'; villagerId: number; x: number; z: number }
   | { type: 'blight'; x: number; z: number; radius: number; crops: number }
   | { type: 'meteorFall'; x: number; z: number; impactTick: number }
@@ -93,7 +94,11 @@ export type SimEventBody =
   | { type: 'slain'; killer: number; victim: number; raid: number; x: number; z: number }
   | { type: 'raidEnd'; raid: number; from: number; to: number; loot: number; burned: boolean; raidersLost: number; defendersLost: number; captives?: number }
   /** A new people: `from` is the tribe they broke away from. */
-  | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles' | 'settlers'; leaderId: number; x: number; z: number }
+  | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles' | 'settlers' | 'hallowed'; leaderId: number; x: number; z: number }
+  /** Believers set out from their people for hallowed ground, to found a people there. */
+  | { type: 'calling'; tribe: number; ids: number[]; x: number; z: number; place: string }
+  /** The party came to nothing (too few left, or the ground was lost). */
+  | { type: 'callingEnd'; tribe: number; ids: number[] }
   /** Settlers set out for an islet (gathering on the shore at x, z), put to sea, come ashore, or give up. */
   | { type: 'voyage'; tribe: number; ids: number[]; islet: number; x: number; z: number }
   | { type: 'setSail'; tribe: number; ids: number[]; x: number; z: number }

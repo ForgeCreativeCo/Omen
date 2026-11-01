@@ -45,6 +45,15 @@ export interface LightBeam {
   ticksLeft: number;
 }
 
+/** Hallowed ground, glowing while it lasts. */
+export interface Hallowed {
+  id: number;
+  x: number;
+  z: number;
+  radius: number;
+  ticksLeft: number;
+}
+
 /** A Falling Star on its way down. */
 export interface FallingStar {
   x: number;
@@ -84,6 +93,7 @@ export class Miracles {
     bloom: 0,
     dream: 0,
     light: 0,
+    hallow: 0,
     bless: 0,
     blight: 0,
     meteor: 0,
@@ -99,6 +109,7 @@ export class Miracles {
   /** Earthquakes, firestorms, tidal waves and swarms in progress. */
   readonly wrath: Wrath;
   readonly beams: LightBeam[] = [];
+  readonly hallows: Hallowed[] = [];
   readonly falling: FallingStar[] = [];
   private nextCloudId = 1;
   private lastStrokeTick = -Infinity;
@@ -187,6 +198,8 @@ export class Miracles {
 
     for (const b of this.beams) b.ticksLeft--;
     for (let i = this.beams.length - 1; i >= 0; i--) if (this.beams[i]!.ticksLeft <= 0) this.beams.splice(i, 1);
+    for (const h of this.hallows) h.ticksLeft--;
+    for (let i = this.hallows.length - 1; i >= 0; i--) if (this.hallows[i]!.ticksLeft <= 0) this.hallows.splice(i, 1);
 
     for (let i = this.falling.length - 1; i >= 0; i--) {
       const f = this.falling[i]!;
@@ -209,6 +222,7 @@ export class Miracles {
           else if (cmd.miracle === 'lightning') this.lightning(cmd.x, cmd.z);
           else if (cmd.miracle === 'bloom') this.bloom(cmd.x, cmd.z);
           else if (cmd.miracle === 'light') this.light(cmd.x, cmd.z);
+          else if (cmd.miracle === 'hallow') this.hallow(cmd.x, cmd.z);
           else if (cmd.miracle === 'blight') this.blight(cmd.x, cmd.z);
           else if (cmd.miracle === 'quake') this.wrath.quake(cmd.x, cmd.z);
           else if (cmd.miracle === 'firestorm') this.wrath.firestorm(cmd.x, cmd.z);
@@ -443,6 +457,14 @@ export class Miracles {
     const b: LightBeam = { id: this.nextCloudId++, x, z, radius: L.radius, ticksLeft: L.durationTicks };
     this.beams.push(b);
     this.sim.events.push(this.sim.tick, { type: 'holyLight', beamId: b.id, x, z, radius: b.radius });
+  }
+
+  /** Ground marked out as holy: a glow that lasts for days. What it means is for the people to decide. */
+  private hallow(x: number, z: number): void {
+    const H = MT.hallow;
+    const h: Hallowed = { id: this.nextCloudId++, x, z, radius: H.radius, ticksLeft: H.durationDays * TICKS_PER_DAY };
+    this.hallows.push(h);
+    this.sim.events.push(this.sim.tick, { type: 'hallow', id: h.id, x, z, radius: h.radius });
   }
 
   /** The opposite of Bloom: crops wither, flowers go, grass dies back to bare earth. */

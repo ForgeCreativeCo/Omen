@@ -161,6 +161,18 @@ export class OmenRecorder {
           sky: 2,
         });
         break;
+      case 'hallow':
+        this.record({
+          kind: 'hallow',
+          isDivine: true,
+          position: { x: e.x, y: surfaceY(sim, Math.round(e.x), Math.round(e.z)), z: e.z },
+          radius: e.radius,
+          magnitude: 0.55,
+          outcomes: [],
+          range: TUNING.miracles.hallow.range,
+          sky: 16,
+        });
+        break;
       case 'holyLight':
         this.record({
           kind: 'light',

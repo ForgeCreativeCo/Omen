@@ -513,6 +513,7 @@ export class Soundscape {
         if (e.phase === 'strike') this.rumble(2.5);
         break;
       case 'holyLight':
+      case 'hallow':
         if (this.ok('choir', 2)) this.choir();
         break;
       case 'blessing':

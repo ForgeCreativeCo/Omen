@@ -84,6 +84,8 @@ export class MiracleFx {
 
   // Holy Light and Falling Stars
   private readonly beams = new Map<number, Beam>();
+  /** Hallowed ground: a low glow over the area, and a faint column above it to be seen from afar. */
+  private readonly hallowed = new Map<number, Beam>();
   private readonly beamGeo = new THREE.CylinderGeometry(1, 1, 1, 28, 1, true);
   private readonly starHead: THREE.Mesh;
   private readonly starGlow: THREE.Sprite;
@@ -463,6 +465,43 @@ export class MiracleFx {
         const a = this.rng.range(0, Math.PI * 2);
         const r = this.rng.range(0, 2);
         this.spark(bm.x + ox + Math.cos(a) * r, ground, bm.z + oz + Math.sin(a) * r, 0, this.rng.range(2, 5), 0, this.rng.pick([0xfff2c2, 0xffd98a]), this.rng.range(1.5, 3), 0);
+      }
+    }
+
+    // ---- hallowed ground: a warm glow that lingers for days, motes drifting up across it
+    const liveHallows = new Map(sim.miracles.hallows.map((h) => [h.id, h] as const));
+    for (const h of sim.miracles.hallows) {
+      if (this.hallowed.has(h.id)) continue;
+      this.hallowed.set(h.id, { outer: this.beamMesh(0xffe6a0, 0.16), inner: this.beamMesh(0xfff3d0, 0.12), fade: 0, x: h.x, z: h.z });
+    }
+    for (const [id, hm] of this.hallowed) {
+      const h = liveHallows.get(id);
+      hm.fade = h ? Math.min(1, hm.fade + dt * 0.8) : hm.fade - dt * 0.4;
+      if (hm.fade <= 0) {
+        for (const m of [hm.outer, hm.inner]) {
+          this.group.remove(m);
+          (m.material as THREE.Material).dispose();
+        }
+        this.hallowed.delete(id);
+        continue;
+      }
+      const ground = sim.world.topY(Math.floor(hm.x), Math.floor(hm.z)) + 1;
+      const r = h?.radius ?? 5;
+      const breathe = 0.85 + 0.15 * Math.sin(time * 1.3 + id);
+      // The glow sits on the ground across the whole area.
+      hm.outer.position.set(hm.x + ox, ground + 1.5, hm.z + oz);
+      hm.outer.scale.set(r, 3, r);
+      (hm.outer.material as THREE.MeshBasicMaterial).opacity = 0.16 * hm.fade * breathe;
+      // A thin, faint column above it, so it's seen from far off.
+      hm.inner.position.set(hm.x + ox, ground + 25, hm.z + oz);
+      hm.inner.scale.set(0.5, 50, 0.5);
+      (hm.inner.material as THREE.MeshBasicMaterial).opacity = 0.12 * hm.fade * breathe;
+      if (h && this.rng.chance(Math.min(1, dt * 30))) {
+        const a = this.rng.range(0, Math.PI * 2);
+        const rr = Math.sqrt(this.rng.next()) * r;
+        const x = hm.x + Math.cos(a) * rr;
+        const z = hm.z + Math.sin(a) * rr;
+        this.spark(x + ox, sim.world.topY(Math.floor(x), Math.floor(z)) + 1, z + oz, 0, this.rng.range(0.8, 2), 0, this.rng.pick([0xfff2c2, 0xffe6a0, 0xd8f0a0]), this.rng.range(2, 4), 0);
       }
     }
 

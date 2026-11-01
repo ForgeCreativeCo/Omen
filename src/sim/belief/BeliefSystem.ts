@@ -93,6 +93,7 @@ const RESPONSE_WORD: Record<string, string> = {
   rain: 'rain',
   bloom: 'a blooming',
   light: 'the pillar of light',
+  hallow: 'the glowing ground',
   blessing: 'a blessing',
   blight: 'a withering',
   meteor: 'a falling star',
