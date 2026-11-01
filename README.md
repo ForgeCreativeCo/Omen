@@ -72,7 +72,7 @@ Next, if wanted:
 - **Raiders rarely win outright** (defenders fight on home ground), so captives are mostly snatched by a party breaking away.
 - **Boats only carry settlers**: no raids, trade or fishing by sea, and the god can't sink one.
 - **Saves don't carry across versions**: each change to the world's shape bumps the save version (now 8) and old saves are refused.
-- **The audio for the newer powers is synthesized but not tuned by ear** (the tidal wave uses a recording).
+- **The audio for the newer powers is synthesized but not tuned by ear** (the tidal wave and the falling star use recordings).
 - **Performance is untested on low-end hardware.** Zoomed out over the whole island on one desktop: about 280 draw calls and 410k triangles with level of detail, against 456 and 690k without.
 
 ## Layout
@@ -93,5 +93,5 @@ Next, if wanted:
   - `camera/OrbitCamera.ts`, `Environment.ts` (sky, sun/moon, seasons, clouds, storm gloom), `post/PostFX.ts` (tilt-shift).
   - `villagers/VillagerRenderer.ts` instanced voxel villagers (tunics take their people's color; the sick look it); `vfx/` weather, miracle, wrath, Hand and boat effects.
 - `src/ui/` plain DOM HUD (a wrapping top bar), villager inspector and hover card, activity icons and speech (`Overhead.ts`, `Reactions.ts`), toasts, the Village life log, the season report, Purposes, Village Beliefs, the Holy Book (the last four switch between peoples through `PeopleFocus.ts`), title / vision / end screens, the tutorial. `src/debug/` God's Eye.
-- `src/audio/Soundscape.ts` WebAudio, synthesized: wind, sea, birds, rain, murmuring at the fire, ritual drums, a voice per miracle, and the Warning's drone. Starts on the first click or key. `src/audio/sounds/` recordings that replace a synthesized voice once loaded: the tidal wave's crash (`ocean-wave.mp3`, from the file `freesound_community-ocean-wave-100271`).
+- `src/audio/Soundscape.ts` WebAudio, synthesized: wind, sea, birds, rain, murmuring at the fire, ritual drums, a voice per miracle, and the Warning's drone. Starts on the first click or key. `src/audio/sounds/` recordings that replace a synthesized voice once loaded: the tidal wave's crash (`ocean-wave.mp3`, from the file `freesound_community-ocean-wave-100271`), the falling star's descent (`asteroid.mp3`, from `freesound_community-asteroid-94614`) and impact (`explosion.mp3`, from `soundreality-explosion-fx-343683`).
 - `src/loop.ts` fixed-timestep bridge between real time and sim ticks.

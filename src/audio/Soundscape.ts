@@ -1,12 +1,15 @@
 import type { SimEvent } from '../sim/events';
 import type { Sim } from '../sim/Sim';
+import asteroidUrl from './sounds/asteroid.mp3?url';
+import explosionUrl from './sounds/explosion.mp3?url';
 import waveUrl from './sounds/ocean-wave.mp3?url';
 
 /**
  * Sound (SPEC §17), synthesized with WebAudio: wind, sea and birds by time of day; rain; murmuring at the evening fire; drums for rituals; a voice for
  * each miracle; and, in the Warning, a low drone that builds as the sea draws near.
  * A few recordings stand in for the synthesized voice once loaded (the tidal wave's
- * crash); until then, or if one can't be decoded, the synthesized one plays.
+ * crash, the falling star's descent and impact); until then, or if one can't be
+ * decoded, the synthesized one plays.
  * Reads the sim, never changes it. Starts on the first click or key (browsers
  * don't allow sound before that).
  */
@@ -22,6 +25,8 @@ export class Soundscape {
   private recent = new Map<string, number>();
   /** Decoded recordings by name, once loaded. */
   private samples = new Map<string, AudioBuffer>();
+  /** The falling star's descent while it plays, cut short when the star lands. */
+  private falling: GainNode | null = null;
 
   constructor() {
     const start = () => this.start();
@@ -54,6 +59,8 @@ export class Soundscape {
     this.bed('murmur', 'bandpass', 520, 3);
     this.droneBed();
     void this.load('wave', waveUrl);
+    void this.load('asteroid', asteroidUrl);
+    void this.load('explosion', explosionUrl);
   }
 
   private async load(name: string, url: string): Promise<void> {
@@ -65,10 +72,10 @@ export class Soundscape {
     }
   }
 
-  /** Play a loaded recording; false if it isn't loaded (yet). */
-  private sample(name: string, gain: number): boolean {
+  /** Play a loaded recording; its gain node, or null if it isn't loaded (yet). */
+  private sample(name: string, gain: number): GainNode | null {
     const buf = this.samples.get(name);
-    if (!buf) return false;
+    if (!buf) return null;
     const ctx = this.ctx!;
     const src = ctx.createBufferSource();
     src.buffer = buf;
@@ -76,7 +83,8 @@ export class Soundscape {
     g.gain.value = gain;
     src.connect(g).connect(this.master!);
     src.start();
-    return true;
+    src.onended = () => g.disconnect();
+    return g;
   }
 
   /** A looping filtered-noise layer whose loudness follows the world. */
@@ -193,7 +201,9 @@ export class Soundscape {
         if (this.ok('blight', 0.8)) this.wither();
         break;
       case 'meteorFall':
-        if (this.ok('whoosh', 1)) this.whoosh();
+        if (!this.ok('meteorFall', 1)) break;
+        this.falling = this.sample('asteroid', 0.8);
+        if (!this.falling) this.whoosh();
         break;
       case 'handGrab':
         if (this.ok('whoosh', 0.4)) this.whoosh();
@@ -202,8 +212,13 @@ export class Soundscape {
         if (!e.water) this.rumble(e.what === 'villager' ? 0.4 : 0.9);
         break;
       case 'meteor':
-        this.thunder(1);
-        this.rumble(3);
+        // The descent gives way to the blast.
+        if (this.falling) this.falling.gain.setTargetAtTime(0, this.ctx!.currentTime, 0.08);
+        this.falling = null;
+        if (!this.sample('explosion', 0.65)) {
+          this.thunder(1);
+          this.rumble(3);
+        }
         break;
       case 'milestone':
         if (this.ok('milestone', 2)) this.chime(1, 0.6);
