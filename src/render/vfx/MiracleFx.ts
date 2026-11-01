@@ -325,6 +325,17 @@ export class MiracleFx {
         this.burst(e.x + ox, y + 1.2, e.z + oz, 40, 2.2, [0xffe7a0, 0xfff7da], 1.2, -0.8);
         break;
       }
+      case 'blessPlace': {
+        // Light settles over the whole field or roof.
+        const y = sim.world.topY(Math.floor(e.x), Math.floor(e.z)) + (e.kind === 'hut' ? 2 : 1);
+        for (let i = 0; i < 120; i++) {
+          const x = e.x + this.rng.jitter(e.w / 2 + 0.5);
+          const z = e.z + this.rng.jitter(e.d / 2 + 0.5);
+          this.spark(x + ox, y + this.rng.range(0, 1.5), z + oz, this.rng.jitter(0.2), this.rng.range(1, 3), this.rng.jitter(0.2), this.rng.pick([0xfff0b0, 0xffd66e, 0xffffff]), this.rng.range(1, 2.2), -0.3);
+        }
+        this.burst(e.x + ox, y + 2, e.z + oz, 50, 2.6, [0xffe7a0, 0xfff7da], 1.4, -0.8);
+        break;
+      }
       case 'blight':
         for (let i = 0; i < 26 + e.crops; i++) {
           const a = this.rng.range(0, Math.PI * 2);
@@ -482,6 +493,16 @@ export class MiracleFx {
         this.spark(bm.x + ox + Math.cos(a) * r, ground, bm.z + oz + Math.sin(a) * r, 0, this.rng.range(2, 5), 0, this.rng.pick([0xfff2c2, 0xffd98a]), this.rng.range(1.5, 3), 0);
       }
     }
+
+    // ---- blessed fields and homes: gold motes drifting up off them while the blessing lasts
+    for (const t of sim.tribes)
+      for (const s of t.village.structures) {
+        if ((s.blessedUntil ?? 0) <= sim.tick || !this.rng.chance(Math.min(1, dt * (s.kind === 'field' ? 5 : 3)))) continue;
+        const x = s.x0 + this.rng.range(0, s.w);
+        const z = s.z0 + this.rng.range(0, s.d);
+        const y = s.kind === 'hut' ? s.baseY + this.rng.range(0, 3) : sim.world.topY(Math.floor(x), Math.floor(z)) + 1;
+        this.spark(x + ox, y, z + oz, this.rng.jitter(0.1), this.rng.range(0.6, 1.4), this.rng.jitter(0.1), this.rng.pick([0xfff0b0, 0xffd66e]), this.rng.range(1.5, 2.5), 0);
+      }
 
     // ---- hallowed ground: a warm glow that lingers for days, motes drifting up across it
     const liveHallows = new Map(sim.miracles.hallows.map((h) => [h.id, h] as const));

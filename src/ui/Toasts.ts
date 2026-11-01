@@ -203,6 +203,8 @@ export class Toasts {
         return `${who(e.villagerId)} stirs in their sleep.`;
       case 'blessing':
         return `${who(e.villagerId)} glows.`;
+      case 'blessPlace':
+        return e.kind === 'field' ? 'Light settles on a field.' : e.residents.length ? `Light settles on the home of ${e.residents.slice(0, 2).map((id) => who(id)).join(' and ')}${e.residents.length > 2 ? ' and theirs' : ''}.` : 'Light settles on an empty home.';
       case 'meteorFall':
         return e.big ? '<b>The sky is falling.</b>' : 'A star is falling.';
       case 'cataclysm': {

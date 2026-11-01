@@ -1,6 +1,7 @@
 import type { Rng } from '../rng';
 import type { Sim } from '../Sim';
-import { TICKS_PER_DAY } from '../time';
+import { TICKS_PER_DAY, TICKS_PER_YEAR } from '../time';
+import { blessed } from '../world/structures';
 import { TUNING } from '../tuning';
 import { CROP_STAGES, M, material, type MaterialId } from '../world/materials';
 import { plantTree } from '../world/terrain';
@@ -22,6 +23,8 @@ export type Command =
   | { type: 'moveCloud'; cloudId: number; x: number; z: number }
   | { type: 'dream'; villagerId: number; symbols: DreamSymbol[] }
   | { type: 'bless'; villagerId: number }
+  /** Bless a field or a home: whatever building stands at (x, z). */
+  | { type: 'blessPlace'; x: number; z: number }
   | { type: 'grab'; target: GrabTarget; x: number; z: number }
   | { type: 'carry'; x: number; z: number }
   | { type: 'release'; vx: number; vz: number };
@@ -183,6 +186,8 @@ export class Miracles {
       this.grace = Math.min(G.sandboxFloor, this.grace + (G.regenBasePerDay * 3) / TICKS_PER_DAY);
     }
 
+    if (sim.tick % TICKS_PER_DAY === 0) this.blessedHomes();
+
     // Rain clouds water the ground beneath them and douse fires.
     for (const c of this.clouds) {
       c.ticksLeft--;
@@ -267,6 +272,13 @@ export class Miracles {
         if (!fail) {
           this.spend('bless');
           this.bless(cmd.villagerId);
+        }
+        break;
+      case 'blessPlace':
+        fail = this.check('bless') ?? (this.blessable(cmd.x, cmd.z) ? null : 'target');
+        if (!fail) {
+          this.spend('bless');
+          this.blessPlace(cmd.x, cmd.z);
         }
         break;
       case 'dream':
@@ -478,6 +490,8 @@ export class Miracles {
     const B = MT.blight;
     let crops = 0;
     for (const f of sim.fields) {
+      // A blessed field doesn't wither.
+      if (blessed(f, sim.tick)) continue;
       for (const t of f.tiles) {
         if (t.state !== 2 || Math.hypot(t.x + 0.5 - cx, t.z + 0.5 - cz) > B.radius) continue;
         // As if withered by drought, all at once.
@@ -629,6 +643,47 @@ export class Miracles {
       o.faith.love = Math.min(1 - o.faith.fear, o.faith.love + B.onlookerLove);
     }
     sim.events.push(sim.tick, { type: 'blessing', villagerId, x: v.x, z: v.z });
+  }
+
+  /** A field or a home, standing, at (x, z). */
+  blessable(x: number, z: number): boolean {
+    const s = this.sim.structureAt(Math.floor(x), Math.floor(z));
+    return !!s && (s.kind === 'field' || s.kind === 'hut') && !s.destroyed && !s.abandoned && (s.kind === 'field' || s.complete);
+  }
+
+  /** A field or a home blessed for a year. Those who see the light settle on it may make of it what they will. */
+  private blessPlace(x: number, z: number): void {
+    const sim = this.sim;
+    const s = sim.structureAt(Math.floor(x), Math.floor(z))!;
+    s.blessedUntil = sim.tick + Math.round(MT.bless.years * TICKS_PER_YEAR);
+    const tribe = sim.tribes.findIndex((t) => t.village.byId(s.id) === s);
+    sim.events.push(sim.tick, {
+      type: 'blessPlace',
+      structureId: s.id,
+      kind: s.kind === 'field' ? 'field' : 'hut',
+      x: s.x0 + s.w / 2,
+      z: s.z0 + s.d / 2,
+      w: s.w,
+      d: s.d,
+      residents: [...s.residents],
+      tribe: Math.max(0, tribe),
+    });
+  }
+
+  /** Each midnight: whoever sleeps in a blessed home wakes rested, and loves the god a little more. */
+  private blessedHomes(): void {
+    const sim = this.sim;
+    for (const t of sim.tribes)
+      for (const s of t.village.structures) {
+        if (s.kind !== 'hut' || !blessed(s, sim.tick)) continue;
+        for (const id of s.residents) {
+          const v = sim.villagers.byId(id);
+          if (!v?.alive) continue;
+          v.needs.energy = 1;
+          v.needs.safety = 1;
+          v.faith.love = Math.min(1 - v.faith.fear, v.faith.love + MT.bless.homeLovePerDay);
+        }
+      }
   }
 
   private dreamCheck(villagerId: number, symbols: DreamSymbol[]): CastFailure | null {

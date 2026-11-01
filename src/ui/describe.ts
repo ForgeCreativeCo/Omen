@@ -17,6 +17,8 @@ const KIND_TEXT: Record<OmenKind, string> = {
   light: 'A pillar of light came down',
   hallow: 'Ground glowed with a light that stayed',
   blessing: 'Someone was touched by the god',
+  blessField: 'Light settled on a field',
+  blessHome: 'Light settled on a home',
   blight: 'The land withered',
   meteor: 'A star fell from the sky',
   cataclysm: 'The sky fell, and a village with it',
@@ -55,6 +57,8 @@ const MEMORY_TEXT: Record<OmenKind, string> = {
   light: 'a pillar of light come down',
   hallow: 'the ground begin to glow',
   blessing: 'someone touched by the god',
+  blessField: 'light settle on a field',
+  blessHome: 'light settle on a home',
   blight: 'the land wither',
   meteor: 'a star fall from the sky',
   cataclysm: 'the sky fall',
@@ -93,6 +97,8 @@ const HEARSAY_TEXT: Record<OmenKind, string> = {
   light: 'a {size}pillar of light',
   hallow: 'a {size}glow upon the ground',
   blessing: 'a {size}blessing',
+  blessField: 'a {size}blessing on a field',
+  blessHome: 'a {size}blessing on a home',
   blight: 'a {size}withering',
   meteor: 'a {size}falling star',
   cataclysm: 'the falling of the sky',
@@ -110,6 +116,8 @@ const RESPONSE_WORD: Record<string, string> = {
   bloom: 'a harvest',
   light: 'the light',
   blessing: 'a blessing',
+  blessField: 'a good harvest',
+  blessHome: 'a blessing on our homes',
   favor: 'your favor',
   wrath: 'mercy',
   shapeEarth: 'the earth to move',
@@ -139,6 +147,8 @@ export function reactionLine(sim: Sim, v: { id: number }, m: OmenMemoryRecord, o
   const bad = m.valence < -0.15;
   const seed = v.id * 7 + o.tick;
   if (o.kind === 'blessing' && o.outcomes.some((x) => x.entity === `person:${v.id}`)) return pick(['I feel warm all through!', 'The god touched me!', 'I am not afraid anymore.'], seed);
+  if (o.kind === 'blessHome' && o.outcomes.some((x) => x.entity?.startsWith('structure:') && sim.structureById(Number(x.entity.slice(10)))?.residents.includes(v.id))) return pick(['Our home is blessed!', 'The god chose our house!', 'We will sleep safe now.'], seed);
+  if (o.kind === 'blessField' && good) return pick(['That field is the god\'s now.', 'The grain will be heavy this year!', 'Look how it shines!'], seed);
   if (!m.cause) {
     if (good) return pick(['A wonder!', 'Someone up there is kind.', 'Did you see that?'], seed);
     if (bad) return pick(['Something is angry with us.', 'What did we do?', 'Hide!'], seed);

@@ -161,7 +161,7 @@ export class MiracleController {
         : def.targeting === 'sleeper'
           ? 'Tap a sleeper (marked).'
           : def.targeting === 'person'
-            ? 'Tap someone who is awake.'
+            ? 'Tap someone who is awake, a field or a home.'
             : def.targeting === 'hand'
               ? 'Press and drag. Let go gently, or flick to throw.'
               : 'Tap the land.';
@@ -180,8 +180,14 @@ export class MiracleController {
     if (def.targeting === 'hand') return true;
     if (def.targeting === 'person') {
       const id = this.view.pickVillager(this.sim, clientX, clientY);
-      if (id < 0) this.toast('target');
-      else this.send({ type: 'bless', villagerId: id }, 'bless');
+      if (id >= 0) {
+        this.send({ type: 'bless', villagerId: id }, 'bless');
+        return true;
+      }
+      // No one there: a field or a home, then.
+      const hit = this.view.groundAt(clientX, clientY);
+      if (hit && this.sim.miracles.blessable(hit.x, hit.z)) this.send({ type: 'blessPlace', x: hit.x, z: hit.z }, 'bless');
+      else this.toast('target');
       return true;
     }
     const hit = this.view.groundAt(clientX, clientY);

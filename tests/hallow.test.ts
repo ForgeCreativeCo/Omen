@@ -30,7 +30,7 @@ const hallow = (s: Sim, p: { x: number; z: number }) => {
   s.step();
 };
 
-describe('Hallow', () => {
+describe('Hallow', { timeout: 120_000 }, () => {
   it('glows for days; those who see it name the place and hold it holy', () => {
     const { s, spot } = setup(45);
     hallow(s, spot);

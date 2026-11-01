@@ -4,7 +4,7 @@ import type { Sim } from '../Sim';
 import { DAYS_PER_YEAR, TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
 import { M } from '../world/materials';
-import type { Structure } from '../world/structures';
+import { blessed, type Structure } from '../world/structures';
 import { makeName } from './names';
 import { Pathfinder } from './pathfinding';
 import {
@@ -749,7 +749,7 @@ export class Villagers {
           if (job === 'till') village.till(t);
           else if (job === 'plant') village.plant(t);
           else if (job === 'harvest') {
-            const food = village.harvest(t) * sim.dissent.yieldFor(v);
+            const food = village.harvest(t, blessed(f, sim.tick)) * sim.dissent.yieldFor(v);
             village.store.food += food;
             village.stats.harvested += food;
             // Re-sow in the same visit while the season allows.
@@ -1000,8 +1000,11 @@ export class Villagers {
       const father = this.byId(mother.partnerId);
       if (!father?.alive) continue;
       const kids = mother.childIds.filter((c) => father.childIds.includes(c)).length;
-      if (kids >= V.maxChildrenPerCouple || !this.rng.chance(V.birthChancePerDay * mood)) continue;
+      if (kids >= V.maxChildrenPerCouple) continue;
       const home = this.home(mother);
+      // A blessed home is a fruitful one.
+      const boon = home && blessed(home, sim.tick) ? TUNING.miracles.bless.births : 1;
+      if (!this.rng.chance(V.birthChancePerDay * mood * boon)) continue;
       const spot = home?.door ?? { x: Math.floor(mother.x), z: Math.floor(mother.z) };
       const cell = village.nearestWalkable(spot.x, spot.z) ?? spot;
       const child = this.spawn({ age: 0, x: cell.x, z: cell.z, parents: [mother.id, father.id] });

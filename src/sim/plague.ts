@@ -104,6 +104,8 @@ export class Plague {
       }
       if (v.homeId < 0) continue;
       const home = sim.structureById(v.homeId);
+      // Under a blessed roof it doesn't pass from one to another.
+      if (home && (home.blessedUntil ?? 0) > sim.tick) continue;
       for (const r of home?.residents ?? []) {
         const o = sim.villagers.byId(r);
         if (o && o !== v && this.rng.chance(P.spreadChance)) this.infect(o, v.id);

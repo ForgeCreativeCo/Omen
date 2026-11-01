@@ -11,6 +11,7 @@ import {
   planSteps,
   rotatedSize,
   rotationToward,
+  blessed,
   type BuildStep,
   type FieldTile,
   type Structure,
@@ -536,9 +537,9 @@ export class Village {
     this.world.set(t.x, t.y + 1, t.z, CROP_STAGES[this.stageOf(progress) - 1]!);
   }
 
-  harvest(t: FieldTile): number {
+  harvest(t: FieldTile, boon = false): number {
     const soil = material(this.world.get(t.x, t.y, t.z));
-    const food = FARM.yieldPerTile * (0.7 + 0.6 * soil.fertility);
+    const food = FARM.yieldPerTile * (0.7 + 0.6 * soil.fertility) * (boon ? TUNING.miracles.bless.harvest : 1);
     this.world.set(t.x, t.y + 1, t.z, M.AIR);
     t.state = 1;
     t.progress = 0;
@@ -575,7 +576,10 @@ export class Village {
       f.moisture = Math.max(0, f.moisture - decay);
       if (host.raining) f.moisture = Math.min(1, f.moisture + FARM.rainMoisturePerTick * CROP_STEP);
       if (f.nearWater) f.moisture = Math.max(f.moisture, FARM.riverMoisture);
-      const wet = Math.min(1, Math.max(0, (f.moisture - 0.04) / 0.3));
+      const boon = blessed(f, host.tick);
+      // A blessed field never goes thirsty.
+      const wet = boon ? 1 : Math.min(1, Math.max(0, (f.moisture - 0.04) / 0.3));
+      const rate = boon ? TUNING.miracles.bless.growth : 1;
       let untilled = 0;
       for (const t of f.tiles) {
         if (t.state === 0) untilled++;
@@ -585,7 +589,7 @@ export class Village {
           t.state = this.nav.at(t.x, t.z) === t.y ? 1 : 0;
           continue;
         }
-        if (f.moisture < FARM.witherBelow) {
+        if (f.moisture < FARM.witherBelow && !boon) {
           t.health -= (FARM.witherPerDay / TICKS_PER_DAY) * CROP_STEP;
           if (t.health <= 0) {
             this.world.set(t.x, t.y + 1, t.z, M.AIR);
@@ -596,7 +600,7 @@ export class Village {
         if (t.progress >= 1) continue;
         const soil = material(this.world.get(t.x, t.y, t.z)).fertility;
         const before = this.stageOf(t.progress);
-        t.progress = Math.min(1, t.progress + FARM.growthPerTick * CROP_STEP * seasonRate * wet * (0.7 + 0.6 * soil));
+        t.progress = Math.min(1, t.progress + FARM.growthPerTick * CROP_STEP * seasonRate * wet * rate * (0.7 + 0.6 * soil));
         const after = this.stageOf(t.progress);
         if (after !== before) this.world.set(t.x, t.y + 1, t.z, CROP_STAGES[after - 1]!);
       }

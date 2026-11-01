@@ -61,6 +61,13 @@ export interface Structure {
   fenceId?: number;
   moisture: number;
   nearWater: boolean;
+  /** Fields and homes the god blessed: blessed until this tick. */
+  blessedUntil?: number;
+}
+
+/** Is this field or home under the god's blessing now? */
+export function blessed(s: Structure, tick: number): boolean {
+  return (s.blessedUntil ?? 0) > tick;
 }
 
 /** Rotate local (lx, lz) of a w×d box; front row (lz = d-1) faces +z, +x, -z, -x for rot 0, 3, 2, 1. */

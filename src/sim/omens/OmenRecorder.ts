@@ -216,6 +216,24 @@ export class OmenRecorder {
         });
         break;
       }
+      case 'blessPlace': {
+        // A field feeds everyone; a home, those who sleep in it.
+        const people = e.kind === 'field' ? (sim.tribes[e.tribe]?.members.map((v) => v.id) ?? []) : e.residents;
+        this.record({
+          kind: e.kind === 'field' ? 'blessField' : 'blessHome',
+          isDivine: true,
+          position: { x: Math.floor(e.x), y: surfaceY(sim, Math.floor(e.x), Math.floor(e.z)), z: Math.floor(e.z) },
+          radius: Math.max(e.w, e.d) / 2 + 1,
+          magnitude: 0.5,
+          outcomes: [{ type: 'blessed', entity: `structure:${e.structureId}`, people }],
+          range: 30,
+          sky: 4,
+          affected: e.residents,
+          // Those who live there know, wherever they were.
+          also: e.residents,
+        });
+        break;
+      }
       case 'handPlace': {
         // Carried through the sky and set down unharmed: chosen, surely.
         const v = sim.villagers.byId(e.id);

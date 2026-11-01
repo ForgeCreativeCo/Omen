@@ -385,7 +385,22 @@ export const TUNING = {
       sightStrength: 0.22,
     },
     /** Bless: one villager restored; people close by see the glow and feel it a little. */
-    bless: { cost: 15, cooldown: 25, witnessRadius: 2, love: 0.25, onlookerLove: 0.04, onlookerRadius: 8 },
+    bless: {
+      cost: 15,
+      cooldown: 25,
+      witnessRadius: 2,
+      love: 0.25,
+      onlookerLove: 0.04,
+      onlookerRadius: 8,
+      /** A blessed field or home stays blessed this long. */
+      years: 1,
+      /** Blessed fields: crops grow this much faster, never wither, and give this much more. Blight and swarms pass them by. */
+      growth: 1.75,
+      harvest: 1.5,
+      /** Blessed homes: those who sleep there wake rested and a little fonder of the god, sickness doesn't pass between them, and babies come this much more often. */
+      homeLovePerDay: 0.02,
+      births: 2,
+    },
     /** Blight: crops wither and grass dies back. */
     blight: { cost: 14, cooldown: 20, radius: 5, grassChance: 0.55 },
     /** Falling Star: a meteor lands a few ticks after the cast. */

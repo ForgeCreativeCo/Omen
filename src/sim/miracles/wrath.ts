@@ -5,7 +5,7 @@ import { TUNING } from '../tuning';
 import type { Tree } from '../villagers/village';
 import type { Villager } from '../villagers/types';
 import { M, material, type MaterialId } from '../world/materials';
-import type { Structure } from '../world/structures';
+import { blessed, type Structure } from '../world/structures';
 
 const MT = TUNING.miracles;
 
@@ -300,7 +300,8 @@ export class Wrath {
     const S = MT.swarm;
     s.ticksLeft--;
     const t = sim.tribes[s.tribe];
-    const fields = t ? t.village.fields.filter((f) => !f.destroyed) : [];
+    // The locusts pass a blessed field by.
+    const fields = t ? t.village.fields.filter((f) => !f.destroyed && !blessed(f, sim.tick)) : [];
     const ripe = (f: Structure) => f.tiles.some((tile) => tile.state === 2);
     let field = fields.find((f) => f.id === s.fieldId);
     if (!field || !ripe(field)) {

@@ -112,7 +112,7 @@ export const MIRACLES: readonly MiracleDef[] = [
   {
     id: 'bless',
     name: 'Bless',
-    blurb: 'Touch one person who is awake: fed, rested, unafraid, glowing. Those who see it may decide they are chosen.',
+    blurb: 'Touch one person who is awake: fed, rested, unafraid, glowing. Or bless a field (it grows fast and heavy, and blight and locusts pass it by) or a home (its sleepers wake rested, sickness stays out, babies come sooner) for a year.',
     targeting: 'person',
     cost: MT.bless.cost,
     cooldownTicks: MT.bless.cooldown,

@@ -223,6 +223,8 @@ export const DEPICTION_FROM_OMEN: Record<string, [DepictionAxis, string][]> = {
   light: [['body', 'sunDisc'], ['feature', 'wings']],
   hallow: [['body', 'sunDisc'], ['element', 'growth']],
   blessing: [['body', 'humanoid'], ['feature', 'raisedHand']],
+  blessField: [['element', 'growth'], ['body', 'sunDisc'], ['feature', 'raisedHand']],
+  blessHome: [['body', 'humanoid'], ['feature', 'raisedHand'], ['element', 'fire']],
   blight: [['element', 'fire'], ['body', 'serpent'], ['feature', 'horns']],
   meteor: [['element', 'stone'], ['body', 'sunDisc'], ['feature', 'eyes']],
   cataclysm: [['element', 'fire'], ['element', 'stone'], ['feature', 'horns']],

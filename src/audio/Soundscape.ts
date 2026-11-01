@@ -517,6 +517,7 @@ export class Soundscape {
         if (this.ok('choir', 2)) this.choir();
         break;
       case 'blessing':
+      case 'blessPlace':
         if (this.ok('bless', 0.6)) this.chime(0.6);
         break;
       case 'blight':

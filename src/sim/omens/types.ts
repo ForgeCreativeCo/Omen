@@ -10,6 +10,8 @@ export type OmenKind =
   | 'light'
   | 'hallow'
   | 'blessing'
+  | 'blessField'
+  | 'blessHome'
   | 'blight'
   | 'meteor'
   | 'cataclysm'

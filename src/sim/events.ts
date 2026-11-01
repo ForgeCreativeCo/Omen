@@ -37,6 +37,7 @@ export type SimEventBody =
   | { type: 'holyLight'; beamId: number; x: number; z: number; radius: number }
   | { type: 'hallow'; id: number; x: number; z: number; radius: number }
   | { type: 'blessing'; villagerId: number; x: number; z: number }
+  | { type: 'blessPlace'; structureId: number; kind: 'field' | 'hut'; x: number; z: number; w: number; d: number; residents: number[]; tribe: number }
   | { type: 'blight'; x: number; z: number; radius: number; crops: number }
   | { type: 'meteorFall'; x: number; z: number; impactTick: number; big?: boolean }
   | { type: 'meteor'; x: number; y: number; z: number; killed: number[]; wrecked: number[]; fire: boolean }
