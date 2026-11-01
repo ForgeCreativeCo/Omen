@@ -9,6 +9,7 @@ import sawUrl from './sounds/sawing.mp3?url';
 import coughUrl from './sounds/cough.mp3?url';
 import coughGrandpaUrl from './sounds/cough-grandpa.mp3?url';
 import coughManUrl from './sounds/cough-man.mp3?url';
+import quakeUrl from './sounds/earthquake.mp3?url';
 import explosionUrl from './sounds/explosion.mp3?url';
 import waveUrl from './sounds/ocean-wave.mp3?url';
 
@@ -16,7 +17,7 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * Sound (SPEC §17), synthesized with WebAudio: wind, sea and birds by time of day; rain; murmuring at the evening fire; drums for rituals; a voice for
  * each miracle; and, in the Warning, a low drone that builds as the sea draws near.
  * A few recordings stand in for the synthesized voice once loaded (the tidal wave's
- * crash, a lightning strike's crack and roll, the falling star's descent and impact, the roar of a firestorm for as long
+ * crash, a lightning strike's crack and roll, the cracking ground of an earthquake, the falling star's descent and impact, the roar of a firestorm for as long
  * as it burns, a swarm's buzzing while it feeds); until then, or if one can't be
  * decoded, the synthesized one plays. Building sites near where the camera looks
  * ring with hammering and sawing (recorded only). While the god's sickness is abroad, the sick
@@ -40,6 +41,8 @@ export class Soundscape {
   /** The hammering loop while a building site is in earshot. */
   private hammer: GainNode | null = null;
   private sawTimer = 0;
+  /** The cracking of each earthquake shaking now, by its id. */
+  private quakes = new Map<number, GainNode>();
   /** The buzzing of each swarm alive now, by its id. */
   private swarms = new Map<number, GainNode>();
   /** The fire's roar for each firestorm burning now, by its id. */
@@ -95,6 +98,7 @@ export class Soundscape {
     void this.load('explosion', explosionUrl);
     void this.load('fire', fireUrl);
     void this.load('buzz', buzzUrl);
+    void this.load('quake', quakeUrl);
     void this.load('hammer', hammerUrl);
     void this.load('lightning', lightningUrl);
     void this.load('saw', sawUrl);
@@ -289,6 +293,21 @@ export class Soundscape {
       if (g) this.storms.set(id, g);
     }
 
+    // An earthquake cracks the ground while it shakes and dies away after; it carries, so a far one is quieter, never silent.
+    const shaking = new Map(running ? sim.miracles.wrath.quakes.map((q) => [q.id, q] as const) : []);
+    for (const [id, g] of this.quakes) {
+      if (shaking.has(id)) continue;
+      this.fadeOut(g, 1.5);
+      this.quakes.delete(id);
+    }
+    for (const [id, q] of shaking) {
+      let g = this.quakes.get(id);
+      if (!g) g = this.sample('quake', 0) ?? undefined;
+      if (!g) continue;
+      this.quakes.set(id, g);
+      g.gain.setTargetAtTime(0.85 * (0.4 + 0.6 * this.hearing(q.x, q.z, 60)), this.ctx.currentTime, 0.1);
+    }
+
     // A swarm buzzes for as long as it feeds, louder the closer the camera is to it.
     const alive = new Map(running ? sim.miracles.wrath.swarms.map((w) => [w.id, w] as const) : []);
     for (const [id, g] of this.swarms) {
@@ -394,6 +413,8 @@ export class Soundscape {
         if (this.ok('milestone', 2)) this.chime(1, 0.6);
         break;
       case 'quake':
+        // The recording, once loaded, plays from update() while the ground shakes.
+        if (this.samples.has('quake')) break;
         this.rumble(4);
         this.rumble(2.5);
         break;
