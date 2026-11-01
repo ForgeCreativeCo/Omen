@@ -324,7 +324,7 @@ Keep content non-graphic: exile, shunning and offerings of food, livestock and g
 ## 12. Time, rumor and drift
 
 ### Time scale (all tunable)
-- 1 in-game day ≈ 20 s at 1×. A compressed calendar: 4 seasons × 3 days = 1 year ≈ 4 min at 1×.
+- 1 in-game day ≈ 40 s at 1× (half the base rate of 10 ticks a second, for an unhurried pace; 4× and 16× are multiples of the base rate). A compressed calendar: 4 seasons × 3 days = 1 year ≈ 8 min at 1×.
 - Lifespan ≈ 45 years. A generation ≈ 25 years.
 - Speeds: **Pause, 1×, 4×, 16×.** Simulation must stay stable at 16×.
 - Target: a full Warning run lasts **60–90 minutes** of real time across about 5 generations.

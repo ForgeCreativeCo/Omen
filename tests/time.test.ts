@@ -12,8 +12,9 @@ describe('calendar', () => {
     expect(formatCalendar(c)).toBe('Year 1 · Spring');
   });
 
-  it('a year is 4 seasons × 3 days ≈ 4 min at 1×', () => {
+  it('a year is 4 seasons × 3 days ≈ 8 min at 1× (half the base rate)', () => {
     expect(TICKS_PER_YEAR / TUNING.time.ticksPerSecond).toBe(240);
+    expect(TICKS_PER_YEAR / (TUNING.time.ticksPerSecond * TUNING.time.speeds[1]!)).toBe(480);
     expect(calendarAt(TICKS_PER_YEAR).year).toBe(2);
     expect(calendarAt(TICKS_PER_DAY * 3).season).toBe('summer');
   });
@@ -36,6 +37,7 @@ describe('FixedLoop', () => {
     loop.advance(1);
     expect(sim.tick).toBe(0);
     loop.togglePause();
-    expect(loop.speed).toBe(1);
+    // Back to 1×: half the base rate.
+    expect(loop.speed).toBe(0.5);
   });
 });

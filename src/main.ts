@@ -203,7 +203,7 @@ function frame(now: number): void {
   const alpha = loop.advance(dt);
   renderer.villagers.selectedId = inspector.villagerId;
   miracles.update();
-  renderer.render(sim, alpha, dt);
+  renderer.render(sim, alpha, dt, loop.speed);
   hud.update(sim, dt);
   toasts.update(sim);
   inspector.update(sim, dt);

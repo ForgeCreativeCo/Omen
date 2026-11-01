@@ -23,7 +23,7 @@ Your miracles have no cooldowns and no cost (a switch in `src/sim/tuning.ts` bri
 | Rotate | right-drag, Q / E | two-finger twist |
 | Tilt | right-drag vertically | two fingers slide up/down |
 | Zoom | wheel | pinch |
-| Time | Space = pause, 1 = pause, 2 = 1×, 3 = 4×, 4 = 16× | HUD buttons |
+| Time | Space = pause, 1 = pause, 2 = 1× (a day is about 40 s), 3 = 4×, 4 = 16× | HUD buttons |
 | Settings | ⚙ button: graphics quality, tilt-shift (T), reduced motion, activity icons (U), volume, mute (M), save now / delete save | ⚙ button |
 | Miracles | click a miracle or press its key: Rain R, Lightning L, Shape Earth G, Bloom B, Holy Light I, Bless K, Blight X, Falling Star O, The Hand F, Dream N; then click the land (Esc cancels) | tap a miracle, then tap; Cancel button |
 | Wrath | the red buttons: Earthquake Y, Firestorm C, Tidal Wave Z (needs a shore within reach), Plague P, Swarm 5 | same |

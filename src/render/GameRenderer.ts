@@ -59,6 +59,8 @@ export class GameRenderer {
   reducedMotion = false;
   private guide: THREE.Group | null = null;
   private elapsed = 0;
+  /** Clock for the villagers' bobbing and work motions: slows with the game below full rate, so a slow walker doesn't scurry (paused, it runs as before). */
+  private animTime = 0;
   private pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
   private frameSamples = 0;
   private frameTimeSum = 0;
@@ -248,8 +250,9 @@ export class GameRenderer {
    * @param alpha interpolation between the last two sim ticks, 0..1
    * @param dt real seconds since last frame
    */
-  render(sim: Sim, alpha: number, dt: number): void {
+  render(sim: Sim, alpha: number, dt: number, speed = 1): void {
     this.elapsed += dt;
+    this.animTime += dt * (speed > 0 ? Math.min(1, speed) : 1);
     const cal = sim.calendar;
     const dayFrac = (cal.dayFraction + alpha / TICKS_PER_DAY) % 1;
     const yearFrac = ((cal.day % DAYS_PER_YEAR) + dayFrac) / DAYS_PER_YEAR;
@@ -261,7 +264,7 @@ export class GameRenderer {
     this.handFx.update(sim, dt);
     this.boatFx.update(sim, this.elapsed);
     this.witnessLines.update(sim, this.elapsed);
-    this.villagers.update(sim, alpha, dt, this.elapsed);
+    this.villagers.update(sim, alpha, dt, this.animTime);
     this.orbit.update(Math.min(dt, 0.1));
     if (this.guide?.visible) {
       const ring = this.guide.getObjectByName('ring');

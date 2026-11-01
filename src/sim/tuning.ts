@@ -12,7 +12,8 @@ export const TUNING = {
     daysPerSeason: 3,
     seasonsPerYear: 4,
     /** Available speed multipliers; index 0 is pause. */
-    speeds: [0, 1, 4, 16],
+    // 1× runs at half the sim rate (40 s days, unhurried walking); 4× and 16× are multiples of the base rate.
+    speeds: [0, 0.5, 4, 16],
     /** Safety valve: max sim ticks run in one rendered frame before dropping time. */
     maxTicksPerFrame: 40,
     /** Fraction of the day where dawn/dusk begin, 0 = midnight. */
