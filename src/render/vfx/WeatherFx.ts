@@ -7,6 +7,8 @@ import { M } from '../../sim/world/materials';
 
 const FIRE_PARTICLES = 700;
 const RAIN_DROPS = 1600;
+/** Glowing fires at most (one per people); a fixed set, so new peoples don't recompile the shaders. */
+const PIT_LIGHTS = 6;
 
 /**
  * Environmental effects driven by sim state: flames and embers (burning voxels and
@@ -23,7 +25,7 @@ export class WeatherFx {
   private readonly fireVel = new Float32Array(FIRE_PARTICLES * 3);
   private readonly fire: THREE.Points;
   private nextFire = 0;
-  private readonly pitLight = new THREE.PointLight(0xff8a3a, 0, 22, 1.6);
+  private readonly pitLights = Array.from({ length: PIT_LIGHTS }, () => new THREE.PointLight(0xff8a3a, 0, 22, 1.6));
   // Rain
   private readonly rain: THREE.LineSegments;
   private readonly rainPos = new Float32Array(RAIN_DROPS * 6);
@@ -55,7 +57,7 @@ export class WeatherFx {
       }),
     );
     this.fire.frustumCulled = false;
-    this.group.add(this.fire, this.pitLight);
+    this.group.add(this.fire, ...this.pitLights);
 
     const rg = new THREE.BufferGeometry();
     rg.setAttribute('position', new THREE.BufferAttribute(this.rainPos, 3).setUsage(THREE.DynamicDrawUsage));
@@ -107,22 +109,31 @@ export class WeatherFx {
         if (this.rng.chance(0.7)) this.emitFire(x + 0.5 + ox, y + 1, z + 0.5 + oz, 1.2);
       }
     }
-    let mainPit: { x: number; y: number; z: number } | null = null;
-    for (const s of sim.village.structures) {
-      if (s.kind !== 'firePit' || !s.complete) continue;
-      const ember = s.steps.find((st) => st.mat === M.EMBER);
-      if (!ember) continue;
-      if (!mainPit) mainPit = ember;
-      // Bigger fire at the evening gathering.
-      const f = sim.calendar.dayFraction;
-      const evening = f > 0.7 || f < 0.25;
-      if (this.rng.chance(evening ? 0.9 : 0.25)) this.emitFire(ember.x + 0.5 + ox, ember.y + 0.9, ember.z + 0.5 + oz, evening ? 0.9 : 0.5);
+    // Every people's fire burns and glows (the first pit of each village carries the light).
+    let lit = 0;
+    const f = sim.calendar.dayFraction;
+    // Bigger fire at the evening gathering.
+    const evening = f > 0.7 || f < 0.25;
+    for (const t of sim.tribes) {
+      if (!t.members.length) continue;
+      let mainPit: { x: number; y: number; z: number } | null = null;
+      for (const s of t.village.structures) {
+        if (s.kind !== 'firePit' || !s.complete) continue;
+        const ember = s.steps.find((st) => st.mat === M.EMBER);
+        if (!ember) continue;
+        if (!mainPit) mainPit = ember;
+        if (this.rng.chance(evening ? 0.9 : 0.25)) this.emitFire(ember.x + 0.5 + ox, ember.y + 0.9, ember.z + 0.5 + oz, evening ? 0.9 : 0.5);
+      }
+      const light = mainPit && this.pitLights[lit];
+      if (!light || !mainPit) continue;
+      lit++;
+      light.position.set(mainPit.x + 0.5 + ox, mainPit.y + 2, mainPit.z + 0.5 + oz);
+      // Each fire flickers on its own.
+      const p = t.id * 2.1;
+      const flicker = 0.85 + 0.15 * Math.sin(time * 13 + p) * Math.sin(time * 7.3 + p);
+      light.intensity = (6 + 40 * nightness) * flicker;
     }
-    if (mainPit) {
-      this.pitLight.position.set(mainPit.x + 0.5 + ox, mainPit.y + 2, mainPit.z + 0.5 + oz);
-      const flicker = 0.85 + 0.15 * Math.sin(time * 13) * Math.sin(time * 7.3);
-      this.pitLight.intensity = (6 + 40 * nightness) * flicker;
-    }
+    for (let i = lit; i < PIT_LIGHTS; i++) this.pitLights[i]!.intensity = 0;
 
     for (let i = 0; i < FIRE_PARTICLES; i++) {
       let life = this.fireLife[i]!;
