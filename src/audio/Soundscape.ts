@@ -11,6 +11,7 @@ import coughGrandpaUrl from './sounds/cough-grandpa.mp3?url';
 import coughManUrl from './sounds/cough-man.mp3?url';
 import quakeUrl from './sounds/earthquake.mp3?url';
 import explosionUrl from './sounds/explosion.mp3?url';
+import prayerUrl from './sounds/prayer.mp3?url';
 import waveUrl from './sounds/ocean-wave.mp3?url';
 
 /**
@@ -20,7 +21,7 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * crash, a lightning strike's crack and roll, the cracking ground of an earthquake, the falling star's descent and impact, the roar of a firestorm for as long
  * as it burns, a swarm's buzzing while it feeds); until then, or if one can't be
  * decoded, the synthesized one plays. Building sites near where the camera looks
- * ring with hammering and sawing (recorded only). While the god's sickness is abroad, the sick
+ * ring with hammering and sawing, and people praying there chant (recorded only). While the god's sickness is abroad, the sick
  * cough (recorded only: nothing plays until they load).
  * Reads the sim, never changes it. Starts on the first click or key (browsers
  * don't allow sound before that).
@@ -40,6 +41,8 @@ export class Soundscape {
   private ear = { x: 0, z: 0, zoom: 100 };
   /** The hammering loop while a building site is in earshot. */
   private hammer: GainNode | null = null;
+  /** The chant while people pray within earshot. */
+  private chant: GainNode | null = null;
   private sawTimer = 0;
   /** The cracking of each earthquake shaking now, by its id. */
   private quakes = new Map<number, GainNode>();
@@ -99,6 +102,7 @@ export class Soundscape {
     void this.load('fire', fireUrl);
     void this.load('buzz', buzzUrl);
     void this.load('quake', quakeUrl);
+    void this.load('prayer', prayerUrl);
     void this.load('hammer', hammerUrl);
     void this.load('lightning', lightningUrl);
     void this.load('saw', sawUrl);
@@ -182,6 +186,21 @@ export class Soundscape {
       if (k > best && sim.tribes[v.tribeId]?.village.byId(a.structureId)?.kind !== 'grave') best = k;
     }
     return best;
+  }
+
+  /** 0..1: how loud the prayers near where the camera looks are (at a rite or on holy ground). */
+  private prayingNear(sim: Sim): number {
+    let best = 0;
+    let n = 0;
+    for (const v of sim.villagers.alive) {
+      const a = v.action;
+      if ((a?.kind !== 'ritual' && a?.kind !== 'pilgrimage') || a.ritual !== 'pray' || a.phase !== 'work') continue;
+      const k = this.hearing(v.x, v.z, 35);
+      if (k <= 0) continue;
+      n++;
+      best = Math.max(best, k);
+    }
+    return best * Math.min(1, 0.55 + n * 0.09);
   }
 
   /** Let a playing recording die away over about `seconds`, then stop it. */
@@ -324,6 +343,16 @@ export class Soundscape {
       g.gain.setTargetAtTime(1.6 * this.hearing(w.x, w.z, 30), this.ctx.currentTime, 0.25);
     }
 
+    // People praying near where the camera looks chant to the god, a little louder the more of them.
+    const prayer = running ? this.prayingNear(sim) : 0;
+    if (prayer > 0.03) {
+      if (!this.chant) this.chant = this.sample('prayer', 0, { loop: true, offset: Math.random() * 30 });
+      this.chant?.gain.setTargetAtTime(prayer * 0.7, this.ctx.currentTime, 0.6);
+    } else if (this.chant) {
+      this.fadeOut(this.chant, 2.5);
+      this.chant = null;
+    }
+
     // Hammering and sawing from the nearest building site at work, louder the closer the camera.
     const near = running ? this.buildingNear(sim) : 0;
     if (near > 0.03) {
@@ -375,6 +404,8 @@ export class Soundscape {
         if (this.ok('swell', 1)) this.swell();
         break;
       case 'ritual':
+        // Prayer has its chant (once loaded); drums are for the other rites.
+        if (e.activity === 'pray' && this.samples.has('prayer')) break;
         if (this.ok('drums', 3)) this.drums();
         break;
       case 'flood':
