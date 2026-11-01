@@ -1,6 +1,7 @@
 import type { SimEvent } from '../sim/events';
 import type { Sim } from '../sim/Sim';
 import asteroidUrl from './sounds/asteroid.mp3?url';
+import babyUrl from './sounds/baby-crying.mp3?url';
 import buzzUrl from './sounds/buzzing.mp3?url';
 import danceUrl from './sounds/dance.mp3?url';
 import fireUrl from './sounds/blazing-fire.mp3?url';
@@ -26,8 +27,8 @@ import waveUrl from './sounds/ocean-wave.mp3?url';
  * decoded, the synthesized one plays. Building sites near where the camera looks
  * ring with hammering and sawing, people praying there chant, people dancing there
  * have a tune, and a raid fighting
- * there clashes; a war horn sounds when war comes and when a war party sets out
- * (recorded only). While the god's sickness is abroad, the sick
+ * there clashes; a war horn sounds when war comes and when a war party sets out,
+ * and a newborn cries (recorded only). While the god's sickness is abroad, the sick
  * cough (recorded only: nothing plays until they load).
  * Reads the sim, never changes it. Starts on the first click or key (browsers
  * don't allow sound before that).
@@ -115,6 +116,7 @@ export class Soundscape {
     void this.load('quake', quakeUrl);
     void this.load('prayer', prayerUrl);
     void this.load('dance', danceUrl);
+    void this.load('baby', babyUrl);
     void this.load('horn', hornUrl);
     void this.load('swords', swordsUrl);
     void this.load('hammer', hammerUrl);
@@ -443,6 +445,14 @@ export class Soundscape {
       case 'miracleRain':
         if (this.ok('swell', 1)) this.swell();
         break;
+      case 'birth': {
+        // A newborn's first cry, from where it lies: faint from across the island, never missed. Babies come at dawn, often several at once: one cry for them.
+        if (!this.ok('birth', 3)) break;
+        const baby = sim.villagers.byId(e.id);
+        const k = baby ? 0.3 + 0.7 * this.hearing(baby.x, baby.z, 30) : 0.5;
+        this.sample('baby', 0.45 * k, { rate: 0.95 + Math.random() * 0.1 });
+        break;
+      }
       case 'war':
         // War is declared: the horn, at full voice.
         if (this.ok('horn', 4)) this.sample('horn', 0.6);
