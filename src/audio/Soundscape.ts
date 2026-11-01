@@ -1,10 +1,12 @@
 import type { SimEvent } from '../sim/events';
 import type { Sim } from '../sim/Sim';
+import waveUrl from './sounds/ocean-wave.mp3?url';
 
 /**
- * Sound (SPEC §17), all synthesized with WebAudio, no files: wind, sea and birds by
- * time of day; rain; murmuring at the evening fire; drums for rituals; a voice for
+ * Sound (SPEC §17), synthesized with WebAudio: wind, sea and birds by time of day; rain; murmuring at the evening fire; drums for rituals; a voice for
  * each miracle; and, in the Warning, a low drone that builds as the sea draws near.
+ * A few recordings stand in for the synthesized voice once loaded (the tidal wave's
+ * crash); until then, or if one can't be decoded, the synthesized one plays.
  * Reads the sim, never changes it. Starts on the first click or key (browsers
  * don't allow sound before that).
  */
@@ -18,6 +20,8 @@ export class Soundscape {
   private birdTimer = 0;
   /** Real-time stamps of recent one-shots, so 16× doesn't turn into noise. */
   private recent = new Map<string, number>();
+  /** Decoded recordings by name, once loaded. */
+  private samples = new Map<string, AudioBuffer>();
 
   constructor() {
     const start = () => this.start();
@@ -49,6 +53,30 @@ export class Soundscape {
     this.bed('rain', 'highpass', 2400, 0.5);
     this.bed('murmur', 'bandpass', 520, 3);
     this.droneBed();
+    void this.load('wave', waveUrl);
+  }
+
+  private async load(name: string, url: string): Promise<void> {
+    try {
+      const data = await (await fetch(url)).arrayBuffer();
+      this.samples.set(name, await this.ctx!.decodeAudioData(data));
+    } catch {
+      // Keep the synthesized voice.
+    }
+  }
+
+  /** Play a loaded recording; false if it isn't loaded (yet). */
+  private sample(name: string, gain: number): boolean {
+    const buf = this.samples.get(name);
+    if (!buf) return false;
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    src.connect(g).connect(this.master!);
+    src.start();
+    return true;
   }
 
   /** A looping filtered-noise layer whose loudness follows the world. */
@@ -288,8 +316,9 @@ export class Soundscape {
     for (let i = 0; i < 14; i++) this.noiseShot('highpass', 3000, this.env(0.06, 0.005, 0.08, i * 0.35 + Math.random() * 0.2), 0.12, i * 0.35);
   }
 
-  /** Tidal wave: a swell of surf that builds and breaks. */
+  /** Tidal wave: the recorded crash, or a swell of surf that builds and breaks. */
   private surf(): void {
+    if (this.sample('wave', 0.9)) return;
     const ctx = this.ctx!;
     const src = ctx.createBufferSource();
     src.buffer = this.noise;
