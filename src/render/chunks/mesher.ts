@@ -19,6 +19,8 @@ export interface MeshData {
   colors: Float32Array;
   /** Per-vertex 0..1 weight for the season foliage tint. */
   tint: Float32Array;
+  /** Per-vertex (autumn foliage, snow, AO brightness), for the season shading. */
+  season: Float32Array;
   indices: Uint32Array;
 }
 
@@ -39,6 +41,8 @@ function hexToLinear(hex: number): [number, number, number] {
 const LINEAR = MATERIALS.map((m) => hexToLinear(m.color));
 const SOLID = Uint8Array.from(MATERIALS, (m) => (m.solid ? 1 : 0));
 const TINT = MATERIALS.map((m) => m.seasonTint);
+const AUTUMN = MATERIALS.map((m) => (m.autumn ? 1 : 0));
+const SNOW = MATERIALS.map((m) => m.snow);
 const DECOR = Uint8Array.from(MATERIALS, (m) => (m.decor ? 1 : 0));
 const SHORE_FOAM = hexToLinear(0xa9d4e0);
 
@@ -83,6 +87,7 @@ class Builder {
   private nor = new Float32Array(4096 * 3);
   private col = new Float32Array(4096 * 3);
   private tnt = new Float32Array(4096);
+  private ssn = new Float32Array(4096 * 3);
   private idx = new Uint32Array(4096 * 1.5);
   private verts = 0;
   private indices = 0;
@@ -97,11 +102,12 @@ class Builder {
     this.nor = g(this.nor);
     this.col = g(this.col);
     this.tnt = g(this.tnt);
+    this.ssn = g(this.ssn);
     this.idx = g(this.idx);
   }
 
   /** Append a quad; corners are packed xyz in `v` (12 numbers), ao is 4 levels. */
-  quad(v: Float32Array, n: readonly number[], r: number, g: number, b: number, ao: Uint8Array, tint: number): void {
+  quad(v: Float32Array, n: readonly number[], r: number, g: number, b: number, ao: Uint8Array, tint: number, autumn = 0, snow = 0): void {
     if ((this.verts + 4) * 3 > this.pos.length) this.grow();
     const base = this.verts;
     for (let i = 0; i < 4; i++) {
@@ -117,6 +123,9 @@ class Builder {
       this.col[o + 1] = g * k;
       this.col[o + 2] = b * k;
       this.tnt[base + i] = tint;
+      this.ssn[o] = autumn;
+      this.ssn[o + 1] = snow;
+      this.ssn[o + 2] = k;
     }
     this.verts += 4;
     const ix = this.idx;
@@ -139,6 +148,7 @@ class Builder {
       normals: this.nor.slice(0, this.verts * 3),
       colors: this.col.slice(0, this.verts * 3),
       tint: this.tnt.slice(0, this.verts),
+      season: this.ssn.slice(0, this.verts * 3),
       indices: this.idx.slice(0, this.indices),
     };
   }
@@ -328,7 +338,7 @@ export function meshVoxels(col: ColumnVoxels): ColumnMesh {
             verts[k * 3 + 1] = y + c.py;
             verts[k * 3 + 2] = z + c.pz;
           }
-          opaque.quad(verts, fd.f.n, r, g, b, ao, tint);
+          opaque.quad(verts, fd.f.n, r, g, b, ao, tint, AUTUMN[id], SNOW[id]);
         }
       }
     }

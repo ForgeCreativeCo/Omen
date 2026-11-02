@@ -108,7 +108,7 @@ export class Hud {
     const vs = { food: 0, wood: 0, stone: 0 };
     for (const t of sim.tribes) (vs.food += t.village.store.food), (vs.wood += t.village.store.wood), (vs.stone += t.village.store.stone);
     const w = sim.weather;
-    const sky = w.precipitation === 'storm' ? 'Storm' : w.raining ? 'Rain' : w.drought ? 'Drought' : '';
+    const sky = w.precipitation === 'storm' ? 'Storm' : w.raining ? (c.season === 'winter' ? 'Snow' : 'Rain') : w.drought ? 'Drought' : '';
     // Average faith with its love / fear split (SPEC §15).
     let love = 0;
     let fear = 0;

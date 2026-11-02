@@ -32,9 +32,24 @@ const DAY_KEYS: Key[] = [
 const SEASON_TINTS: { tint: number; desat: number; light: number }[] = [
   { tint: 0xe8ffd8, desat: 0.0, light: 0xfff8f0 }, // spring: fresh green
   { tint: 0xfff0b0, desat: 0.05, light: 0xfff2dc }, // summer: gold
-  { tint: 0xffb070, desat: 0.05, light: 0xffe6cc }, // autumn: orange
-  { tint: 0xf4f6ff, desat: 0.55, light: 0xe8f0ff }, // winter: pale
+  { tint: 0xffd8a0, desat: 0.08, light: 0xffe6cc }, // autumn: dry gold (trees turn on their own)
+  { tint: 0xf4f6ff, desat: 0.45, light: 0xe8f0ff }, // winter: pale
 ];
+
+/**
+ * Leaves turn through autumn and die back as winter comes; snow settles early in
+ * winter and melts in the first days of spring, when the trees green again.
+ * @param y 0..1 through the year, 0 = start of spring
+ */
+export function seasonCurves(y: number): { autumn: number; bare: number; snow: number } {
+  const ss = THREE.MathUtils.smoothstep;
+  const late = y >= 0.5;
+  return {
+    autumn: late ? ss(y, 0.5, 0.66) : 0,
+    bare: late ? ss(y, 0.68, 0.8) : 1 - ss(y, 0.02, 0.1),
+    snow: late ? ss(y, 0.76, 0.86) : 1 - ss(y, 0, 0.07),
+  };
+}
 
 const c = (hex: number) => new THREE.Color(hex);
 const tmpA = new THREE.Color();
@@ -64,6 +79,8 @@ export class Environment {
   private cloudMesh: THREE.InstancedMesh | null = null;
   private readonly cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9aa4b4, emissiveIntensity: 0.35, flatShading: true });
   private readonly seasonLight = new THREE.Color(1, 1, 1);
+  /** 0..1 snow on the ground, for snowfall to follow. */
+  snow = 0;
   readonly horizon = new THREE.Color();
 
   constructor() {
@@ -251,5 +268,10 @@ export class Environment {
     lerpHex(s0.tint, s1.tint, t, terrainUniforms.uSeasonTint.value);
     terrainUniforms.uSeasonDesat.value = THREE.MathUtils.lerp(s0.desat, s1.desat, t);
     lerpHex(s0.light, s1.light, t, this.seasonLight);
+
+    const s = seasonCurves(yearFraction);
+    terrainUniforms.uAutumn.value = s.autumn;
+    terrainUniforms.uBare.value = s.bare;
+    terrainUniforms.uSnow.value = this.snow = s.snow;
   }
 }

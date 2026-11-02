@@ -209,6 +209,7 @@ export class TerrainRenderer {
     geo.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(data.colors, 3));
     geo.setAttribute('aTint', new THREE.BufferAttribute(data.tint, 1));
+    geo.setAttribute('aSeason', new THREE.BufferAttribute(data.season, 3));
     geo.setIndex(new THREE.BufferAttribute(data.indices, 1));
     geo.computeBoundingSphere();
     const mesh = new THREE.Mesh(geo, material);

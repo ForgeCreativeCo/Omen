@@ -323,7 +323,9 @@ export class Soundscape {
     const flood = sim.warning && sim.warning.disaster.phase === 'striking' ? 1 : 0;
     this.level('wind', 0.05 + 0.05 * night + 0.22 * storm);
     this.level('sea', 0.07 + 0.2 * flood);
-    this.level('rain', raining ? (storm ? 0.32 : 0.16) : 0);
+    // Snow falls quietly; a winter storm is still heard.
+    const snow = cal.season === 'winter';
+    this.level('rain', raining ? (storm ? 0.32 : snow ? 0 : 0.16) : 0);
     const gathered = sim.villagers.alive.filter((v) => v.action?.kind === 'gathering' && v.action.phase === 'work').length;
     this.level('murmur', running ? Math.min(0.14, gathered * 0.006) : 0);
     // The Warning: a drone that starts ~40 years out and swells to the flood.

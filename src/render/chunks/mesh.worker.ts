@@ -14,7 +14,7 @@ export interface MeshResponse {
 }
 
 const transferables = (m: MeshData | null): ArrayBuffer[] =>
-  m ? [m.positions, m.normals, m.colors, m.tint, m.indices].map((a) => a.buffer as ArrayBuffer) : [];
+  m ? [m.positions, m.normals, m.colors, m.tint, m.season, m.indices].map((a) => a.buffer as ArrayBuffer) : [];
 
 self.onmessage = (e: MessageEvent<MeshRequest>) => {
   const { key, version, column } = e.data;

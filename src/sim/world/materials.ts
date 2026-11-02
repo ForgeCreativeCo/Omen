@@ -26,6 +26,10 @@ export interface MaterialDef {
   burnsTo: MaterialId | null;
   /** 0..1, how strongly the season foliage tint applies when rendered. */
   seasonTint: number;
+  /** Deciduous foliage: turns colour in autumn and browns over winter. */
+  autumn: boolean;
+  /** 0..1, how much snow settles on its top in winter. */
+  snow: number;
   /** Growth stage for crop materials (1-based), 0 otherwise. */
   cropStage: number;
   /** Small decorative voxel (flowers): drawn as a little cube, never blocks anything. */
@@ -80,6 +84,8 @@ const DEFAULTS: Omit<MaterialDef, 'id' | 'name' | 'color'> = {
   fertility: 0,
   burnsTo: null,
   seasonTint: 0,
+  autumn: false,
+  snow: 1,
   cropStage: 0,
   decor: false,
 };
@@ -108,7 +114,7 @@ export const MATERIALS: readonly MaterialDef[] = [
   def(M.SAND, 'sand', 0xdcc995, { fertility: 0.1 }),
   def(M.WATER, 'water', 0x4f8fb3, { solid: false, liquid: true, walkable: false }),
   def(M.WOOD, 'wood', 0x6b4a2f, { walkable: false, flammability: 0.45, burnsTo: M.ASH }),
-  def(M.LEAVES, 'leaves', 0x5f9440, { walkable: false, passable: true, flammability: 0.6, burnsTo: M.AIR, seasonTint: 1.2 }),
+  def(M.LEAVES, 'leaves', 0x5f9440, { walkable: false, passable: true, flammability: 0.6, burnsTo: M.AIR, seasonTint: 1.2, autumn: true }),
   def(M.PINE_LEAVES, 'pineLeaves', 0x3f6b45, { walkable: false, passable: true, flammability: 0.5, burnsTo: M.AIR, seasonTint: 0.25 }),
   crop(1, 0x8fae5a),
   crop(2, 0x9fbf4f),
@@ -120,7 +126,7 @@ export const MATERIALS: readonly MaterialDef[] = [
   def(M.MARKER_STONE, 'markerStone', 0xb3aea3),
   def(M.SHRINE_STONE, 'shrineStone', 0xd8cdb4),
   def(M.STATUE_STONE, 'statueStone', 0xc4c0b8, { walkable: false }),
-  def(M.EMBER, 'ember', 0xff7a2a, { walkable: false }),
+  def(M.EMBER, 'ember', 0xff7a2a, { walkable: false, snow: 0 }),
   def(M.FLOWER_RED, 'flowerRed', 0xe0607a, { solid: false, walkable: false, passable: true, decor: true, flammability: 0.3, burnsTo: M.AIR }),
   def(M.FLOWER_GOLD, 'flowerGold', 0xf2c94c, { solid: false, walkable: false, passable: true, decor: true, flammability: 0.3, burnsTo: M.AIR }),
   // Statue accents (SPEC §11): element colors and gold eyes; ruins weather to mossy stone.

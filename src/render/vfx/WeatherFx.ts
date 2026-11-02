@@ -7,12 +7,13 @@ import { M } from '../../sim/world/materials';
 
 const FIRE_PARTICLES = 700;
 const RAIN_DROPS = 1600;
+const SNOW_FLAKES = 1400;
 /** Glowing fires at most (one per people); a fixed set, so new peoples don't recompile the shaders. */
 const PIT_LIGHTS = 6;
 
 /**
  * Environmental effects driven by sim state: flames and embers (burning voxels and
- * fire pits), the fire-pit glow at night, rain streaks, storm darkening, and
+ * fire pits), the fire-pit glow at night, rain streaks (snowflakes in winter), storm darkening, and
  * lightning bolts with a flash. Visual-only randomness uses its own stream.
  */
 export class WeatherFx {
@@ -30,6 +31,11 @@ export class WeatherFx {
   private readonly rain: THREE.LineSegments;
   private readonly rainPos = new Float32Array(RAIN_DROPS * 6);
   private rainAmount = 0;
+  // Snow: winter's rain
+  private readonly snow: THREE.Points;
+  private readonly snowPos = new Float32Array(SNOW_FLAKES * 3);
+  /** 0..1, how far precipitation has turned to snow, smoothed. */
+  private snowMix = 0;
   /** 0..1 how overcast it looks (rain/storm), smoothed. */
   overcast = 0;
   // Lightning
@@ -68,6 +74,22 @@ export class WeatherFx {
     this.rain.frustumCulled = false;
     for (let i = 0; i < RAIN_DROPS; i++) this.resetDrop(i, true);
     this.group.add(this.rain);
+
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute('position', new THREE.BufferAttribute(this.snowPos, 3).setUsage(THREE.DynamicDrawUsage));
+    this.snow = new THREE.Points(
+      sg,
+      new THREE.PointsMaterial({ color: 0xf4f8ff, size: 0.55, transparent: true, opacity: 0.9, depthWrite: false }),
+    );
+    this.snow.frustumCulled = false;
+    for (let i = 0; i < SNOW_FLAKES; i++) this.resetFlake(i, true);
+    this.group.add(this.snow);
+  }
+
+  private resetFlake(i: number, anyHeight: boolean): void {
+    const r = Math.sqrt(this.rng.next()) * 60;
+    const a = this.rng.range(0, Math.PI * 2);
+    this.snowPos.set([Math.cos(a) * r, anyHeight ? this.rng.range(0, 60) : this.rng.range(50, 62), Math.sin(a) * r], i * 3);
   }
 
   private resetDrop(i: number, anyHeight: boolean): void {
@@ -160,7 +182,9 @@ export class WeatherFx {
     const target = sim.weather.precipitation === 'storm' ? 1 : sim.weather.raining ? 0.6 : 0;
     this.rainAmount += (target - this.rainAmount) * Math.min(1, dt * 1.5);
     this.overcast = this.rainAmount;
-    this.rain.visible = this.rainAmount > 0.02;
+    this.snowMix += ((sim.calendar.season === 'winter' ? 1 : 0) - this.snowMix) * Math.min(1, dt * 0.5);
+    this.updateSnow(sim, dt, time, this.rainAmount * this.snowMix);
+    this.rain.visible = this.rainAmount * (1 - this.snowMix) > 0.02;
     if (this.rain.visible) {
       const active = Math.floor(RAIN_DROPS * this.rainAmount);
       const fall = 38 * dt;
@@ -181,7 +205,7 @@ export class WeatherFx {
         if (this.rainPos[o + 1]! < 5) this.resetDrop(i, false);
       }
       (this.rain.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-      (this.rain.material as THREE.LineBasicMaterial).opacity = 0.25 + 0.3 * this.rainAmount;
+      (this.rain.material as THREE.LineBasicMaterial).opacity = (0.25 + 0.3 * this.rainAmount) * (1 - this.snowMix);
     }
 
     // ---- bolts
@@ -197,6 +221,31 @@ export class WeatherFx {
     this.bolts.splice(0, this.bolts.length, ...this.bolts.filter((b) => b.t > 0));
     this.flash = Math.max(0, this.flash - dt * 4);
     this.shake = Math.max(0, this.shake - dt * 3);
+  }
+
+  /** Flakes drift down slowly on the wind, each swaying on its own. */
+  private updateSnow(sim: Sim, dt: number, time: number, amount: number): void {
+    this.snow.visible = amount > 0.02;
+    if (!this.snow.visible) return;
+    const active = Math.floor(SNOW_FLAKES * Math.min(1, amount * 1.4));
+    const wind = sim.weather.windStrength * 3;
+    const wx = Math.cos(sim.weather.windAngle) * wind;
+    const wz = Math.sin(sim.weather.windAngle) * wind;
+    for (let i = 0; i < SNOW_FLAKES; i++) {
+      const o = i * 3;
+      if (i >= active) {
+        this.snowPos[o + 1] = -999;
+        continue;
+      }
+      if (this.snowPos[o + 1]! < -900) this.resetFlake(i, true);
+      const sway = Math.sin(time * 1.3 + i * 0.7);
+      this.snowPos[o] = this.snowPos[o]! + (wx + sway * 0.8) * dt;
+      this.snowPos[o + 1] = this.snowPos[o + 1]! - (3.2 + (i % 7) * 0.25) * dt;
+      this.snowPos[o + 2] = this.snowPos[o + 2]! + (wz + Math.cos(time * 1.1 + i) * 0.8) * dt;
+      if (this.snowPos[o + 1]! < 5) this.resetFlake(i, false);
+    }
+    (this.snow.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+    (this.snow.material as THREE.PointsMaterial).opacity = 0.9 * Math.min(1, amount * 2);
   }
 
   private onEvent(e: SimEvent): void {
