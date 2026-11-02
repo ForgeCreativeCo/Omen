@@ -173,6 +173,18 @@ export class OmenRecorder {
           sky: 16,
         });
         break;
+      case 'created':
+        this.record({
+          kind: 'created',
+          isDivine: true,
+          position: { x: e.x, y: surfaceY(sim, Math.floor(e.x), Math.floor(e.z)), z: e.z },
+          radius: TUNING.miracles.create.radius,
+          magnitude: 0.7,
+          outcomes: [],
+          range: TUNING.miracles.create.range,
+          sky: 4,
+        });
+        break;
       case 'holyLight':
         this.record({
           kind: 'light',

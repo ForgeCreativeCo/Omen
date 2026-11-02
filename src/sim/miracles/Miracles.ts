@@ -100,6 +100,7 @@ export class Miracles {
     dream: 0,
     light: 0,
     hallow: 0,
+    create: 0,
     bless: 0,
     anoint: 0,
     blight: 0,
@@ -233,6 +234,7 @@ export class Miracles {
           else if (cmd.miracle === 'bloom') this.bloom(cmd.x, cmd.z);
           else if (cmd.miracle === 'light') this.light(cmd.x, cmd.z);
           else if (cmd.miracle === 'hallow') this.hallow(cmd.x, cmd.z);
+          else if (cmd.miracle === 'create') this.create(cmd.x, cmd.z);
           else if (cmd.miracle === 'blight') this.blight(cmd.x, cmd.z);
           else if (cmd.miracle === 'quake') this.wrath.quake(cmd.x, cmd.z);
           else if (cmd.miracle === 'firestorm') this.wrath.firestorm(cmd.x, cmd.z);
@@ -305,6 +307,7 @@ export class Miracles {
   /** Point miracles that need something there: a sea to send, someone to sicken. */
   private castCheck(id: PointMiracle, x: number, z: number): CastFailure | null {
     if (id === 'wave' && !this.wrath.shoreNear(x, z)) return 'shore';
+    if (id === 'create' && !this.createPlan(x, z)) return 'target';
     if (id === 'plague' && !this.sim.villagers.alive.some((v) => Math.hypot(v.x - x, v.z - z) <= MT.plague.radius * 3)) return 'target';
     return null;
   }
@@ -490,6 +493,29 @@ export class Miracles {
     const h: Hallowed = { id: this.nextCloudId++, x, z, radius: H.radius, ticksLeft: H.durationDays * TICKS_PER_DAY };
     this.hallows.push(h);
     this.sim.events.push(this.sim.tick, { type: 'hallow', id: h.id, x, z, radius: h.radius });
+  }
+
+  /** Where the god's couple would stand and go: on open ground, to a people or to found one. */
+  private createPlan(x: number, z: number) {
+    const at = { x: Math.floor(x), z: Math.floor(z) };
+    if (this.sim.nav.at(at.x, at.z) < 0 || this.sim.structureAt(at.x, at.z)) return null;
+    const plan = this.sim.castaways.plan(at, MT.create.joinRadius);
+    return plan && { at, plan };
+  }
+
+  /** A man and a woman, grown, rise from the earth: a couple who know who made them. */
+  private create(x: number, z: number): void {
+    const sim = this.sim;
+    const c = this.createPlan(x, z);
+    if (!c) return;
+    const age = this.rng.range(18, 22);
+    const woman = sim.villagers.spawn({ age, sex: 'f', x: c.at.x, z: c.at.z, tribeId: -1 });
+    const man = sim.villagers.spawn({ age: age + this.rng.range(0, 3), sex: 'm', x: c.at.x, z: c.at.z, tribeId: -1 });
+    woman.partnerId = man.id;
+    man.partnerId = woman.id;
+    for (const v of [woman, man]) v.faith = { love: this.rng.range(0.6, 0.8), fear: this.rng.range(0.1, 0.25) };
+    const t = sim.castaways.settle([woman, man], c.at, c.plan, 'created', MT.create.foodDays);
+    sim.events.push(sim.tick, { type: 'created', ids: [woman.id, man.id], x: c.at.x + 0.5, z: c.at.z + 0.5, tribe: t.id, founded: 'found' in c.plan });
   }
 
   /** The opposite of Bloom: crops wither, flowers go, grass dies back to bare earth. */

@@ -9,6 +9,7 @@ export type OmenKind =
   | 'dream'
   | 'light'
   | 'hallow'
+  | 'created'
   | 'blessing'
   | 'blessField'
   | 'blessHome'

@@ -516,6 +516,7 @@ export class Soundscape {
         break;
       case 'holyLight':
       case 'hallow':
+      case 'created':
         if (this.ok('choir', 2)) this.choir();
         break;
       case 'anointed':

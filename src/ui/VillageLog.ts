@@ -194,7 +194,12 @@ export class VillageLog {
         return this.push(e.tick, 'faith', `${e.ids.map(w).join(', ')} turned back from the hallowed ground.`);
       case 'voyage':
         return this.push(e.tick, 'life', `${e.ids.map(w).join(', ')} set out to settle an island.`);
+      case 'castaways':
+        return this.push(e.tick, 'life', `${e.ids.slice(0, -1).map(w).join(', ')} and ${w(e.ids.at(-1)!)} came ashore from a wreck${e.founded ? `, and became <b>${sim.tribes[e.tribe]?.name ?? 'a new people'}</b>` : `, and went to live with ${sim.tribes[e.tribe]?.name ?? 'the people'}`}.`);
+      case 'created':
+        return this.push(e.tick, 'faith', `${e.ids.map(w).join(' and ')} rose from the earth, made by the god${e.founded ? `: the first of <b>${sim.tribes[e.tribe]?.name ?? 'a new people'}</b>` : `, and went to live with ${sim.tribes[e.tribe]?.name ?? 'the people'}`}.`);
       case 'tribeFounded':
+        if (e.reason === 'castaways' || e.reason === 'created') return;
         if (e.reason === 'settlers') return this.push(e.tick, 'life', `<b>${e.name}</b> came ashore on an island off the coast${e.leaderId >= 0 ? `, led by ${w(e.leaderId)}` : ''}.`);
         if (e.reason === 'hallowed') return this.push(e.tick, 'faith', `<b>${e.name}</b> settled the hallowed ground${e.leaderId >= 0 ? `, led by ${w(e.leaderId)}` : ''}: kin of ${sim.tribes[e.from]?.name ?? 'their people'}, with the old faith.`);
         return this.push(e.tick, 'life', `<b>${e.name}</b> broke away${e.leaderId >= 0 ? `, led by ${w(e.leaderId)},` : ''} and settled in ${REGION_TEXT[sim.island.region[e.x + e.z * sim.world.sizeX] ?? 0] ?? 'new country'}.`);

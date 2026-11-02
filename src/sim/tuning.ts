@@ -472,6 +472,18 @@ export const TUNING = {
       /** Belief planted in a witness each day they see it (more for the devout, less for skeptics). */
       sightStrength: 0.22,
     },
+    /** Create: a man and a woman rise from the earth, grown and already a couple. */
+    create: {
+      cost: 45,
+      cooldownDays: 3,
+      radius: 2,
+      /** Seen from this far (a glow rises where they stand up). */
+      range: 40,
+      /** Nearer a people's fire than this, they join it; farther, they found a people of their own. */
+      joinRadius: 40,
+      /** Days of food the god leaves a new people (they have fields to plant first). */
+      foodDays: 30,
+    },
     /** Bless: one villager restored; people close by see the glow and feel it a little. */
     bless: {
       cost: 15,
@@ -923,6 +935,23 @@ export const TUNING = {
     foodDays: 30,
     /** An islet whose settlers die out this soon is never tried again. */
     failedYears: 10,
+  },
+
+  /** Castaways: a boat wrecked on the coast, its survivors come ashore. */
+  castaways: {
+    /** Chance a day while anyone lives (and not within restYears of the last), and on an empty island. */
+    chancePerDay: 0.012,
+    emptyChancePerDay: 0.15,
+    restYears: 3,
+    /** How many come ashore (always at least a young man and woman). */
+    partyMin: 2,
+    partyMax: 5,
+    /** Chance the first two came as a couple. */
+    coupleChance: 0.5,
+    /** Days of food they save from the wreck, if they must make a home of their own. */
+    foodDays: 20,
+    /** How far from the landing they look for ground to settle. */
+    settleRadius: 30,
   },
 
   /** How a people answers a cruel god (dread, great offerings, sacrifice, defiance, rivalry). */

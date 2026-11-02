@@ -2,10 +2,10 @@ import { TICKS_PER_DAY } from '../time';
 import { TUNING } from '../tuning';
 
 /** The miracles (SPEC §6, plus the later powers), as data: UI and casting both read from here. */
-export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'hallow' | 'bless' | 'anoint' | 'blight' | 'meteor' | 'cataclysm' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm' | 'hand';
+export type MiracleId = 'rain' | 'lightning' | 'shapeEarth' | 'bloom' | 'dream' | 'light' | 'hallow' | 'create' | 'bless' | 'anoint' | 'blight' | 'meteor' | 'cataclysm' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm' | 'hand';
 
 /** Miracles cast by tapping a point on the ground. */
-export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'hallow' | 'blight' | 'meteor' | 'cataclysm' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm';
+export type PointMiracle = 'rain' | 'lightning' | 'bloom' | 'light' | 'hallow' | 'create' | 'blight' | 'meteor' | 'cataclysm' | 'quake' | 'firestorm' | 'wave' | 'plague' | 'swarm';
 
 export type Targeting =
   /** Tap a point on the ground. */
@@ -108,6 +108,17 @@ export const MIRACLES: readonly MiracleDef[] = [
     radius: MT.hallow.radius,
     nightOnly: false,
     key: '6',
+  },
+  {
+    id: 'create',
+    name: 'Create',
+    blurb: 'A man and a woman rise from the earth where you point, grown and already a couple. Near a village they go to live there; on empty ground they become a people of their own.',
+    targeting: 'point',
+    cost: MT.create.cost,
+    cooldownTicks: MT.create.cooldownDays * TICKS_PER_DAY,
+    radius: MT.create.radius,
+    nightOnly: false,
+    key: '9',
   },
   {
     id: 'bless',

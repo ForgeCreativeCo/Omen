@@ -135,8 +135,8 @@ export class GoalsPanel {
     const sim = this.sim;
     const m = sim.miracles;
     const alive = sim.villagers.alive;
-    if (!alive.length) return '';
     const ready = (id: Parameters<typeof m.check>[0]) => m.check(id) === null;
+    if (!alive.length) return sim.warning ? '' : `No one is left. <b>Create</b> (9) raises a man and a woman from the earth to begin again${ready('create') ? '' : ' when you have the Grace'}. Or wait: the sea brings castaways to an empty shore.`;
     if (sim.warning?.disaster.phase === 'striking') return 'The sea is rising. Watch where they run.';
     if (sim.fire.burning.size > 0 && ready('rain')) return 'Something is burning. <b>Rain</b> (R) puts it out.';
     const raid = sim.war.raids[0];

@@ -33,6 +33,7 @@ export const BASE_VALENCE: Record<OmenKind, number> = {
   drought: -0.5,
   light: 0.45,
   hallow: 0.5,
+  created: 0.6,
   blessing: 0.5,
   blessField: 0.5,
   blessHome: 0.5,

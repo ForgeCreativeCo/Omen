@@ -13,6 +13,8 @@ import type { ExodusReason } from './exodus';
 import type { PrayerEnd, PrayerKind } from './prayers';
 import type { MessiahDeath } from './messiah';
 import type { Crime, Judge, Sentence } from './justice';
+/** Why a new people formed: split off from one, sailed or called away from one, or strangers to the island. */
+export type TribeFoundedReason = 'schism' | 'exiles' | 'settlers' | 'hallowed' | 'castaways' | 'created';
 export type DissentEndReason = 'converted' | 'recanted' | 'discredited' | 'died' | 'gone';
 
 export type SimEventBody =
@@ -98,8 +100,12 @@ export type SimEventBody =
   | { type: 'battle'; raid: number; from: number; to: number; x: number; z: number }
   | { type: 'slain'; killer: number; victim: number; raid: number; x: number; z: number }
   | { type: 'raidEnd'; raid: number; from: number; to: number; loot: number; burned: boolean; raidersLost: number; defendersLost: number; captives?: number }
-  /** A new people: `from` is the tribe they broke away from. */
-  | { type: 'tribeFounded'; id: number; name: string; from: number; reason: 'schism' | 'exiles' | 'settlers' | 'hallowed'; leaderId: number; x: number; z: number }
+  /** A new people: `from` is the tribe they broke away from (-1 for strangers). */
+  | { type: 'tribeFounded'; id: number; name: string; from: number; reason: TribeFoundedReason; leaderId: number; x: number; z: number }
+  /** Survivors of a wreck came ashore: they joined `tribe`, or `founded` it. */
+  | { type: 'castaways'; ids: number[]; x: number; z: number; tribe: number; founded: boolean }
+  /** The god made a man and a woman from the earth: they joined `tribe`, or `founded` it. */
+  | { type: 'created'; ids: number[]; x: number; z: number; tribe: number; founded: boolean }
   /** Believers set out from their people for hallowed ground, to found a people there. */
   | { type: 'anointed'; id: number; x: number; z: number; witnesses: number[] }
   | { type: 'messiahCredited'; id: number; kind: string; omenId: string }

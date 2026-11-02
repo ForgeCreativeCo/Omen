@@ -1,6 +1,6 @@
 import type { BeliefSystem } from './belief/BeliefSystem';
 import type { BeliefEffects } from './belief/effects';
-import { EventLog, type DeathCause } from './events';
+import { EventLog, type DeathCause, type TribeFoundedReason } from './events';
 import type { MythSystem } from './myth/Myth';
 import type { Milestones } from './milestones';
 import type { Dissent } from './dissent';
@@ -8,6 +8,7 @@ import { Society } from './society';
 import { War } from './war';
 import { Plague } from './plague';
 import { Boats } from './boats';
+import { Castaways } from './castaways';
 import { Paths } from './paths';
 import { Branching } from './branching';
 import { Prayers } from './prayers';
@@ -84,6 +85,8 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
   readonly plague: Plague;
   /** Settlers sailing for the islets. */
   readonly boats: Boats;
+  /** Strangers wrecked on the coast. */
+  readonly castaways: Castaways;
   /** Paths worn by feet. */
   readonly paths: Paths;
   /** Hallowed ground, and believers leaving to found daughter peoples there. */
@@ -130,6 +133,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     this.branching = new Branching(this, this.rng.fork('branching'));
     this.prayers = new Prayers(this, this.rng.fork('prayers'));
     this.messiah = new Messiah(this, this.rng.fork('messiah'));
+    this.castaways = new Castaways(this, this.rng.fork('castaways'));
     this.tribes.push(new Tribe(this, 0, 'the first people', this.island.landmarks.villageSite));
     this.mode = opts.mode ?? 'sandbox';
     this.warning = this.mode === 'warning' ? new WarningScenario(this, opts.floodInYears) : null;
@@ -274,25 +278,32 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
    * a share of the stores and the beliefs they hold. They camp around a new fire
    * and raise homes. Returns the new tribe.
    */
-  foundTribe(people: Villager[], site: { x: number; y: number; z: number }, opts: { reason: 'schism' | 'exiles' | 'settlers' | 'hallowed'; leaderId?: number; priestId?: number }): Tribe {
+  foundTribe(
+    people: Villager[],
+    site: { x: number; y: number; z: number },
+    opts: { reason: TribeFoundedReason; leaderId?: number; priestId?: number; strangers?: boolean },
+  ): Tribe {
     // Through a people's view this runs on that view; the tribes and the world are the real sim's.
     const root = this.tribes[0]!.sim;
-    const from = root.tribes[people[0]?.tribeId ?? 0] ?? root.tribes[0]!;
+    // Strangers (castaways, the god's made people) come from no people here: no stores, no faith, no name for the god.
+    const from = opts.strangers ? null : (root.tribes[people[0]?.tribeId ?? 0] ?? root.tribes[0]!);
     const id = root.tribes.length;
     const leader = opts.leaderId !== undefined ? root.villagers.byId(opts.leaderId) : undefined;
     const t = new Tribe(root, id, tribeName(root.rng.fork(`tribe:${id}`), root.island.region[site.x + site.z * root.world.sizeX] ?? 0, leader?.name, root.tribes.map((x) => x.name)), site);
     root.tribes.push(t);
     // Their share of the stores.
-    const share = people.length / Math.max(1, from.members.length);
-    for (const k of ['food', 'wood', 'stone'] as const) {
-      const take = from.village.store[k] * share;
-      from.village.store[k] -= take;
-      t.village.store[k] = take;
+    if (from) {
+      const share = people.length / Math.max(1, from.members.length);
+      for (const k of ['food', 'wood', 'stone'] as const) {
+        const take = from.village.store[k] * share;
+        from.village.store[k] -= take;
+        t.village.store[k] = take;
+      }
+      t.belief.adopt(from.belief, people);
+      t.myth.godName = from.myth.godName;
     }
-    t.belief.adopt(from.belief, people);
-    t.myth.godName = from.myth.godName;
     for (const p of people) {
-      const home = p.homeId >= 0 ? from.village.byId(p.homeId) : undefined;
+      const home = from && p.homeId >= 0 ? from.village.byId(p.homeId) : undefined;
       if (home) home.residents = home.residents.filter((r) => r !== p.id);
       p.homeId = -1;
       p.inside = false;
@@ -310,7 +321,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
     t.village.found(t.view, 1, 2);
     t.village.rebuilding = true;
     root.villagers.newDayRolesAndHomes();
-    root.events.push(root.tick, { type: 'tribeFounded', id, name: t.name, from: from.id, reason: opts.reason, leaderId: opts.leaderId ?? -1, x: site.x, z: site.z });
+    root.events.push(root.tick, { type: 'tribeFounded', id, name: t.name, from: from?.id ?? -1, reason: opts.reason, leaderId: opts.leaderId ?? -1, x: site.x, z: site.z });
     return t;
   }
 
@@ -389,6 +400,7 @@ export class Sim implements WeatherHost, FireHost, VillageHost {
       this.war.dawn();
       this.plague.dawn();
       this.boats.dawn();
+      this.castaways.dawn();
       this.branching.dawn();
       this.prayers.dawn();
       this.messiah.dawn();

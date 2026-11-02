@@ -94,6 +94,7 @@ const RESPONSE_WORD: Record<string, string> = {
   bloom: 'a blooming',
   light: 'the pillar of light',
   hallow: 'the glowing ground',
+  created: 'the making of people',
   blessing: 'a blessing',
   blessField: 'the blessed field',
   blessHome: 'the blessed home',

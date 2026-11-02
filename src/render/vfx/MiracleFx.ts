@@ -345,6 +345,15 @@ export class MiracleFx {
         this.burst(e.x + ox, y + 1.2, e.z + oz, 40, 2.2, [0xffe7a0, 0xfff7da], 1.2, -0.8);
         break;
       }
+      case 'created': {
+        // The earth heaves and two stand up out of it, in a column of light.
+        const y = sim.world.topY(Math.floor(e.x), Math.floor(e.z)) + 1;
+        for (let i = 0; i < 14; i++) this.dustAt(e.x + ox + this.rng.jitter(1.6), y, e.z + oz + this.rng.jitter(1.6));
+        this.pillars.push({ outer: this.beamMesh(0xffe2a0, 0.3), inner: this.beamMesh(0xffffff, 0.6), x: e.x, z: e.z, age: 0, life: 3.5, follow: -1 });
+        this.burst(e.x + ox, y + 1, e.z + oz, 160, 3, [0xfff2c2, 0xb8e08a, 0xffffff], 1.8, -0.6);
+        this.shake = Math.max(this.shake, 0.2);
+        break;
+      }
       case 'anointed':
       case 'messiahRisen': {
         const risen = e.type === 'messiahRisen';

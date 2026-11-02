@@ -134,7 +134,20 @@ export class Toasts {
         return `${e.ids.length} of ${sim.tribes[e.tribe]?.name ?? 'a people'} are going down to the shore, to sail for an island.`;
       case 'setSail':
         return `A boat puts to sea from the land of ${sim.tribes[e.tribe]?.name ?? 'a people'}.`;
+      case 'castaways': {
+        const all = e.ids.map(who);
+        const names = all.length > 1 ? `${all.slice(0, -1).join(', ')} and ${all.at(-1)}` : all.join('');
+        if (e.founded) return `<b>A boat was wrecked on the coast.</b> ${names} came ashore to an empty land, and make a home of their own: ${sim.tribes[e.tribe]?.name ?? 'a new people'}.`;
+        return `<b>A boat was wrecked on the coast.</b> ${names} came ashore, strangers, and go to live with ${sim.tribes[e.tribe]?.name ?? 'the people'}.`;
+      }
+      case 'created': {
+        const [a, b] = e.ids;
+        if (e.founded) return `<b>From the earth you made ${who(a!)} and ${who(b!)}.</b> They are the first of a new people: ${sim.tribes[e.tribe]?.name ?? 'a new people'}.`;
+        return `<b>From the earth you made ${who(a!)} and ${who(b!)}.</b> They go to live with ${sim.tribes[e.tribe]?.name ?? 'the people'}.`;
+      }
       case 'tribeFounded': {
+        // Strangers have their own notice.
+        if (e.reason === 'castaways' || e.reason === 'created') return null;
         const from = sim.tribes[e.from];
         if (e.reason === 'settlers') return `<b>A new people:</b> ${e.name}, sailed from ${from?.name ?? 'the main island'}, have settled an island off the coast.`;
         if (e.reason === 'hallowed') {

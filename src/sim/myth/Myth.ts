@@ -65,6 +65,7 @@ const WONDER_PAST: Record<string, string> = {
   bloom: 'the fields bloomed',
   light: 'light came down from heaven',
   hallow: 'the ground shone',
+  created: 'a man and a woman rose from the earth',
   blessing: 'the sick were made whole',
   blessField: 'the grain grew heavy',
   blessHome: 'a house was blessed',
@@ -83,6 +84,7 @@ const FAMILY: Partial<Record<OmenKind, string>> = {
   drought: 'drought',
   light: 'light',
   hallow: 'light',
+  created: 'created',
   blessing: 'blessing',
   blessField: 'bloom',
   blessHome: 'blessing',
@@ -105,6 +107,7 @@ const TRUE_NAME: Record<OmenKind, string> = {
   dream: 'your Dream',
   light: 'your Holy Light',
   hallow: 'your Hallow',
+  created: 'your Creation',
   blessing: 'your Blessing',
   blessField: 'your Blessing on a field',
   blessHome: 'your Blessing on a home',
@@ -420,7 +423,7 @@ export class MythSystem {
     else if (o.kind === 'storm' && f.deaths) reason = 'storm';
     else if (o.kind === 'rain') reason = 'rain';
     else if (o.kind === 'bloom') reason = 'bloom';
-    else if (o.kind === 'light') reason = 'sacred';
+    else if (o.kind === 'light' || o.kind === 'created') reason = 'sacred';
     else if (o.kind === 'hallow') {
       // The god marked out this ground: it's a place now, with a name.
       this.hallowedSite(o.position.x, o.position.z, Math.max(4, o.radius));
