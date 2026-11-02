@@ -38,16 +38,18 @@ const SEASON_TINTS: { tint: number; desat: number; light: number }[] = [
 
 /**
  * Leaves turn through autumn and die back as winter comes; snow settles early in
- * winter and melts in the first days of spring, when the trees green again.
+ * winter. Both are gone by the end of it, so spring (and a new game) opens green.
  * @param y 0..1 through the year, 0 = start of spring
  */
 export function seasonCurves(y: number): { autumn: number; bare: number; snow: number } {
   const ss = THREE.MathUtils.smoothstep;
-  const late = y >= 0.5;
+  // The thaw, and the trees budding, in winter's last days. (Autumn colour lets go
+  // while the trees are still bare, so it never shows again on the way back to green.)
+  const thaw = 1 - ss(y, 0.93, 0.99);
   return {
-    autumn: late ? ss(y, 0.5, 0.66) : 0,
-    bare: late ? ss(y, 0.68, 0.8) : 1 - ss(y, 0.02, 0.1),
-    snow: late ? ss(y, 0.76, 0.86) : 1 - ss(y, 0, 0.07),
+    autumn: ss(y, 0.5, 0.66) * (1 - ss(y, 0.88, 0.92)),
+    bare: ss(y, 0.68, 0.8) * (1 - ss(y, 0.94, 1)),
+    snow: ss(y, 0.76, 0.86) * thaw,
   };
 }
 
