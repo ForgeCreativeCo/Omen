@@ -12,8 +12,8 @@ import type { Villager } from './villagers/types';
 import { Village } from './villagers/village';
 import type { Point3 } from './world/terrain';
 
-/** Colors that tell the peoples apart (tunics, map marks, names in the log). */
-export const TRIBE_COLORS = [0xe2b26a, 0x7fb3e0, 0xd9776a, 0x9fd38a, 0xc8a0e8, 0xe8d36a] as const;
+/** Colors that tell the peoples apart (headbands, belts, banners, sails, names in the log): one hue each, far apart. */
+export const TRIBE_COLORS = [0xe8b04a, 0x4f8fe0, 0xd9463a, 0x5fbf5a, 0xa66ee0, 0x3fc8c0] as const;
 
 /** The systems a people has of its own, by the name the sim gives them. */
 const OWN = ['village', 'belief', 'effects', 'myth', 'milestones', 'dissent', 'justice', 'exodus', 'appease'] as const;

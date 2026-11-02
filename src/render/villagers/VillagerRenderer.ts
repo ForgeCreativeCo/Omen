@@ -51,6 +51,12 @@ const HAIR_GEO = voxels([
   [0.15, 5.4, 0.15, 2.7, 1.0, 0.45, 1],
 ]);
 const CARRY_GEO = voxels([[0.5, 7.1, 0.3, 2, 1, 1.4, 1]]);
+// Their people's mark: a headband and a belt in its color, tails hanging behind.
+const MARK_GEO = voxels([
+  [0.1, 5.85, 0.1, 2.8, 0.4, 1.8, 1],
+  [1.1, 5.0, -0.2, 0.8, 0.9, 0.3, 0.85],
+  [-0.08, 3.0, -0.08, 3.16, 0.45, 2.16, 1],
+]);
 
 interface Ghost {
   id: number;
@@ -70,10 +76,11 @@ const tmpP = new THREE.Vector3();
 const tmpS = new THREE.Vector3();
 const tmpC = new THREE.Color();
 const tmpT = new THREE.Color();
+const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
 
 /**
- * Instanced voxel villagers (body, skin, hair, carried load): four draw calls for
- * everyone. Interpolates between sim ticks; the dead sink into the ground and fade
+ * Instanced voxel villagers (body, skin, hair, carried load, clan mark): five draw
+ * calls for everyone. Interpolates between sim ticks; the dead sink into the ground and fade
  * out of scale rather than anything graphic.
  */
 export class VillagerRenderer {
@@ -82,6 +89,7 @@ export class VillagerRenderer {
   private readonly skin: THREE.InstancedMesh;
   private readonly hair: THREE.InstancedMesh;
   private readonly carry: THREE.InstancedMesh;
+  private readonly mark: THREE.InstancedMesh;
   private readonly ring: THREE.Mesh;
   /** instanceId → villager id from the last frame (for picking). */
   private idAt: number[] = [];
@@ -109,6 +117,8 @@ export class VillagerRenderer {
     this.hair = make(HAIR_GEO);
     this.carry = make(CARRY_GEO);
     this.carry.castShadow = false;
+    this.mark = make(MARK_GEO);
+    this.mark.castShadow = false;
 
     this.ring = new THREE.Mesh(
       new THREE.RingGeometry(0.55, 0.75, 24).rotateX(-Math.PI / 2),
@@ -156,9 +166,15 @@ export class VillagerRenderer {
       this.clothes.setMatrixAt(n, tmpM);
       this.skin.setMatrixAt(n, tmpM);
       this.hair.setMatrixAt(n, tmpM);
+      // Several peoples: each wears its color, pure, at brow and waist; the tunic keeps the role.
+      if (tribe >= 0) {
+        this.mark.setMatrixAt(n, tmpM);
+        this.mark.setColorAt(n, tmpC.setHex(TRIBE_COLORS[tribe % TRIBE_COLORS.length]!));
+      } else {
+        this.mark.setMatrixAt(n, HIDDEN);
+      }
       tmpC.setHex(ROLE_COLORS[role]);
-      // Several peoples: their tunics take on their people's color.
-      if (tribe >= 0) tmpC.lerp(tmpT.setHex(TRIBE_COLORS[tribe % TRIBE_COLORS.length]!), 0.6);
+      if (tribe >= 0) tmpC.lerp(tmpT.setHex(TRIBE_COLORS[tribe % TRIBE_COLORS.length]!), 0.2);
       this.clothes.setColorAt(n, tmpC);
       tmpC.setHex(SKIN[(id * 7) % SKIN.length]!);
       // The god's sickness shows in their faces.
@@ -236,7 +252,7 @@ export class VillagerRenderer {
       place(g.id, g.x, g.y - (1 - k) * 0.8, g.z, g.yaw, g.scale * (0.3 + 0.7 * k), 0, g.role, null, false);
     }
 
-    for (const m of [this.clothes, this.skin, this.hair, this.carry]) {
+    for (const m of [this.clothes, this.skin, this.hair, this.carry, this.mark]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
